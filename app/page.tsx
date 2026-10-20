@@ -1,7 +1,9 @@
-export default function Home() {
+export default function HomePage() {
   return (
-    <main className="flex flex-1 items-center justify-center p-6">
-      <h1 className="text-3xl font-semibold tracking-tight">Money Map</h1>
-    </main>
+    <div className="space-y-4">
+      <h1 className="text-2xl font-bold tracking-tight">Money Map</h1>
+      <p className="text-muted-foreground">What are we recording today?</p>
+      <p className="text-sm text-muted-foreground">Tap a card to add an entry</p>
+    </div>
   );
 }

@@ -102,7 +102,70 @@
     - User B cannot INSERT rows with `user_id = user_a` (rejected by RLS `with check`).
     - `loans.due_on >= started_on` CHECK constraint rejects invalid loan dates (`due_on < started_on`).
     - `server_updated_at` trigger automatically updates on modification.
-  - Vitest test `tests/unit/database-schema.test.ts` (34 total unit tests passing).
+### Prompt 4: Local data layer (Dexie, Schemas, Repo & Hooks)
+- Configured local IndexedDB database `moneymap` in `lib/db/dexie.ts` matching PRD 6.3 stores:
+  - `profiles: 'user_id'`
+  - `categories: 'id, user_id, scope, [scope+is_hidden], updated_at'`
+  - `entries: 'id, user_id, kind, category_id, occurred_on, [kind+occurred_on], updated_at, deleted_at'`
+  - `loans: 'id, user_id, due_on, updated_at'`
+  - `loan_payments: 'id, loan_id, paid_on, updated_at'`
+  - `recurring_rules: 'id, next_due_on, updated_at'`
+  - `outbox: '++seq, table, row_id'`
+  - `meta: 'key'`
+  - Reused TypeScript column types from `lib/db/database.types.ts`.
+- Created Zod validation schemas in `lib/schemas/index.ts` with exact limits from PRD Section 4:
+  - `incomeFormSchema`: validates positive amount <= 999,999,999,999.99, future date <= 1 year, counterparty <= 80 chars, description <= 500 chars.
+  - `expenseFormSchema`: validates positive amount, category ID, occurred_on, description <= 500 chars.
+  - `givingFormSchema`: validates positive amount, given-to <= 80 chars, occurred_on, description <= 500 chars.
+  - `loanFormSchema`: validates borrower 1-80 chars, positive principal, `due_on >= started_on`, interest type & value, remind, description <= 500 chars.
+  - `loanPaymentFormSchema`: validates loan ID, positive amount, paid_on, note <= 200 chars.
+  - `categoryFormSchema`: validates scope, name 1-40 chars, slug, default & hidden flags, sort order.
+  - Exported inferred TypeScript types for all forms.
+- Implemented repository layer in `lib/repo/index.ts` with atomic writes + outbox tracking:
+  - `createEntry`: creates an entry, sets UUID, timestamps, and appends outbox item in 1 transaction.
+  - `updateEntry`: updates entry fields, bumps updated_at, and appends outbox item.
+  - `softDeleteEntry`: sets deleted_at and updated_at on entry and appends outbox item.
+  - `getEntry`: fetches active entry by ID (ignores soft-deleted).
+  - `listEntries`: lists entries filtered by kind, category, or date range (excludes deleted by default).
+  - `createLoan`: creates a loan record with borrower, principal, and outbox tracking.
+  - `updateLoan`: updates loan details and appends outbox item.
+  - `softDeleteLoan`: marks loan deleted and appends outbox item.
+  - `getLoan`: fetches active loan by ID.
+  - `listLoans`: lists all active loans.
+  - `createLoanPayment`: logs repayment against loan and appends outbox item.
+  - `updateLoanPayment`: updates repayment details and appends outbox item.
+  - `softDeleteLoanPayment`: soft-deletes repayment and appends outbox item.
+  - `getLoanPayment`: fetches loan repayment by ID.
+  - `listLoanPayments`: lists repayments for a loan or all loans.
+  - `createCategory`: creates a user or custom category with outbox item.
+  - `updateCategory`: updates category name/visibility and appends outbox item.
+  - `softDeleteCategory`: soft-deletes category and appends outbox item.
+  - `getCategory`: fetches active category by ID.
+  - `listCategories`: lists categories filtered by scope and visibility, sorted by sort_order.
+  - `createRecurringRule`: creates repeating reminder rule with outbox item.
+  - `updateRecurringRule`: updates recurring rule parameters and appends outbox item.
+  - `softDeleteRecurringRule`: soft-deletes recurring rule and appends outbox item.
+  - `getRecurringRule`: fetches active recurring rule by ID.
+  - `listRecurringRules`: lists all active recurring rules.
+  - `createProfile` / `updateProfile` / `getProfile` / `softDeleteProfile` / `listProfiles`: manages user profile in Dexie.
+  - `getCurrentUserId` / `setCurrentUserId`: current user ID getter/setter (null for guests).
+- Implemented default category seed in `lib/repo/seed.ts`:
+  - `seedDefaultCategories`: idempotent function inserting all 36 default categories across income, expense, giving, and lent scopes with kebab-case slugs, default flags, and sequential sort orders.
+- Implemented reactive hooks in `lib/repo/hooks.ts`:
+  - `useEntries(filter)`: live reactive query hook returning entries matching optional kind/category/date filters.
+  - `useCategories(scope, includeHidden)`: live reactive query hook returning sorted categories for a scope.
+  - `useLoans(includeDeleted)`: live reactive query hook returning all loans.
+- Verification:
+  - 61 Vitest unit tests passing (`bun run test`).
+  - Unit tests in `tests/unit/repo.test.ts` (fake-indexeddb) proving:
+    - Create adds a row and exactly one outbox item in the same transaction.
+    - Soft delete sets `deleted_at` and records an outbox item.
+    - Seed runs twice idempotently without duplicating categories.
+  - Unit tests in `tests/unit/schemas.test.ts` proving:
+    - All Zod schemas reject invalid amounts (<= 0, > 999,999,999,999.99, non-integers).
+    - Invalid calendar dates and future dates > 1 year rejected.
+    - Counterparty (> 80), description (> 500), note (> 200) length limits enforced.
+    - Loans reject `due_on < started_on` and empty borrower names.
 
 ## Decisions
 
@@ -115,6 +178,8 @@
 - Database schema pushed directly to linked remote Supabase project (`jiktrplyuneakhhoayde`) using `supabase db push` as local Docker stack is not present on host machine.
 - Database types generated with `supabase gen types typescript --linked` to synchronize directly with remote schema.
 - Used `clock_timestamp()` in `set_server_updated_at()` trigger function so `server_updated_at` advances reliably within transactions.
+- Dexie repository operations execute in single transactions linking the table update and outbox append atomically.
+- Tested IndexedDB locally via `fake-indexeddb` to allow full unit test execution in Node/Vitest environments.
 
 ## Database Instructions
 
@@ -128,4 +193,4 @@
 
 ## Next prompt
 
-Prompt 4: local data layer
+Prompt 5: calculation engine

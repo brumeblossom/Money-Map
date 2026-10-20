@@ -167,6 +167,47 @@
     - Counterparty (> 80), description (> 500), note (> 200) length limits enforced.
     - Loans reject `due_on < started_on` and empty borrower names.
 
+### Prompt 5: Calculation Engine
+- Built pure TypeScript calculation engine in `lib/calc/index.ts` (zero React, zero Dexie dependencies, strictly integer minor units arithmetic):
+  - **Exported calculation functions:**
+    - `periodTotals(rows, period)`: Aggregates active entries in a period into `{ moneyIn, expenses, giving, moneyOut, leftOver }` minor units.
+    - `owedToMe(loans, payments)`: Computes outstanding balance on all active loans (`sum of balanceLeft for un-deleted loans`).
+    - `previousPeriod(period)`: Calculates the preceding adjacent period of equal calendar duration in days.
+    - `percentChange(current, previous)`: Calculates integer percent change `Math.round(((current - previous) / previous) * 100)`; returns `"New"` when previous period is 0.
+    - `signedAmount(row)`: Signed minor unit value per rule (+ for income, - for expense, - for giving).
+    - `interestAmount(loan)`: Pure integer calculation for none (`0`), fixed (`interest_value`), or percent (`Math.round((principal * interest_value) / 10000)` with 2-decimal percent base).
+    - `totalToGetBack(loan)`: `loan.principal_minor + interestAmount(loan)`.
+    - `receivedSoFar(loanId, payments)`: Sum of un-deleted repayments for loan.
+    - `balanceLeft(loan, payments)`: Outstanding balance clamped to minimum 0 (`Math.max(0, totalToGetBack(loan) - receivedSoFar(loan.id, payments))`).
+    - `instalmentCount(loan)`: Computes scheduled count of instalments between `started_on` and `due_on` based on `repay_plan` (`weekly`, `monthly`, `custom`/`none` = 1).
+    - `suggestedInstalment(loan)`: Calculates integer instalment amount `Math.ceil(totalToGetBack(loan) / instalmentCount(loan))`.
+    - `instalmentDates(loan)`: Generates list of ISO date milestones matching repayment plan cadence up to `due_on`.
+    - `nextExpectedDate(loan, payments)`: Computes earliest upcoming instalment date whose cumulative milestone exceeds total repayments made. Falls back to `due_on` if all past milestones satisfied.
+    - `loanStatus(loan, payments, today)`: Determines status with strict precedence (`Paid off` if balance is 0, else `Overdue` if `today > nextExpectedDate`, else `Due soon` if within 7 days, else `Active`).
+    - `loanProgress(loan, payments)`: Percentage integer 0-100 of repayments against total receivable amount (`Math.min(100, Math.round((receivedSoFar / totalToGetBack) * 100))`).
+    - `categoryShare(categoryId, rows)`: Computes percentage share (0-100) of expense category relative to total expenses in dataset.
+    - `sixMonthTrend(categoryId, rows, today)`: Returns array of `{ monthKey, totalMinor }` for the last 6 calendar months (M5 down to M0).
+    - `countAndAverage(categoryId, rows)`: Returns count and average transaction amount `Math.round(total / count)` for category.
+    - `busiestWeekday(categoryId, rows)`: Computes day of week (Monday-Sunday) with most transactions; resolves ties to earlier weekday (Monday).
+    - `biggestEntry(categoryId, rows)`: Finds largest single entry in minor units for category.
+    - `habitLabel(m0, m1, m2, a, entryCount)`: Determines spending habit label with strict precedence (`"Not enough data yet"` if count < 3, else `Spike` if `M0 >= 2 * A`, else `Rising` if `M0 > 1.15 * M1 && M1 > 1.15 * M2`, else `Falling` if `M0 < 0.85 * M1 && M1 < 0.85 * M2`, else `Steady`).
+    - `habitsSummary(rows, categories, currency, today)`: Computes top 3 rising categories and top 3 falling categories formatted into plain English sentences using `formatMoney`.
+    - `smartTip(rows, categories, currency, today)`: Generates actionable tip for biggest spiking or rising expense category, or encouraging confirmation if spending is falling/steady.
+    - `getPeriodPreset(preset, today, customRange)`: Computes period date range for `thisWeek` (Monday start), `thisMonth`, `last3Months`, `thisYear`, and `custom`.
+    - `diffInDays(isoDateA, isoDateB)`: Timezone-agnostic calendar day difference helper.
+- Unit Testing and Verification:
+  - Added 29 hand-calculated test cases in `tests/unit/calc.test.ts` covering:
+    - Empty data sets.
+    - Previous period 0 returning `"New"`.
+    - Percent-interest loan with weekly plan.
+    - Monthly repayment plan with mid-month due date.
+    - Overpayment clamping `balanceLeft` strictly to 0.
+    - Status ordering (`Paid off` strictly overrides `Overdue`).
+    - Each habit label (`Spike`, `Rising`, `Falling`, `Steady`, `"Not enough data yet"`).
+    - Busiest weekday ties breaking by earliest in week (Monday).
+  - Test coverage via `@vitest/coverage-v8`: `lib/calc/index.ts` achieved **98.05% lines** and **96.29% statements** (exceeding >= 95% requirement).
+  - All 90 unit tests passing project-wide (`bun test`).
+
 ## Decisions
 
 - Dark mode theme configured using media query `@media (prefers-color-scheme: dark)` in `app/globals.css` to respect the system preference per PRD §9 rather than a class toggle.
@@ -180,6 +221,9 @@
 - Used `clock_timestamp()` in `set_server_updated_at()` trigger function so `server_updated_at` advances reliably within transactions.
 - Dexie repository operations execute in single transactions linking the table update and outbox append atomically.
 - Tested IndexedDB locally via `fake-indexeddb` to allow full unit test execution in Node/Vitest environments.
+- All calculations in `lib/calc` operate on integer minor units (kobo/cents) with no floating-point math for money.
+- Date arithmetic in `lib/calc` uses UTC calendar methods to avoid local timezone drift.
+- PRD Section 5 left no open decisions; all calculation rules implemented precisely as specified.
 
 ## Database Instructions
 
@@ -193,4 +237,4 @@
 
 ## Next prompt
 
-Prompt 5: calculation engine
+Prompt 6: Home and first forms

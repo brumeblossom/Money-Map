@@ -1,0 +1,14 @@
+.next
+out
+build
+node_modules
+coverage
+test-results
+playwright-report
+blob-report
+bun.lock
+next-env.d.ts
+.agents
+docs/PRD.md
+CLAUDE.md
+AGENTS.md

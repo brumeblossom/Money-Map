@@ -252,6 +252,29 @@
   - Playwright E2E tests pass across phone (390px) and desktop (1280px) viewports (`bun run e2e`).
   - TypeScript strict check (`bun run typecheck`) and ESLint (`bun run lint`) pass with 0 errors.
 
+### Prompt 6b: Amount input fix, form layout polish & Money I lent form
+- **AmountField Root Cause and Fix**:
+  - *Root Cause*: On every keystroke, `AmountField` fired `onChange` with converted minor units, updating the parent's `value` prop. On receiving the prop update, the component reset its local text state to `null` and re-formatted `fromMinor(value)` into a 2-decimal string (`"5"` -> `"5.00"`). This round-trip formatted substitution wiped the user's draft input, shifted the cursor, and rejected consecutive digit typing.
+  - *Fix*: `AmountField` now stores `rawText` in local component state. It tracks `lastEmittedMinor` in state (without accessing refs during render per React 19 rules) so parent re-renders from user typing never overwrite the active input draft. Restricts input to digits, at most one decimal point, at most 2 decimal places, and integer up to 12 digits (cap 999,999,999,999.99). Converts leading `.` to `0.`. Pasting strips symbols (`₦`, `$`) and commas. Thousands separators format smoothly on blur.
+- **Form Layout (All Four Forms)**:
+  - Completely removed the collapsible "More details" section. Every field displays directly on the form.
+  - Required fields appear first, followed by optional fields with `(optional)` in their label.
+  - Field order:
+    - *Money in*: Amount, Category, Date, Source (optional), Repeats (optional), Description (optional)
+    - *Money out*: Amount, Category, Date, Repeats (optional), Description (optional)
+    - *Giving*: Amount, Category, Date, Recipient (optional), Repeats (optional), Description (optional)
+    - *Money I lent*: Borrower, Amount lent, Category, Date lent, Expected back by, Payback plan (optional), Instalment amount (optional), Interest (optional), Remind me, Description (optional)
+- **Modal Sizing & Scrolling**:
+  - *Mobile (Drawer)*: Bottom sheet capped at `max-h-[90dvh]` with `handleOnly={true}` so touch dragging only triggers from the handle/header and does not interfere with field scrolling. Layout split into fixed header (`shrink-0`), scrollable body (`flex-1 overflow-y-auto overscroll-contain`), and sticky footer (`shrink-0 border-t bg-background/95`) ensuring the Save button is always reachable without scrolling.
+  - *Desktop (Dialog)*: Centered dialog sized to `w-[480px]` and `max-h-[min(640px, 80vh)]`, keeping the background overlay and page visible behind it. Uses identical fixed header, scrollable body, and sticky Save footer.
+- **Money I lent Form (`/new/lent`)**:
+  - Fully implemented within `EntryForm` using `loanFormSchema` validation and `createLoan` in `lib/repo`.
+  - Automatically calculates suggested instalment via `suggestedInstalment(total, count)` from `lib/calc` when payback plan is weekly or monthly, remaining editable.
+  - Supports Interest toggle (None, Percent % in basis points, Flat minor units).
+  - Remind me toggle switch (default on).
+  - Saving writes to Dexie `loans` with outbox entry, shows toast `"Saved"` with a 5-second Undo action (soft-deletes loan), and live updates the Money I lent Home card (`owedToMe`).
+  - Lent form is completely finished, so Prompt 7 is scoped strictly to `/lent` list, `/lent/[id]` detail, "Record money received", and edit/delete.
+
 ## Decisions
 
 - Dark mode theme configured using media query `@media (prefers-color-scheme: dark)` in `app/globals.css` to respect the system preference per PRD §9 rather than a class toggle.
@@ -270,6 +293,8 @@
 - PRD Section 5 left no open decisions; all calculation rules implemented precisely as specified.
 - Responsive entry modal utilizes `React.useSyncExternalStore` for SSR-safe viewport match-media detection avoiding React 19 cascading re-render warnings.
 - HomeView maintains entry modal state with `window.history.pushState` on card clicks to allow instant modal transitions over Home without unmounting or duplicate route DOM mounts.
+- All form fields shown directly without "More details" collapsibles, with required fields first followed by optional fields marked "(optional)".
+- Phone drawer utilizes `handleOnly={true}` from vaul so inner form touch scrolling never conflicts with sheet dismiss gestures.
 
 ## Database Instructions
 
@@ -284,4 +309,5 @@
 ## Next prompt
 
 Prompt 7: Money I lent
+
 

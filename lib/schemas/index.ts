@@ -85,7 +85,7 @@ export const givingFormSchema = z.object({
   occurred_on: dateStringSchema,
   counterparty: z
     .string()
-    .max(80, "Given to cannot exceed 80 characters")
+    .max(80, "Recipient cannot exceed 80 characters")
     .optional()
     .nullable(),
   repeats: formRepeatSchema.optional(),

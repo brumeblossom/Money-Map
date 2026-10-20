@@ -43,14 +43,85 @@ describe("AmountField component", () => {
     expect(screen.getByDisplayValue("150,000.00")).toBeInTheDocument();
   });
 
-  it("formats thousands separators while typing and emits minor units", () => {
+  it("typing '2500' gives 250000 minor and formats on blur", () => {
     const handleChange = vi.fn();
     render(<AmountField currency="NGN" onChange={handleChange} />);
     const input = screen.getByPlaceholderText("0.00");
 
-    // Type 1500.50
-    fireEvent.change(input, { target: { value: "1500.50" } });
-    expect(input).toHaveValue("1,500.50");
-    expect(handleChange).toHaveBeenCalledWith(150050);
+    fireEvent.change(input, { target: { value: "2500" } });
+    expect(input).toHaveValue("2500");
+    expect(handleChange).toHaveBeenCalledWith(250000);
+
+    fireEvent.blur(input);
+    expect(input).toHaveValue("2,500");
+  });
+
+  it("typing '1234567.89' gives 123456789 minor and formats on blur", () => {
+    const handleChange = vi.fn();
+    render(<AmountField currency="NGN" onChange={handleChange} />);
+    const input = screen.getByPlaceholderText("0.00");
+
+    fireEvent.change(input, { target: { value: "1234567.89" } });
+    expect(input).toHaveValue("1234567.89");
+    expect(handleChange).toHaveBeenCalledWith(123456789);
+
+    fireEvent.blur(input);
+    expect(input).toHaveValue("1,234,567.89");
+  });
+
+  it("ignores a third decimal digit", () => {
+    const handleChange = vi.fn();
+    render(<AmountField currency="NGN" onChange={handleChange} />);
+    const input = screen.getByPlaceholderText("0.00");
+
+    fireEvent.change(input, { target: { value: "12.345" } });
+    expect(input).toHaveValue("12.34");
+    expect(handleChange).toHaveBeenCalledWith(1234);
+  });
+
+  it("converts leading '.' to '0.'", () => {
+    const handleChange = vi.fn();
+    render(<AmountField currency="NGN" onChange={handleChange} />);
+    const input = screen.getByPlaceholderText("0.00");
+
+    fireEvent.change(input, { target: { value: "." } });
+    expect(input).toHaveValue("0.");
+    expect(handleChange).toHaveBeenCalledWith(0);
+
+    fireEvent.change(input, { target: { value: ".5" } });
+    expect(input).toHaveValue("0.5");
+    expect(handleChange).toHaveBeenCalledWith(50);
+  });
+
+  it("handles backspace properly", () => {
+    const handleChange = vi.fn();
+    render(<AmountField currency="NGN" onChange={handleChange} />);
+    const input = screen.getByPlaceholderText("0.00");
+
+    fireEvent.change(input, { target: { value: "2500" } });
+    expect(handleChange).toHaveBeenCalledWith(250000);
+
+    // Backspace: "250"
+    fireEvent.change(input, { target: { value: "250" } });
+    expect(input).toHaveValue("250");
+    expect(handleChange).toHaveBeenCalledWith(25000);
+
+    // Backspace to empty
+    fireEvent.change(input, { target: { value: "" } });
+    expect(input).toHaveValue("");
+    expect(handleChange).toHaveBeenCalledWith(0);
+  });
+
+  it("handles pasting '₦2,500.50'", () => {
+    const handleChange = vi.fn();
+    render(<AmountField currency="NGN" onChange={handleChange} />);
+    const input = screen.getByPlaceholderText("0.00");
+
+    fireEvent.change(input, { target: { value: "₦2,500.50" } });
+    expect(input).toHaveValue("2500.50");
+    expect(handleChange).toHaveBeenCalledWith(250050);
+
+    fireEvent.blur(input);
+    expect(input).toHaveValue("2,500.50");
   });
 });

@@ -53,7 +53,10 @@ export function EntryModal({
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg p-0 overflow-hidden sm:max-w-lg rounded-2xl">
+        <DialogContent
+          showCloseButton={false}
+          className="w-[480px] max-w-[480px] sm:max-w-[480px] max-h-[min(640px,80vh)] h-[min(640px,80vh)] p-0 overflow-hidden rounded-2xl flex flex-col border border-border bg-background shadow-2xl"
+        >
           <DialogTitle className="sr-only">Entry form</DialogTitle>
           <EntryForm action={action} onClose={handleClose} currency={currency} />
         </DialogContent>
@@ -62,8 +65,8 @@ export function EntryModal({
   }
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[90vh] overflow-y-auto rounded-t-3xl">
+    <Drawer open={open} onOpenChange={onOpenChange} handleOnly={true}>
+      <DrawerContent className="data-[vaul-drawer-direction=bottom]:max-h-[90dvh] max-h-[90dvh] h-[90dvh] rounded-t-3xl p-0 overflow-hidden flex flex-col border-t border-border bg-background">
         <DrawerTitle className="sr-only">Entry form</DrawerTitle>
         <EntryForm action={action} onClose={handleClose} currency={currency} />
       </DrawerContent>

@@ -34,14 +34,38 @@ function getCurrencySymbol(currency: string): string {
   }
 }
 
-function formatNumberWithCommas(raw: string): string {
+export function formatAmountWithCommas(raw: string): string {
   if (!raw) return "";
-  const parts = raw.split(".");
+  const cleaned = raw.replace(/,/g, "");
+  const parts = cleaned.split(".");
   const intPart = parts[0] ? BigInt(parts[0]).toLocaleString("en-US") : "0";
   if (parts.length > 1) {
-    return `${intPart}.${parts[1].slice(0, 2)}`;
+    return `${intPart}.${parts[1]}`;
   }
   return intPart;
+}
+
+export function sanitizeAmountInput(input: string): string {
+  // Strip currency symbols, spaces, commas, etc.
+  let cleaned = input.replace(/[^0-9.]/g, "");
+
+  // If starts with ".", prepend "0"
+  if (cleaned.startsWith(".")) {
+    cleaned = "0" + cleaned;
+  }
+
+  // At most one decimal point and at most 2 decimal digits
+  const dotIndex = cleaned.indexOf(".");
+  if (dotIndex !== -1) {
+    const intPart = cleaned.slice(0, dotIndex);
+    const decPart = cleaned.slice(dotIndex + 1).replace(/\./g, "").slice(0, 2);
+    // Integer part up to 12 digits (999,999,999,999)
+    const cappedInt = intPart.slice(0, 12);
+    return `${cappedInt}.${decPart}`;
+  }
+
+  // Up to 12 integer digits
+  return cleaned.slice(0, 12);
 }
 
 export function AmountField({
@@ -62,63 +86,54 @@ export function AmountField({
   const inputId = id || generatedId;
   const symbol = getCurrencySymbol(currency);
 
-  const [userText, setUserText] = React.useState<string | null>(null);
-
-  // Reset userText when controlled value changes from outside
-  const [prevValue, setPrevValue] = React.useState(value);
-  if (value !== prevValue) {
-    setPrevValue(value);
-    setUserText(null);
-  }
-
-  // Derive displayValue
-  const displayValue = React.useMemo(() => {
-    if (userText !== null) return userText;
-    const initialMinor = value ?? defaultValue;
+  const initialMinor = value ?? defaultValue;
+  const initialText = React.useMemo(() => {
     if (initialMinor === undefined || initialMinor === 0) return "";
-    const majorStr = fromMinor(initialMinor);
-    return formatNumberWithCommas(majorStr);
-  }, [userText, value, defaultValue]);
+    return formatAmountWithCommas(fromMinor(initialMinor));
+  }, [initialMinor]);
+
+  const [rawText, setRawText] = React.useState<string>(initialText);
+  const [lastEmittedMinor, setLastEmittedMinor] = React.useState<number | undefined>(initialMinor);
+  const [prevValue, setPrevValue] = React.useState(value);
+
+  if (value !== undefined && value !== prevValue) {
+    setPrevValue(value);
+    if (value !== lastEmittedMinor) {
+      setLastEmittedMinor(value);
+      setRawText(value === 0 ? "" : formatAmountWithCommas(fromMinor(value)));
+    }
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputVal = e.target.value;
 
-    const cleaned = inputVal.replace(/[^0-9.]/g, "");
-
-    const parts = cleaned.split(".");
-    let normalized = cleaned;
-    if (parts.length > 2) {
-      normalized = `${parts[0]}.${parts.slice(1).join("")}`;
-    }
-
-    if (normalized === "" || normalized === ".") {
-      const nextDisplay = normalized === "." ? "0." : "";
-      setUserText(nextDisplay);
+    if (inputVal === "") {
+      setRawText("");
+      setLastEmittedMinor(0);
       onChange?.(0);
       return;
     }
 
-    const decimalParts = normalized.split(".");
-    const rawInt = decimalParts[0] || "0";
-    const hasDecimal = decimalParts.length > 1;
-    const decimalDigits = hasDecimal ? decimalParts[1].slice(0, 2) : "";
+    const sanitized = sanitizeAmountInput(inputVal);
+    setRawText(sanitized);
 
-    let formatted = "";
-    try {
-      const intBig = BigInt(rawInt);
-      formatted = intBig.toLocaleString("en-US");
-    } catch {
-      formatted = rawInt;
+    // Convert to minor units
+    let minor = 0;
+    if (sanitized && sanitized !== "0.") {
+      try {
+        minor = toMinor(sanitized);
+      } catch {
+        minor = 0;
+      }
     }
+    setLastEmittedMinor(minor);
+    onChange?.(minor);
+  };
 
-    if (hasDecimal) {
-      formatted = `${formatted}.${decimalDigits}`;
+  const handleBlur = () => {
+    if (rawText && rawText !== "0.") {
+      setRawText(formatAmountWithCommas(rawText));
     }
-
-    setUserText(formatted);
-
-    const minorUnits = toMinor(formatted);
-    onChange?.(minorUnits);
   };
 
   return (
@@ -146,8 +161,9 @@ export function AmountField({
           type="text"
           inputMode="decimal"
           placeholder="0.00"
-          value={displayValue}
+          value={rawText}
           onChange={handleChange}
+          onBlur={handleBlur}
           disabled={disabled}
           required={required}
           autoFocus={autoFocus}

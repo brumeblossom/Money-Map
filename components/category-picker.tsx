@@ -43,6 +43,12 @@ export function CategoryPicker({
 
   const isOtherSelected = value === OTHER_CATEGORY_VALUE;
 
+  React.useEffect(() => {
+    if (!value && categories && categories.length > 0) {
+      onChange(categories[0].id, false);
+    }
+  }, [value, categories, onChange]);
+
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedVal = e.target.value;
     if (selectedVal === OTHER_CATEGORY_VALUE) {

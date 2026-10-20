@@ -237,41 +237,43 @@ Each story has an ID the prompt pack will reference. A story is done only when e
 
 These are the final fields from Phase 1, including Chinedum's edits. Every category picker is a dropdown (a bottom-sheet list on phones) ending with "Other (type your own)". "Column" is where the value is stored (section 6). Amount rules for all forms: greater than 0, at most 2 decimals, at most 999,999,999,999.99.
 
+There is NO "More details" section. Every field shows directly on the form. Required fields first, then optional fields marked "(optional)" in the label.
+
 ### 4.1 Money in (`kind = income`)
 
-| Field       | Input                 | Required | Column                 | Notes                                                |
-|-------------|-----------------------|----------|------------------------|------------------------------------------------------|
-| Amount      | Decimal keypad        | Yes      | `entries.amount_minor` |                                                      |
-| Category    | Dropdown              | Yes      | `entries.category_id`  | Defaults to last used                                |
-| Date        | Date picker           | Yes      | `entries.occurred_on`  | Defaults to today; future dates allowed up to 1 year |
-| Source      | Text, max 80          | No       | `entries.counterparty` | e.g. employer, client, brand                         |
-| Repeats     | No / Weekly / Monthly | No       | `recurring_rules`      | Remind and tap to confirm (US-5.1)                   |
-| Description | Multi-line, max 500   | No       | `entries.description`  |                                                      |
+| Field                  | Input                 | Required | Column                 | Notes                                                |
+|------------------------|-----------------------|----------|------------------------|------------------------------------------------------|
+| Amount                 | Decimal keypad        | Yes      | `entries.amount_minor` |                                                      |
+| Category               | Dropdown              | Yes      | `entries.category_id`  | Defaults to last used                                |
+| Date                   | Date picker           | Yes      | `entries.occurred_on`  | Defaults to today; future dates allowed up to 1 year |
+| Source (optional)      | Text, max 80          | No       | `entries.counterparty` | e.g. employer, client, brand                         |
+| Repeats (optional)     | No / Weekly / Monthly | No       | `recurring_rules`      | Remind and tap to confirm (US-5.1)                   |
+| Description (optional) | Multi-line, max 500   | No       | `entries.description`  |                                                      |
 
 Categories: Salary, Business sales, Side gig / freelance, Brand partnerships, Digital products, Gift received, Investment returns, Refund, Allowance, Other.
 
 ### 4.2 Money out (`kind = expense`)
 
-| Field       | Input                 | Required | Column                 | Notes                   |
-|-------------|-----------------------|----------|------------------------|-------------------------|
-| Amount      | Decimal keypad        | Yes      | `entries.amount_minor` |                         |
-| Category    | Dropdown              | Yes      | `entries.category_id`  | Drives habit reports    |
-| Date        | Date picker           | Yes      | `entries.occurred_on`  |                         |
-| Repeats     | No / Weekly / Monthly | No       | `recurring_rules`      | For rent, subscriptions |
-| Description | Multi-line, max 500   | No       | `entries.description`  |                         |
+| Field                  | Input                 | Required | Column                 | Notes                   |
+|------------------------|-----------------------|----------|------------------------|-------------------------|
+| Amount                 | Decimal keypad        | Yes      | `entries.amount_minor` |                         |
+| Category               | Dropdown              | Yes      | `entries.category_id`  | Drives habit reports    |
+| Date                   | Date picker           | Yes      | `entries.occurred_on`  |                         |
+| Repeats (optional)     | No / Weekly / Monthly | No       | `recurring_rules`      | For rent, subscriptions |
+| Description (optional) | Multi-line, max 500   | No       | `entries.description`  |                         |
 
 Categories (Chinedum's list): Personal, Family, Subscriptions, Light (electricity), Fuel, Diesel, Internet, Food, Groceries, Transportation, Car repair, Household fixing, Rent savings, Enjoyment, Other.
 
 ### 4.3 Giving (`kind = giving`)
 
-| Field       | Input                 | Required | Column                 | Notes                                  |
-|-------------|-----------------------|----------|------------------------|----------------------------------------|
-| Amount      | Decimal keypad        | Yes      | `entries.amount_minor` |                                        |
-| Category    | Dropdown              | Yes      | `entries.category_id`  |                                        |
-| Date        | Date picker           | Yes      | `entries.occurred_on`  |                                        |
-| Given to    | Text, max 80          | No       | `entries.counterparty` | Person, church, mosque or organisation |
-| Repeats     | No / Weekly / Monthly | No       | `recurring_rules`      |                                        |
-| Description | Multi-line, max 500   | No       | `entries.description`  |                                        |
+| Field                  | Input                 | Required | Column                 | Notes                                  |
+|------------------------|-----------------------|----------|------------------------|----------------------------------------|
+| Amount                 | Decimal keypad        | Yes      | `entries.amount_minor` |                                        |
+| Category               | Dropdown              | Yes      | `entries.category_id`  |                                        |
+| Date                   | Date picker           | Yes      | `entries.occurred_on`  |                                        |
+| Recipient (optional)   | Text, max 80          | No       | `entries.counterparty` | Person, church, mosque or organisation |
+| Repeats (optional)     | No / Weekly / Monthly | No       | `recurring_rules`      |                                        |
+| Description (optional) | Multi-line, max 500   | No       | `entries.description`  |                                        |
 
 Categories: Tithe, Offering & seed, Charity / NGO, Family support, Friends & community, Pledge, Other.
 

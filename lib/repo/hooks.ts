@@ -6,6 +6,7 @@ import {
   type EntryRow,
   type CategoryRow,
   type LoanRow,
+  type LoanPaymentRow,
   type CategoryScope,
 } from "@/lib/db/dexie";
 import { listEntries, type EntryFilter } from "./index";
@@ -60,5 +61,25 @@ export function useLoans(includeDeleted = false): LoanRow[] | undefined {
         .toArray()
         .then((rows) => rows.filter((row) => includeDeleted || row.deleted_at === null)),
     [includeDeleted],
+  );
+}
+
+/**
+ * Live reactive hook for loan payments list.
+ */
+export function useLoanPayments(
+  loanId?: string,
+  includeDeleted = false,
+): LoanPaymentRow[] | undefined {
+  return useLiveQuery(
+    () =>
+      db.loan_payments.toArray().then((rows) =>
+        rows.filter((row) => {
+          if (!includeDeleted && row.deleted_at !== null) return false;
+          if (loanId && row.loan_id !== loanId) return false;
+          return true;
+        }),
+      ),
+    [loanId, includeDeleted],
   );
 }

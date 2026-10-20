@@ -740,17 +740,21 @@ export type PeriodPreset =
  */
 export function getPeriodPreset(
   preset: PeriodPreset,
-  referenceDate = new Date(),
+  referenceDate: Date | string = new Date(),
   customRange?: DatePeriod,
 ): DatePeriod {
-  const y = referenceDate.getUTCFullYear();
-  const m = referenceDate.getUTCMonth(); // 0-indexed
-  const d = referenceDate.getUTCDate();
+  const ref =
+    typeof referenceDate === "string"
+      ? new Date(`${referenceDate}T00:00:00Z`)
+      : referenceDate;
+  const y = ref.getUTCFullYear();
+  const m = ref.getUTCMonth(); // 0-indexed
+  const d = ref.getUTCDate();
 
   switch (preset) {
     case "thisWeek": {
       // Monday start
-      const dayOfWeek = referenceDate.getUTCDay(); // 0 is Sun, 1 is Mon
+      const dayOfWeek = ref.getUTCDay(); // 0 is Sun, 1 is Mon
       const diffToMonday = (dayOfWeek + 6) % 7;
       const monday = new Date(Date.UTC(y, m, d - diffToMonday));
       const sunday = new Date(Date.UTC(monday.getUTCFullYear(), monday.getUTCMonth(), monday.getUTCDate() + 6));

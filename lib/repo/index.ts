@@ -431,6 +431,7 @@ export async function createCategory(
   const id = input.id ?? crypto.randomUUID();
   const userId = getCurrentUserId() ?? "";
   const now = new Date().toISOString();
+  const count = await database.categories.where("scope").equals(input.scope).count();
 
   const row: CategoryRow = {
     id,
@@ -440,7 +441,7 @@ export async function createCategory(
     slug: input.slug ?? null,
     is_default: input.is_default ?? false,
     is_hidden: input.is_hidden ?? false,
-    sort_order: input.sort_order ?? 0,
+    sort_order: input.sort_order ?? count,
     created_at: now,
     updated_at: now,
     deleted_at: null,

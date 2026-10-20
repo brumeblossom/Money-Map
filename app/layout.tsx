@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/app-shell";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-sans",
@@ -39,6 +40,7 @@ export default function RootLayout({
         <React.Suspense fallback={null}>
           <AppShell>{children}</AppShell>
         </React.Suspense>
+        <Toaster />
       </body>
     </html>
   );

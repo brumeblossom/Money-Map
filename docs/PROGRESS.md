@@ -208,6 +208,50 @@
   - Test coverage via `@vitest/coverage-v8`: `lib/calc/index.ts` achieved **98.05% lines** and **96.29% statements** (exceeding >= 95% requirement).
   - All 90 unit tests passing project-wide (`bun test`).
 
+### Prompt 6: Home and first forms
+- Implemented Home view (`/`):
+  - Heading: `"What are we recording today?"`
+  - Hint: `"Tap a card to add an entry"`
+  - This-month strip: displays live period totals for `Money in`, `Money out`, and `Left over` computed via `lib/calc/periodTotals`.
+  - Four action cards in required order:
+    1. Money in (`/new/income`)
+    2. Money out (`/new/expense`)
+    3. Giving (`/new/giving`)
+    4. Money I lent (`/new/lent` - displays live `owedToMe` total computed via `lib/calc/owedToMe`)
+    - Layout: 2x2 grid on mobile viewports (< 1024px), 4 in a row on desktop viewports (>= 1024px).
+- Entry Form Route (`/new/[action]`):
+  - Rendered over Home as a bottom sheet on mobile (`Drawer`) and as a centered dialog on desktop (`Dialog`).
+  - Supports direct URL navigation to `/new/[action]` as well as client-side card taps without unmounting Home.
+  - Implemented full forms for `income`, `expense`, and `giving`.
+  - Other actions (e.g. `lent`) display `"Coming soon"` with a dismiss button until their respective prompts.
+- Input Fields and Form Interaction:
+  - Amount input (`AmountField`) automatically focused on open with `autoFocus`, `inputmode="decimal"`, currency prefix, and formatted thousands separators.
+  - Date input (`DateField`) formatted as `DD-MM-YYYY` with calendar popover, defaulting to today's date in local calendar.
+  - Category selector (`CategoryPicker`) pre-populated from Dexie `categories` filtered by scope, defaulting to the last used category for that entry kind (with race-condition protection), ending with `"Other (type your own)"`.
+  - "Other (type your own)" reveals an inline text input; saving creates the custom category with matching scope and saves the entry under the new category.
+  - Required fields (`amount`, `category`, `date`) placed on top; optional fields (`counterparty`, `description`, `repeats`) grouped under a collapsible `"More details"` section.
+  - Visible "Repeats" field with `// TODO(prompt-14)` comment for future recurring engine integration.
+- Save and Undo Flow:
+  - Form validation with Zod schemas from `lib/schemas`.
+  - Writes to Dexie via `lib/repo/createEntry` and `lib/repo/createCategory` in a single Dexie transaction appending to `outbox`.
+  - On save, closes modal, displays toast `"Saved"` with a 5-second `Undo` action.
+  - Clicking `Undo` soft-deletes the created entry via `lib/repo/softDeleteEntry`, instantly updating the month strip and action card totals.
+- Components Added / Documented:
+  - `ActionCard` (`components/action-card.tsx`): Displays card icon, label, and formatted currency total with interactive hover and click handling.
+  - `CategoryPicker` (`components/category-picker.tsx`): Scope-aware select component with inline custom category expansion.
+  - `EntryForm` (`components/entry-form.tsx`): Action-based form supporting `income`, `expense`, and `giving` with Zod validation and Undo toast.
+  - `EntryModal` (`components/entry-modal.tsx`): Adaptive drawer/dialog wrapper based on viewport width (`>= 1024px`).
+  - `HomeView` (`components/home-view.tsx`): Complete home screen with live totals and integrated entry modal.
+- How to add a new action form:
+  1. Add the new action route key to the supported actions union in `components/entry-modal.tsx` / `components/entry-form.tsx`.
+  2. In `components/entry-form.tsx`, implement the field layout and validation schema (e.g. `lentLoanSchema` from `lib/schemas`) for the action.
+  3. Ensure required fields sit on top and optional fields are grouped under `"More details"`.
+  4. Connect the action's submit handler to the corresponding repository method in `lib/repo` (e.g. `createLoan`).
+- Verification:
+  - All 92 Vitest unit tests pass (`bun run test`).
+  - Playwright E2E tests pass across phone (390px) and desktop (1280px) viewports (`bun run e2e`).
+  - TypeScript strict check (`bun run typecheck`) and ESLint (`bun run lint`) pass with 0 errors.
+
 ## Decisions
 
 - Dark mode theme configured using media query `@media (prefers-color-scheme: dark)` in `app/globals.css` to respect the system preference per PRD §9 rather than a class toggle.
@@ -224,6 +268,8 @@
 - All calculations in `lib/calc` operate on integer minor units (kobo/cents) with no floating-point math for money.
 - Date arithmetic in `lib/calc` uses UTC calendar methods to avoid local timezone drift.
 - PRD Section 5 left no open decisions; all calculation rules implemented precisely as specified.
+- Responsive entry modal utilizes `React.useSyncExternalStore` for SSR-safe viewport match-media detection avoiding React 19 cascading re-render warnings.
+- HomeView maintains entry modal state with `window.history.pushState` on card clicks to allow instant modal transitions over Home without unmounting or duplicate route DOM mounts.
 
 ## Database Instructions
 
@@ -237,4 +283,5 @@
 
 ## Next prompt
 
-Prompt 6: Home and first forms
+Prompt 7: Money I lent
+

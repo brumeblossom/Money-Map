@@ -14,6 +14,7 @@ export interface AmountFieldProps {
   onChange?: (amountMinor: number) => void;
   disabled?: boolean;
   required?: boolean;
+  autoFocus?: boolean;
   className?: string;
   error?: string;
 }
@@ -53,6 +54,7 @@ export function AmountField({
   onChange,
   disabled = false,
   required = false,
+  autoFocus = false,
   className,
   error,
 }: AmountFieldProps) {
@@ -148,6 +150,7 @@ export function AmountField({
           onChange={handleChange}
           disabled={disabled}
           required={required}
+          autoFocus={autoFocus}
           aria-invalid={!!error}
           className="w-full bg-transparent text-3xl font-semibold tracking-tight text-foreground placeholder:text-muted-foreground/40 outline-none"
         />

@@ -402,6 +402,37 @@ export function loanProgress(totalToGetBackVal: number, receivedSoFarVal: number
   return Math.min(Math.max(ratio, 0), 1);
 }
 
+/**
+ * Generates the countdown text for a loan row:
+ * - "Paid off" if status is Paid off or nextDate is null
+ * - "Due in X days" / "Due in 1 day" / "Due today"
+ * - "X days overdue" / "1 day overdue"
+ */
+export function loanCountdown(
+  today: string,
+  nextDate: string | null,
+  status: LoanStatus,
+): string {
+  if (status === "Paid off" || !nextDate) {
+    return "Paid off";
+  }
+  const diff = diffInDays(today, nextDate);
+  if (diff > 1) {
+    return `Due in ${diff} days`;
+  }
+  if (diff === 1) {
+    return "Due in 1 day";
+  }
+  if (diff === 0) {
+    return "Due today";
+  }
+  const overdueDays = Math.abs(diff);
+  if (overdueDays === 1) {
+    return "1 day overdue";
+  }
+  return `${overdueDays} days overdue`;
+}
+
 // ============================================================================
 // 5. Habit Functions (PRD 5.3)
 // ============================================================================

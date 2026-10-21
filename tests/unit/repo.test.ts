@@ -5,13 +5,16 @@ import {
   createEntry,
   updateEntry,
   softDeleteEntry,
+  restoreEntry,
   getEntry,
   listEntries,
   createLoan,
   softDeleteLoan,
+  restoreLoan,
   getLoan,
   createLoanPayment,
   softDeleteLoanPayment,
+  restoreLoanPayment,
   createCategory,
   softDeleteCategory,
   createRecurringRule,
@@ -100,6 +103,13 @@ describe("Local Data Layer (Dexie Repository & Outbox)", () => {
     // listEntries excludes soft-deleted by default
     const activeList = await listEntries(undefined, testDb);
     expect(activeList.find((e) => e.id === entry.id)).toBeUndefined();
+
+    // Restore entry
+    await restoreEntry(entry.id, testDb);
+    expect(await testDb.outbox.count()).toBe(3);
+    const restoredEntry = await getEntry(entry.id, testDb);
+    expect(restoredEntry).toBeDefined();
+    expect(restoredEntry?.deleted_at).toBeNull();
   });
 
   it("handles loan and loan payments create & soft delete with outbox tracking", async () => {
@@ -140,6 +150,19 @@ describe("Local Data Layer (Dexie Repository & Outbox)", () => {
     // Soft delete payment
     await softDeleteLoanPayment(payment.id, testDb);
     expect(await testDb.outbox.count()).toBe(4);
+
+    // Restore payment
+    await restoreLoanPayment(payment.id, testDb);
+    expect(await testDb.outbox.count()).toBe(5);
+    const restoredPayment = await testDb.loan_payments.get(payment.id);
+    expect(restoredPayment?.deleted_at).toBeNull();
+
+    // Restore loan
+    await restoreLoan(loan.id, testDb);
+    expect(await testDb.outbox.count()).toBe(6);
+    const restoredLoan = await getLoan(loan.id, testDb);
+    expect(restoredLoan).toBeDefined();
+    expect(restoredLoan?.deleted_at).toBeNull();
   });
 
   it("assigns user_id from current-user getter (null for guests)", async () => {

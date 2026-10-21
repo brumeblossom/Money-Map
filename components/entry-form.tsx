@@ -671,10 +671,9 @@ function LentEntryForm({
             }}
             className="flex h-11 w-full appearance-none items-center justify-between rounded-xl border border-input bg-background/50 px-3.5 py-2 text-base text-foreground shadow-xs transition-colors focus:border-ring focus:outline-none focus:ring-3 focus:ring-ring/50"
           >
-            <option value="one_payment">One full payment</option>
-            <option value="weekly">Weekly instalment</option>
-            <option value="monthly">Monthly instalment</option>
-            <option value="custom">Custom instalments</option>
+            <option value="one_payment">One payment</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
           </select>
         </div>
 

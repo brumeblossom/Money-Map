@@ -85,7 +85,7 @@ export function HomeView({ activeAction: initialAction, currency = "NGN" }: Home
       </div>
 
       {/* This-month strip (In, Out, Left over) */}
-      <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
+      <div data-testid="this-month-strip" className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
         <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           This month
         </div>

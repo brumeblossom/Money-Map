@@ -13,6 +13,22 @@ import {
   type InterestKind,
   type SyncableTable,
 } from "@/lib/db/dexie";
+
+export {
+  db,
+  type MoneyMapDatabase,
+  type EntryRow,
+  type LoanRow,
+  type LoanPaymentRow,
+  type CategoryRow,
+  type RecurringRuleRow,
+  type ProfileRow,
+  type EntryKind,
+  type CategoryScope,
+  type RepeatPlan,
+  type InterestKind,
+  type SyncableTable,
+};
 import { getCurrentUserId } from "./user";
 
 export * from "./user";
@@ -137,6 +153,23 @@ export async function softDeleteEntry(
     if (existing) {
       await database.entries.update(id, {
         deleted_at: now,
+        updated_at: now,
+      });
+    }
+  });
+}
+
+export async function restoreEntry(
+  id: string,
+  database: MoneyMapDatabase = db,
+): Promise<void> {
+  const now = new Date().toISOString();
+
+  await executeWrite(database, "entries", id, async () => {
+    const existing = await database.entries.get(id);
+    if (existing) {
+      await database.entries.update(id, {
+        deleted_at: null,
         updated_at: now,
       });
     }
@@ -279,6 +312,23 @@ export async function softDeleteLoan(
   });
 }
 
+export async function restoreLoan(
+  id: string,
+  database: MoneyMapDatabase = db,
+): Promise<void> {
+  const now = new Date().toISOString();
+
+  await executeWrite(database, "loans", id, async () => {
+    const existing = await database.loans.get(id);
+    if (existing) {
+      await database.loans.update(id, {
+        deleted_at: null,
+        updated_at: now,
+      });
+    }
+  });
+}
+
 export async function getLoan(
   id: string,
   database: MoneyMapDatabase = db,
@@ -375,6 +425,23 @@ export async function softDeleteLoanPayment(
     if (existing) {
       await database.loan_payments.update(id, {
         deleted_at: now,
+        updated_at: now,
+      });
+    }
+  });
+}
+
+export async function restoreLoanPayment(
+  id: string,
+  database: MoneyMapDatabase = db,
+): Promise<void> {
+  const now = new Date().toISOString();
+
+  await executeWrite(database, "loan_payments", id, async () => {
+    const existing = await database.loan_payments.get(id);
+    if (existing) {
+      await database.loan_payments.update(id, {
+        deleted_at: null,
         updated_at: now,
       });
     }

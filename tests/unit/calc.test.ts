@@ -15,6 +15,7 @@ import {
   nextExpectedDate,
   loanStatus,
   loanProgress,
+  loanCountdown,
   categoryShare,
   sixMonthTrend,
   countAndAverage,
@@ -257,6 +258,90 @@ describe("Calculation Engine (PRD Section 5)", () => {
       expect(loanProgress(100000, 25000)).toBe(0.25);
       expect(loanProgress(100000, 150000)).toBe(1); // clamped
       expect(loanProgress(0, 0)).toBe(1);
+    });
+
+    it("formats loan countdown strings accurately", () => {
+      // Due in future
+      expect(loanCountdown("2026-10-20", "2026-10-24", "Due soon")).toBe("Due in 4 days");
+      expect(loanCountdown("2026-10-20", "2026-10-21", "Due soon")).toBe("Due in 1 day");
+      expect(loanCountdown("2026-10-20", "2026-10-20", "Due soon")).toBe("Due today");
+
+      // Overdue
+      expect(loanCountdown("2026-10-20", "2026-10-18", "Overdue")).toBe("2 days overdue");
+      expect(loanCountdown("2026-10-20", "2026-10-19", "Overdue")).toBe("1 day overdue");
+
+      // Paid off
+      expect(loanCountdown("2026-10-20", null, "Paid off")).toBe("Paid off");
+      expect(loanCountdown("2026-10-20", "2026-10-25", "Paid off")).toBe("Paid off");
+    });
+
+    it("verifies Ada loan scenario: ₦50,000, 2 months, 10% interest, repayments", () => {
+      const principal = 5000000; // ₦50,000.00
+      const interestRate = 1000; // 10% in basis points
+      const interestType = "percent" as const;
+      const startedOn = "2026-10-21";
+      const dueOn = "2026-12-21";
+      const plan = "monthly" as const;
+
+      // 1. Total to get back and suggested instalment
+      const interest = interestAmount(principal, interestType, interestRate);
+      expect(interest).toBe(500000); // ₦5,000.00
+      const total = totalToGetBack(principal, interestType, interestRate);
+      expect(total).toBe(5500000); // ₦55,000.00
+
+      const n = instalmentCount(startedOn, dueOn, plan);
+      expect(n).toBe(2);
+
+      const suggested = suggestedInstalment(total, n);
+      expect(suggested).toBe(2750000); // ₦27,500.00
+
+      const loan = {
+        started_on: startedOn,
+        due_on: dueOn,
+        plan,
+        principal_minor: principal,
+        interest_type: interestType,
+        interest_value: interestRate,
+        instalment_minor: suggested,
+      };
+
+      // 2. Initial state: balance ₦55,000.00
+      let payments: Array<{ amount_minor: number; deleted_at: null }> = [];
+      expect(balanceLeft(total, receivedSoFar(payments))).toBe(5500000);
+      expect(loanProgress(total, receivedSoFar(payments))).toBe(0);
+
+      // 3. Record ₦27,500 received -> balance ₦27,500.00, progress 50%
+      payments = [{ amount_minor: 2750000, deleted_at: null }];
+      expect(receivedSoFar(payments)).toBe(2750000);
+      expect(balanceLeft(total, receivedSoFar(payments))).toBe(2750000);
+      expect(loanProgress(total, receivedSoFar(payments))).toBe(0.5);
+      expect(loanStatus("2026-10-21", loan, payments)).toBe("Active");
+
+      // 4. Record another ₦27,500 -> status Paid off, balance ₦0.00, progress 100%
+      payments = [
+        { amount_minor: 2750000, deleted_at: null },
+        { amount_minor: 2750000, deleted_at: null },
+      ];
+      expect(receivedSoFar(payments)).toBe(5500000);
+      expect(balanceLeft(total, receivedSoFar(payments))).toBe(0);
+      expect(loanProgress(total, receivedSoFar(payments))).toBe(1);
+      expect(loanStatus("2026-10-21", loan, payments)).toBe("Paid off");
+    });
+
+    it("identifies a loan expected back 3 days from today as 'Due soon'", () => {
+      const today = "2026-10-21";
+      const dueOn = "2026-10-24"; // 3 days ahead
+      const loan = {
+        started_on: "2026-10-01",
+        due_on: dueOn,
+        plan: "one_payment" as const,
+        principal_minor: 1000000,
+        interest_type: "none" as const,
+        interest_value: 0,
+      };
+
+      expect(loanStatus(today, loan, [])).toBe("Due soon");
+      expect(loanCountdown(today, dueOn, "Due soon")).toBe("Due in 3 days");
     });
   });
 

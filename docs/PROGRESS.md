@@ -275,6 +275,42 @@
   - Saving writes to Dexie `loans` with outbox entry, shows toast `"Saved"` with a 5-second Undo action (soft-deletes loan), and live updates the Money I lent Home card (`owedToMe`).
   - Lent form is completely finished, so Prompt 7 is scoped strictly to `/lent` list, `/lent/[id]` detail, "Record money received", and edit/delete.
 
+### Prompt 7: Money I lent
+- **`/new/lent` Form (PRD 4.4)**:
+  - Exact labels: Borrower, Amount lent, Category, Date lent, Expected back by, Payback plan (options: "One payment", "Weekly", "Monthly"), Instalment amount (suggested via `lib/calc/suggestedInstalment`, editable), Interest (toggle "Percent" / "Flat" with single input), Remind me (switch, defaults on), Description (optional).
+  - Validation via Zod schema (`loanFormSchema`), atomic create via `createLoan` with outbox tracking, toast with 5-second Undo action.
+- **`/lent` Loans List (PRD 5.2, US-4.1)**:
+  - Header with dynamic active loan count, total balance left summary, and "Lend money" action button linking to `/new/lent`.
+  - Active loan rows display: borrower, balance left (`balanceLeft`), visual progress bar (`loanProgress`), status badge (`Active`, `Due soon`, `Overdue`, `Paid off`), and next expected date formatted `DD-MM-YYYY` with countdown string (`"Due in X days"`, `"Due today"`, `"X days overdue"`).
+  - Paid off loans automatically collapse into an accordion "Paid off (N)" section at the bottom.
+  - Row actions: direct navigation to `/lent/[id]`, plus "Edit" (opens loan edit modal) and "Delete" (soft-deletes loan with 5-second Undo toast).
+- **`/lent/[id]` Loan Detail View (PRD 5.2, US-4.2)**:
+  - Breadcrumbs navigation back to `/lent`.
+  - Top summary cards: "Total to get back", "Received so far", "Balance left" along with a prominent progress bar.
+  - Loan info card: borrower, date lent, expected back by, interest, payback plan, remind me status, and optional description.
+  - "Instalment timeline": milestone cards showing each instalment number and DD-MM-YYYY date with status indicators (Past / Next due / Upcoming).
+  - "Money received" list: chronological list of repayments showing amount, payment date (DD-MM-YYYY), and optional note, with Edit and Delete (soft delete with Undo) buttons.
+  - "Record money received" button: opens modal (`Amount`, `Date`, `Note`) validated with `loanPaymentFormSchema`. Overpayment check triggers explicit warning alert: `"This is more than the ₦X left. Save anyway?"` with Save anyway / Cancel options.
+- **Home Integration & Integrity (PRD 5.1)**:
+  - "Money I lent" action card on Home (`/`) displays live outstanding total (`owedToMe`) across all active loans.
+  - Verified that money lent transactions and repayments do NOT alter `Money in`, `Money out`, or `Left over` on the Home this-month strip.
+- **Edit & Delete Flows with Soft Delete & Undo**:
+  - Implemented `restoreLoan`, `restoreLoanPayment`, and `restoreEntry` in `lib/repo` with atomic outbox tracking.
+  - Edit loan modal and edit payment modal update records atomically via `updateLoan` and `updateLoanPayment`.
+  - Soft delete on loans and loan payments updates `deleted_at` in Dexie and outbox, and presents a 5-second toast with an "Undo" action restoring the record.
+- **Verification**:
+  - All 100 Vitest unit tests passing (`bun test`).
+  - Playwright E2E suite (`tests/e2e/lent-flow.spec.ts`) passing across 390px mobile and 1280px desktop viewports covering:
+    - Lending ₦50,000 to "Ada" on monthly plan over 2 months @ 10% interest -> total ₦55,000.00, suggested instalment ₦27,500.00.
+    - Recording ₦27,500 repayment -> balance reduces to ₦27,500.00.
+    - Recording second ₦27,500 repayment -> status updates to "Paid off" and loan collapses into the "Paid off" section.
+    - Loan expected back 3 days from today showing "Due soon".
+    - Home card updates while Home month strip stays unchanged.
+    - Overpayment warning when recording more than balance left.
+    - Loan and payment edit and delete with Undo restore.
+  - All 70 Playwright E2E tests passing project-wide (`bun run e2e`).
+  - ESLint (`bun run lint`) and TypeScript (`bun run typecheck`) pass with 0 errors.
+
 ## Decisions
 
 - Dark mode theme configured using media query `@media (prefers-color-scheme: dark)` in `app/globals.css` to respect the system preference per PRD §9 rather than a class toggle.
@@ -295,6 +331,8 @@
 - HomeView maintains entry modal state with `window.history.pushState` on card clicks to allow instant modal transitions over Home without unmounting or duplicate route DOM mounts.
 - All form fields shown directly without "More details" collapsibles, with required fields first followed by optional fields marked "(optional)".
 - Phone drawer utilizes `handleOnly={true}` from vaul so inner form touch scrolling never conflicts with sheet dismiss gestures.
+- Loan countdown strings computed via pure function `loanCountdown` in `lib/calc` to ensure identical presentation across list and detail views.
+- Record payment and edit loan forms isolate initial state via keyed inner components (`key={id}`) to remain strictly compliant with React 19 rendering purity rules.
 
 ## Database Instructions
 
@@ -308,6 +346,6 @@
 
 ## Next prompt
 
-Prompt 7: Money I lent
+Prompt 8: records
 
 

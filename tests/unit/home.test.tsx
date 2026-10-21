@@ -48,6 +48,6 @@ describe("Home page", () => {
     expect(incomeCard?.getAttribute("href")).toBe("/new/income");
     expect(expenseCard?.getAttribute("href")).toBe("/new/expense");
     expect(givingCard?.getAttribute("href")).toBe("/new/giving");
-    expect(lentCard?.getAttribute("href")).toBe("/new/lent");
+    expect(lentCard?.getAttribute("href")).toBe("/records?tab=lent");
   });
 });

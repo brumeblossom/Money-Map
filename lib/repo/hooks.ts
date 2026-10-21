@@ -10,6 +10,8 @@ import {
   type CategoryScope,
 } from "@/lib/db/dexie";
 import { listEntries, type EntryFilter } from "./index";
+import { getCurrentUserId } from "./user";
+import { toSlug } from "./seed";
 
 /**
  * Live reactive hook for entries list (PRD section 8, Prompt 4).
@@ -30,23 +32,44 @@ export function useEntries(filter?: EntryFilter): EntryRow[] | undefined {
 
 /**
  * Live reactive hook for categories list filtered by scope.
+ * Deduplicates by (scope, slug || lowercase name) and prioritizes user's categories.
  */
 export function useCategories(
   scope?: CategoryScope,
   includeHidden = false,
 ): CategoryRow[] | undefined {
   return useLiveQuery(
-    () =>
-      db.categories.toArray().then((rows) =>
-        rows
-          .filter((row) => {
-            if (row.deleted_at !== null) return false;
-            if (scope && row.scope !== scope) return false;
-            if (!includeHidden && row.is_hidden) return false;
-            return true;
-          })
-          .sort((a, b) => a.sort_order - b.sort_order),
-      ),
+    async () => {
+      const currentUserId = getCurrentUserId();
+      const rows = await db.categories.toArray();
+
+      const filtered = rows.filter((row) => {
+        if (row.deleted_at !== null) return false;
+        if (scope && row.scope !== scope) return false;
+        if (!includeHidden && row.is_hidden) return false;
+        return true;
+      });
+
+      // Deduplicate by key: `${scope}:${slug || lowercase name}`
+      const seen = new Map<string, CategoryRow>();
+      for (const row of filtered) {
+        const key = `${row.scope}:${(row.slug || toSlug(row.name)).toLowerCase()}`;
+        const existing = seen.get(key);
+
+        if (!existing) {
+          seen.set(key, row);
+        } else {
+          // If current user is signed in, prefer rows with user_id
+          if (currentUserId && row.user_id === currentUserId && existing.user_id !== currentUserId) {
+            seen.set(key, row);
+          } else if (row.updated_at > existing.updated_at) {
+            seen.set(key, row);
+          }
+        }
+      }
+
+      return Array.from(seen.values()).sort((a, b) => a.sort_order - b.sort_order);
+    },
     [scope, includeHidden],
   );
 }

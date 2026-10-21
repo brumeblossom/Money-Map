@@ -23,6 +23,9 @@ import { toast } from "sonner";
 
 export interface LentListViewProps {
   currency?: string;
+  searchQuery?: string;
+  categoryId?: string;
+  onAddClick?: () => void;
 }
 
 interface LoanItemWithMetrics {
@@ -36,7 +39,12 @@ interface LoanItemWithMetrics {
   countdown: string;
 }
 
-export function LentListView({ currency = "NGN" }: LentListViewProps) {
+export function LentListView({
+  currency = "NGN",
+  searchQuery = "",
+  categoryId = "all",
+  onAddClick,
+}: LentListViewProps) {
   const rawLoans = useLoans();
   const rawPayments = useLoanPayments();
   const loans = React.useMemo(() => rawLoans ?? [], [rawLoans]);
@@ -73,14 +81,32 @@ export function LentListView({ currency = "NGN" }: LentListViewProps) {
     });
   }, [loans, allPayments, today]);
 
+  // Filter based on searchQuery and categoryId
+  const filteredLoans = React.useMemo(() => {
+    return enrichedLoans.filter((item) => {
+      if (categoryId && categoryId !== "all" && item.loan.category_id !== categoryId) {
+        return false;
+      }
+      if (searchQuery && searchQuery.trim()) {
+        const q = searchQuery.trim().toLowerCase();
+        const counterparty = (item.loan.counterparty || "").toLowerCase();
+        const desc = (item.loan.description || "").toLowerCase();
+        if (!counterparty.includes(q) && !desc.includes(q)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [enrichedLoans, categoryId, searchQuery]);
+
   // Separate active loans from paid off loans
   const activeLoans = React.useMemo(() => {
-    return enrichedLoans.filter((item) => item.status !== "Paid off");
-  }, [enrichedLoans]);
+    return filteredLoans.filter((item) => item.status !== "Paid off");
+  }, [filteredLoans]);
 
   const paidOffLoans = React.useMemo(() => {
-    return enrichedLoans.filter((item) => item.status === "Paid off");
-  }, [enrichedLoans]);
+    return filteredLoans.filter((item) => item.status === "Paid off");
+  }, [filteredLoans]);
 
   const totalOwed = React.useMemo(() => {
     return activeLoans.reduce((sum, item) => sum + item.balance, 0);
@@ -247,11 +273,22 @@ export function LentListView({ currency = "NGN" }: LentListViewProps) {
           </p>
         </div>
 
-        <Link href="/new/lent">
-          <Button className="w-full rounded-xl px-4 font-semibold sm:w-auto">
+        {onAddClick ? (
+          <Button
+            type="button"
+            onClick={onAddClick}
+            data-testid="lent-header-add-button"
+            className="w-full rounded-xl px-4 font-semibold sm:w-auto cursor-pointer"
+          >
             <Plus className="mr-1.5 size-4" /> Lend money
           </Button>
-        </Link>
+        ) : (
+          <Link href="/new/lent">
+            <Button className="w-full rounded-xl px-4 font-semibold sm:w-auto">
+              <Plus className="mr-1.5 size-4" /> Lend money
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Empty State */}
@@ -265,11 +302,17 @@ export function LentListView({ currency = "NGN" }: LentListViewProps) {
             Keep track of money you lend out to friends, family, or colleagues with instalment
             timelines and automated reminders.
           </p>
-          <Link href="/new/lent" className="mt-5">
-            <Button className="rounded-xl px-5 font-semibold">
+          {onAddClick ? (
+            <Button onClick={onAddClick} className="mt-5 rounded-xl px-5 font-semibold cursor-pointer">
               <Plus className="mr-1.5 size-4" /> Lend money
             </Button>
-          </Link>
+          ) : (
+            <Link href="/new/lent" className="mt-5">
+              <Button className="rounded-xl px-5 font-semibold">
+                <Plus className="mr-1.5 size-4" /> Lend money
+              </Button>
+            </Link>
+          )}
         </div>
       ) : (
         <div className="space-y-6">

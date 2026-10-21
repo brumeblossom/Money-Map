@@ -75,7 +75,7 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
         <p className="text-sm text-muted-foreground">
           This loan may have been deleted or does not exist.
         </p>
-        <Link href="/lent">
+        <Link href="/records?tab=lent">
           <Button variant="outline" className="mt-2 rounded-xl">
             <ArrowLeft className="mr-2 size-4" /> Back to Money I lent
           </Button>
@@ -108,7 +108,7 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
     }
 
     await softDeleteLoan(loan.id);
-    router.push("/lent");
+    router.push("/records?tab=lent");
 
     toast("Loan deleted", {
       duration: 5000,
@@ -138,12 +138,20 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
     <div className="flex flex-col gap-6 py-2 pb-16">
       {/* Navigation & Header */}
       <div className="flex flex-col gap-3">
-        <Link
-          href="/lent"
-          className="inline-flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        <button
+          type="button"
+          data-testid="loan-back-button"
+          onClick={() => {
+            if (typeof window !== "undefined" && window.history.length > 1) {
+              router.back();
+            } else {
+              router.push("/records?tab=lent");
+            }
+          }}
+          className="inline-flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
         >
           <ArrowLeft className="mr-1.5 size-4" /> Money I lent
-        </Link>
+        </button>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">

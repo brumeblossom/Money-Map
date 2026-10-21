@@ -650,12 +650,42 @@
     - Verifies saving transactions works completely offline with Dexie.
     - Verifies uncached routes show the clean `/offline` fallback page.
 
+### Prompt 10b: Duplicate categories, records add buttons, lent back navigation
+- **Duplicate Categories**:
+  - **Root cause**: Categories were initially seeded in Dexie during guest mode with an empty `user_id: ""` and local client UUIDs. When a user signed in and synced with Supabase, `pull()` inserted the remote categories (keyed by user UUID) alongside the local guest copies without merging or deduplicating them. In addition, the dropdown queries in `useCategories()` and `<CategoryPicker>` lacked defensive deduplication on `(scope, slug)`, causing duplicate options to appear in all category dropdowns.
+  - **Fix**:
+    - Made `seedDefaultCategories` strictly idempotent per user: checks for existing categories in Dexie and updates guest category records in-place rather than inserting duplicate records.
+    - Enhanced `mergeGuestCategories` and `app/api/sync/push/route.ts` to match categories by `(user_id, scope, slug || lowercase name)`.
+    - Added `cleanupDuplicateCategories()` in `lib/repo/seed.ts` (triggered on app startup and after sync pulls): identifies duplicates by `(scope, slug || lowercase name)`, re-points all associated entries, loans, and recurring rules to the single canonical category ID, and soft-deletes (`deleted_at: now`) the duplicate categories with outbox queueing so they are cleaned up in Supabase sync.
+    - Added defensive deduplication in `useCategories()` hook and `<CategoryPicker>` component.
+- **Records Add Buttons**:
+  - Added dedicated tab-specific add buttons across all Records tabs:
+    - Income: `+ Add income`
+    - Expenses: `+ Add expense`
+    - Giving: `+ Add giving`
+    - Lent: `+ Lend money`
+  - Responsive layouts:
+    - On phone (390px): Round floating action button (FAB) at bottom right above the bottom navigation bar (`data-testid="records-fab-add-button"`), with `pb-32 sm:pb-36` list padding ensuring the last row is never covered.
+    - On desktop (1280px): Inline action button at the right end of the filter row (`data-testid="records-desktop-add-button"`).
+  - Integrated `EntryModal` directly on the Records screen so the user stays on the active tab, and the newly created record or loan appears in the list immediately after saving.
+- **Lent Back Navigation**:
+  - Opening a loan from Records > Lent and navigating back (via both the app's back arrow and browser back gesture) now reliably returns to `/records?tab=lent` with the 4 tabs visible and filters intact.
+  - Made `/lent` route redirect to `/records?tab=lent`, unifying the loans list into the Records tab system.
+  - Updated the Home screen "Money I lent" card and all loan links to navigate to `/records?tab=lent`.
+  - Added support across Income, Expenses, and Giving detail views to return to the user's previous Records tab.
+- **Verification**:
+  - `bun run lint`: 0 errors.
+  - `bun run typecheck`: 0 errors.
+  - `bun run test`: 11 test files, 132 tests passing.
+  - `bun run build`: Production build succeeded.
+  - Playwright E2E test suite (`tests/e2e/prompt10b-fixes.spec.ts`): All 6 tests passing across both mobile (390x844) and desktop (1280x800) viewports.
+
 ## Known issues
 
 - None.
 
 ## Next prompt
 
-Prompt 12: dashboard
+Prompt 11
 
 

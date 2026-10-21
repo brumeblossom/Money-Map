@@ -12,6 +12,7 @@ import {
 import { getCurrentUserId, setCurrentUserId } from "@/lib/repo/user";
 import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { mergeGuestCategories } from "./category-merge";
+import { cleanupDuplicateCategories } from "@/lib/repo/seed";
 
 export * from "./rate-limit";
 export * from "./category-merge";
@@ -275,6 +276,9 @@ export async function pull(
 
     since = data.server_time;
   }
+
+  // Ensure duplicate categories are cleaned up after pull
+  await cleanupDuplicateCategories(database);
 }
 
 /**

@@ -82,11 +82,20 @@ export function CategoryPicker({
           <option value="" disabled>
             Select a category
           </option>
-          {categories?.map((cat: CategoryRow) => (
-            <option key={cat.id} value={cat.id}>
-              {cat.name}
-            </option>
-          ))}
+          {categories
+            ?.filter(
+              (cat, idx, arr) =>
+                arr.findIndex(
+                  (c) =>
+                    (cat.slug && c.slug === cat.slug) ||
+                    c.name.trim().toLowerCase() === cat.name.trim().toLowerCase(),
+                ) === idx,
+            )
+            .map((cat: CategoryRow) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
           <option value={OTHER_CATEGORY_VALUE}>Other (type your own)</option>
         </select>
 

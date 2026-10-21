@@ -13,6 +13,7 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   Heart,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { db, type EntryRow, type CategoryRow } from "@/lib/db/dexie";
@@ -23,8 +24,40 @@ import { DateField } from "@/components/date-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LentListView } from "@/components/lent-list-view";
+import { EntryModal } from "@/components/entry-modal";
+import { cn } from "@/lib/utils";
 
 export type RecordsTab = "income" | "expenses" | "giving" | "lent";
+
+export const TAB_CONFIG: Record<
+  RecordsTab,
+  {
+    action: "income" | "expense" | "giving" | "lent";
+    desktopLabel: string;
+    fabLabel: string;
+  }
+> = {
+  income: {
+    action: "income",
+    desktopLabel: "+ Add income",
+    fabLabel: "Add income",
+  },
+  expenses: {
+    action: "expense",
+    desktopLabel: "+ Add expense",
+    fabLabel: "Add expense",
+  },
+  giving: {
+    action: "giving",
+    desktopLabel: "+ Add giving",
+    fabLabel: "Add giving",
+  },
+  lent: {
+    action: "lent",
+    desktopLabel: "+ Lend money",
+    fabLabel: "Lend money",
+  },
+};
 
 interface VirtualHeaderItem {
   type: "header";
@@ -188,6 +221,15 @@ export function RecordsView() {
     updateUrl(activeTab, periodPreset, searchQuery, catId, false);
   };
 
+  // Add Entry/Loan Modal state
+  const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+  const [addModalAction, setAddModalAction] = React.useState<"income" | "expense" | "giving" | "lent">("income");
+
+  const handleOpenAdd = (tab: RecordsTab) => {
+    setAddModalAction(TAB_CONFIG[tab].action);
+    setIsAddModalOpen(true);
+  };
+
   // Filter categories matching current tab scope
   const relevantCategories = React.useMemo(() => {
     if (!categories) return [];
@@ -199,6 +241,9 @@ export function RecordsView() {
     }
     if (activeTab === "giving") {
       return categories.filter((c) => c.scope === "giving");
+    }
+    if (activeTab === "lent") {
+      return categories.filter((c) => c.scope === "lent");
     }
     return categories;
   }, [categories, activeTab]);
@@ -411,7 +456,7 @@ export function RecordsView() {
   };
 
   return (
-    <div className="relative flex flex-col space-y-3 pb-24">
+    <div className="relative flex flex-col space-y-3 pb-32 sm:pb-36">
       <h1 className="sr-only">Records</h1>
       {/* 1. Tabs at the Top: Income | Expenses | Giving | Lent */}
       {/* Full-width segmented control sticky on mobile under header, fitting 360px */}
@@ -483,96 +528,114 @@ export function RecordsView() {
         </div>
       </div>
 
-      {/* 2. Lent Tab content */}
-      {activeTab === "lent" ? (
-        <div className="pt-2">
-          <LentListView currency={currency} />
-        </div>
-      ) : (
-        <>
-          {/* 3. Filter Row Under Tabs */}
-          {/* Desktop: Search box, Category dropdown, Period dropdown in one row */}
-          {/* Phones: Category and Period sit side by side under Search box */}
-          <div className="space-y-2">
-            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
-              {/* Search box */}
-              <div className="relative flex-1">
-                <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Search description, counterparty..."
-                  value={searchQuery}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  className="h-10 rounded-xl pr-9 pl-10 text-sm"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => handleSearchChange("")}
-                    className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                    aria-label="Clear search"
-                  >
-                    <X className="size-4" />
-                  </button>
-                )}
-              </div>
+      {/* 2. Filter Row Under Tabs */}
+      {/* Desktop: Search box, Category dropdown, Period dropdown (for entries), Add button at right end */}
+      {/* Phones: Category and Period sit side by side under Search box */}
+      <div className="space-y-2">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
+          {/* Search box */}
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder={activeTab === "lent" ? "Search borrower, description..." : "Search description, counterparty..."}
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="h-10 rounded-xl pr-9 pl-10 text-sm"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => handleSearchChange("")}
+                className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                aria-label="Clear search"
+              >
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
 
-              {/* Category and Period dropdowns */}
-              <div className="grid grid-cols-2 gap-2 lg:flex lg:items-center lg:gap-3">
-                {/* Category Dropdown */}
-                <div className="w-full lg:w-48">
-                  <select
-                    value={selectedCategoryId}
-                    onChange={(e) => handleCategoryChange(e.target.value)}
-                    aria-label="Filter by category"
-                    data-testid="records-category-select"
-                    className="h-10 w-full cursor-pointer rounded-xl border border-input bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted/50 focus:border-ring focus:ring-1 focus:ring-ring sm:text-sm"
-                  >
-                    <option value="all">All categories</option>
-                    {relevantCategories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Period Dropdown */}
-                <div className="w-full lg:w-44">
-                  <select
-                    value={periodPreset}
-                    onChange={(e) => handlePeriodChange(e.target.value as PeriodPreset)}
-                    aria-label="Filter by period"
-                    data-testid="records-period-select"
-                    className="h-10 w-full cursor-pointer rounded-xl border border-input bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted/50 focus:border-ring focus:ring-1 focus:ring-ring sm:text-sm"
-                  >
-                    <option value="thisMonth">This month</option>
-                    <option value="last3Months">Last 3 months</option>
-                    <option value="last6Months">Last 6 months</option>
-                    <option value="last12Months">Last 12 months</option>
-                    <option value="custom">Custom</option>
-                  </select>
-                </div>
-              </div>
+          {/* Category and Period dropdowns */}
+          <div className={cn("grid gap-2 lg:flex lg:items-center lg:gap-3", activeTab === "lent" ? "grid-cols-1" : "grid-cols-2")}>
+            {/* Category Dropdown */}
+            <div className={cn("w-full", activeTab === "lent" ? "lg:w-56" : "lg:w-48")}>
+              <select
+                value={selectedCategoryId}
+                onChange={(e) => handleCategoryChange(e.target.value)}
+                aria-label="Filter by category"
+                data-testid="records-category-select"
+                className="h-10 w-full cursor-pointer rounded-xl border border-input bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted/50 focus:border-ring focus:ring-1 focus:ring-ring sm:text-sm"
+              >
+                <option value="all">All categories</option>
+                {relevantCategories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {/* Custom from/to date pickers (DD-MM-YYYY) */}
-            {periodPreset === "custom" && (
-              <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border/60 bg-card p-3 sm:w-80 animate-in fade-in-50">
-                <DateField
-                  label="From"
-                  value={customRange.start}
-                  onChange={(s) => setCustomRange((prev) => ({ ...prev, start: s }))}
-                />
-                <DateField
-                  label="To"
-                  value={customRange.end}
-                  onChange={(e) => setCustomRange((prev) => ({ ...prev, end: e }))}
-                />
+            {/* Period Dropdown - non-lent tabs */}
+            {activeTab !== "lent" && (
+              <div className="w-full lg:w-44">
+                <select
+                  value={periodPreset}
+                  onChange={(e) => handlePeriodChange(e.target.value as PeriodPreset)}
+                  aria-label="Filter by period"
+                  data-testid="records-period-select"
+                  className="h-10 w-full cursor-pointer rounded-xl border border-input bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted/50 focus:border-ring focus:ring-1 focus:ring-ring sm:text-sm"
+                >
+                  <option value="thisMonth">This month</option>
+                  <option value="last3Months">Last 3 months</option>
+                  <option value="last6Months">Last 6 months</option>
+                  <option value="last12Months">Last 12 months</option>
+                  <option value="custom">Custom</option>
+                </select>
               </div>
             )}
           </div>
 
+          {/* Desktop Add button at the right end of the filter row */}
+          <Button
+            type="button"
+            onClick={() => handleOpenAdd(activeTab)}
+            data-testid="records-desktop-add-button"
+            className="hidden lg:inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold shadow-xs shrink-0 cursor-pointer"
+          >
+            <Plus className="size-4" />
+            <span>{TAB_CONFIG[activeTab].desktopLabel}</span>
+          </Button>
+        </div>
+
+        {/* Custom from/to date pickers (DD-MM-YYYY) */}
+        {activeTab !== "lent" && periodPreset === "custom" && (
+          <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border/60 bg-card p-3 sm:w-80 animate-in fade-in-50">
+            <DateField
+              label="From"
+              value={customRange.start}
+              onChange={(s) => setCustomRange((prev) => ({ ...prev, start: s }))}
+            />
+            <DateField
+              label="To"
+              value={customRange.end}
+              onChange={(e) => setCustomRange((prev) => ({ ...prev, end: e }))}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* 3. Tab content: Lent or Entries */}
+      {activeTab === "lent" ? (
+        <div className="pt-2">
+          <LentListView
+            currency={currency}
+            searchQuery={searchQuery}
+            categoryId={selectedCategoryId}
+            onAddClick={() => handleOpenAdd("lent")}
+          />
+        </div>
+      ) : (
+        <>
           {/* 4. Summary at TOP, under the filter row: "12 entries · ₦245,000.00" */}
           <div
             data-testid="records-top-summary"
@@ -735,6 +798,26 @@ export function RecordsView() {
           </div>
         </div>
       )}
+
+      {/* Phones: round floating button at bottom right, above bottom nav, never covers last row */}
+      <button
+        type="button"
+        onClick={() => handleOpenAdd(activeTab)}
+        data-testid="records-fab-add-button"
+        aria-label={TAB_CONFIG[activeTab].desktopLabel}
+        className="fixed bottom-20 right-4 z-40 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95 lg:hidden cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      >
+        <Plus className="size-6" />
+        <span className="sr-only">{TAB_CONFIG[activeTab].desktopLabel}</span>
+      </button>
+
+      {/* Entry Modal for adding entries or loans */}
+      <EntryModal
+        action={addModalAction}
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
+        currency={currency}
+      />
     </div>
   );
 }

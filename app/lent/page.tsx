@@ -1,5 +1,5 @@
-import { LentListView } from "@/components/lent-list-view";
+import { redirect } from "next/navigation";
 
 export default function LentPage() {
-  return <LentListView />;
+  redirect("/records?tab=lent");
 }

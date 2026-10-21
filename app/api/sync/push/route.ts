@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
   const { changes } = parsed.data;
   const applied: string[] = [];
   const skipped: string[] = [];
+  const remappedCategoryIds = new Map<string, string>();
 
   if (changes.length === 0) {
     return NextResponse.json({ applied, skipped }, { status: 200 });
@@ -94,14 +95,77 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // For categories, also fetch user categories by scope/name to merge duplicates
+    let existingUserCategories: {
+      id: string;
+      scope: string;
+      name: string;
+      slug: string | null;
+      updated_at: string;
+    }[] = [];
+
+    if (table === "categories") {
+      const { data } = await supabase
+        .from("categories")
+        .select("id, scope, name, slug, updated_at")
+        .eq("user_id", user.id);
+
+      if (data) {
+        existingUserCategories = data;
+      }
+    }
+
     // Determine applied vs skipped per row
     const toUpsert: Record<string, unknown>[] = [];
 
     for (const change of tableChanges) {
+      // Re-point category_id if remapped
+      if (remappedCategoryIds.size > 0 && "category_id" in change.row) {
+        const oldCatId = (change.row as { category_id: string }).category_id;
+        const remapped = remappedCategoryIds.get(oldCatId);
+        if (remapped) {
+          (change.row as { category_id: string }).category_id = remapped;
+        }
+      }
+
       const id =
         table === "profiles"
           ? user.id
           : (change.row as { id: string }).id;
+
+      // Check category duplicate on server by (scope, slug || name)
+      if (table === "categories") {
+        const catRow = change.row as {
+          id: string;
+          scope: string;
+          name: string;
+          slug?: string | null;
+          updated_at: string;
+        };
+        const matchingServerCat = existingUserCategories.find(
+          (c) =>
+            c.id !== catRow.id &&
+            c.scope === catRow.scope &&
+            ((catRow.slug && c.slug === catRow.slug) ||
+              c.name.trim().toLowerCase() === catRow.name.trim().toLowerCase()),
+        );
+
+        if (matchingServerCat) {
+          remappedCategoryIds.set(catRow.id, matchingServerCat.id);
+          applied.push(catRow.id);
+
+          const incomingTime = new Date(catRow.updated_at).getTime();
+          const serverTime = new Date(matchingServerCat.updated_at).getTime();
+          if (incomingTime > serverTime) {
+            toUpsert.push({
+              ...catRow,
+              id: matchingServerCat.id,
+              user_id: user.id,
+            });
+          }
+          continue;
+        }
+      }
 
       const incomingUpdatedAt = new Date(change.row.updated_at).getTime();
       const serverRow = existingMap.get(id);

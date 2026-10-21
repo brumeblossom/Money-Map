@@ -16,14 +16,23 @@ export async function mergeGuestCategories(
   if (!serverCategories || serverCategories.length === 0) return 0;
 
   let mergedCount = 0;
-  const localCategories = await database.categories.toArray();
 
   for (const serverCat of serverCategories) {
-    if (!serverCat.slug) continue;
+    if (serverCat.deleted_at !== null) continue;
+    const serverSlug = serverCat.slug;
+    const serverName = serverCat.name.trim().toLowerCase();
 
-    // Find any local category with matching slug but different ID
+    // Query fresh local categories
+    const localCategories = await database.categories.toArray();
+
+    // Find any local category with matching scope and (slug or name) but different ID
     const localDuplicate = localCategories.find(
-      (c) => c.slug === serverCat.slug && c.id !== serverCat.id,
+      (c) =>
+        c.id !== serverCat.id &&
+        c.scope === serverCat.scope &&
+        c.deleted_at === null &&
+        ((serverSlug && c.slug === serverSlug) ||
+          c.name.trim().toLowerCase() === serverName),
     );
 
     if (!localDuplicate) continue;

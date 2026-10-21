@@ -6,16 +6,18 @@ import { cn } from "cn";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppBottomNav } from "@/components/app-bottom-nav";
 import { AppHeader } from "@/components/app-header";
-import { seedDefaultCategories } from "@/lib/repo/seed";
+import { seedDefaultCategories, cleanupDuplicateCategories } from "@/lib/repo/seed";
 import { initSync } from "@/lib/sync";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   React.useEffect(() => {
-    seedDefaultCategories().catch((err) => {
-      console.error("Failed to seed default categories in AppShell", err);
-    });
+    seedDefaultCategories()
+      .then(() => cleanupDuplicateCategories())
+      .catch((err) => {
+        console.error("Failed to seed/clean categories in AppShell", err);
+      });
     const cleanupSync = initSync();
     return () => {
       cleanupSync();

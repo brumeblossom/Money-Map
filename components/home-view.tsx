@@ -289,9 +289,9 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
           amountMinor={lentOwed}
           currency={currency}
           icon={HandCoins}
-          href="/new/lent"
+          href="/records?tab=lent"
           recordsHref="/records?tab=lent"
-          onClick={() => handleActionClick("lent")}
+          onClick={() => router.push("/records?tab=lent")}
           badge="Owed"
         />
       </div>

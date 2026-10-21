@@ -32,9 +32,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: process.env.CI ? "bun run build && bun run start" : "bun run dev",
+    command: "bun run start",
     url: baseURL,
     reuseExistingServer: !process.env.CI,
-    timeout: 180_000,
+    timeout: 60_000,
   },
 });

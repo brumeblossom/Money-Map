@@ -72,12 +72,14 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
     );
   }
 
+  const tab = entry.kind === "expense" ? "expenses" : entry.kind;
+
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
       await softDeleteEntry(entry.id);
       setShowDeleteConfirm(false);
-      router.push("/records");
+      router.push(`/records?tab=${tab}`);
 
       toast("Entry deleted", {
         duration: 5000,
@@ -114,10 +116,10 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
         <button
           type="button"
           onClick={() => {
-            if (window.history.length > 1) {
+            if (typeof window !== "undefined" && window.history.length > 1) {
               router.back();
             } else {
-              router.push("/records");
+              router.push(`/records?tab=${tab}`);
             }
           }}
           className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground cursor-pointer"

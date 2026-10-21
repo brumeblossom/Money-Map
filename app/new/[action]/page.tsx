@@ -1,3 +1,4 @@
+import * as React from "react";
 import { HomeView } from "@/components/home-view";
 
 export default async function NewEntryPage({
@@ -6,5 +7,10 @@ export default async function NewEntryPage({
   params: Promise<{ action: string }>;
 }) {
   const { action } = await params;
-  return <HomeView activeAction={action} />;
+  return (
+    <React.Suspense fallback={null}>
+      <HomeView activeAction={action} />
+    </React.Suspense>
+  );
 }
+

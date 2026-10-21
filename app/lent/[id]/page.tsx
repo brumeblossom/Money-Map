@@ -1,3 +1,4 @@
+import * as React from "react";
 import { LoanDetailView } from "@/components/loan-detail-view";
 
 export default async function LoanDetailPage({
@@ -6,5 +7,10 @@ export default async function LoanDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <LoanDetailView id={id} />;
+  return (
+    <React.Suspense fallback={null}>
+      <LoanDetailView id={id} />
+    </React.Suspense>
+  );
 }
+

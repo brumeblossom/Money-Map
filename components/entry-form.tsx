@@ -9,11 +9,13 @@ import {
   db,
   type CategoryScope,
   type EntryKind,
+  type EntryRow,
   type RepeatPlan,
   type InterestKind,
 } from "@/lib/db/dexie";
 import {
   createEntry,
+  updateEntry,
   createCategory,
   softDeleteEntry,
   listEntries,
@@ -39,13 +41,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export interface EntryFormProps {
-  action: string;
+  action?: string;
+  initialEntry?: EntryRow;
   onClose?: () => void;
   currency?: string;
+  onSaveSuccess?: (entry: EntryRow) => void;
 }
 
-export function EntryForm({ action, onClose, currency = "NGN" }: EntryFormProps) {
+export function EntryForm({
+  action: propAction,
+  initialEntry,
+  onClose,
+  currency = "NGN",
+  onSaveSuccess,
+}: EntryFormProps) {
   const router = useRouter();
+  const action = propAction || (initialEntry ? initialEntry.kind : "expense");
 
   const handleClose = React.useCallback(() => {
     if (onClose) {
@@ -77,8 +88,10 @@ export function EntryForm({ action, onClose, currency = "NGN" }: EntryFormProps)
   return (
     <StandardEntryForm
       action={action as "income" | "expense" | "giving"}
+      initialEntry={initialEntry}
       onClose={handleClose}
       currency={currency}
+      onSaveSuccess={onSaveSuccess}
     />
   );
 }
@@ -88,32 +101,47 @@ export function EntryForm({ action, onClose, currency = "NGN" }: EntryFormProps)
 // ============================================================================
 function StandardEntryForm({
   action,
+  initialEntry,
   onClose,
   currency,
+  onSaveSuccess,
 }: {
   action: "income" | "expense" | "giving";
+  initialEntry?: EntryRow;
   onClose: () => void;
   currency: string;
+  onSaveSuccess?: (entry: EntryRow) => void;
 }) {
   const kind: EntryKind = action;
   const scope: CategoryScope = action;
 
   const today = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
 
-  const [amountMinor, setAmountMinor] = React.useState<number>(0);
-  const [categoryId, setCategoryId] = React.useState<string>("");
+  const [amountMinor, setAmountMinor] = React.useState<number>(
+    initialEntry ? initialEntry.amount_minor : 0,
+  );
+  const [categoryId, setCategoryId] = React.useState<string>(
+    initialEntry ? initialEntry.category_id : "",
+  );
   const [customCategoryName, setCustomCategoryName] = React.useState<string>("");
-  const [date, setDate] = React.useState<string>(today);
-  const [counterparty, setCounterparty] = React.useState<string>("");
+  const [date, setDate] = React.useState<string>(
+    initialEntry ? initialEntry.occurred_on : today,
+  );
+  const [counterparty, setCounterparty] = React.useState<string>(
+    initialEntry?.counterparty ?? "",
+  );
   const [repeats, setRepeats] = React.useState<"No" | "Weekly" | "Monthly">("No");
-  const [description, setDescription] = React.useState<string>("");
+  const [description, setDescription] = React.useState<string>(
+    initialEntry?.description ?? "",
+  );
 
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
-  const userSelectedRef = React.useRef(false);
+  const userSelectedRef = React.useRef(Boolean(initialEntry));
 
-  // Set default category to last used for this action
+  // Set default category to last used for this action (if not editing)
   React.useEffect(() => {
+    if (initialEntry) return;
     let isMounted = true;
     async function loadLastCategory() {
       try {
@@ -148,7 +176,7 @@ function StandardEntryForm({
     return () => {
       isMounted = false;
     };
-  }, [kind, scope]);
+  }, [kind, scope, initialEntry]);
 
   const isOther = categoryId === OTHER_CATEGORY_VALUE;
   const hasValidCategory = isOther ? customCategoryName.trim().length > 0 : categoryId.length > 0;
@@ -211,26 +239,58 @@ function StandardEntryForm({
       // TODO(prompt-14): wire recurring rule storage for repeats value
       // repeats state: "No" | "Weekly" | "Monthly"
 
-      const newEntry = await createEntry({
-        kind,
-        category_id: finalCategoryId,
-        amount_minor: amountMinor,
-        occurred_on: date,
-        counterparty: counterparty.trim() || null,
-        description: description.trim() || null,
-      });
+      if (initialEntry) {
+        const prevValues = {
+          category_id: initialEntry.category_id,
+          amount_minor: initialEntry.amount_minor,
+          occurred_on: initialEntry.occurred_on,
+          counterparty: initialEntry.counterparty,
+          description: initialEntry.description,
+        };
 
-      onClose();
+        const updatedEntry = await updateEntry(initialEntry.id, {
+          category_id: finalCategoryId,
+          amount_minor: amountMinor,
+          occurred_on: date,
+          counterparty: counterparty.trim() || null,
+          description: description.trim() || null,
+        });
 
-      toast("Saved", {
-        duration: 5000,
-        action: {
-          label: "Undo",
-          onClick: async () => {
-            await softDeleteEntry(newEntry.id);
+        onSaveSuccess?.(updatedEntry);
+        onClose();
+
+        toast("Saved", {
+          duration: 5000,
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              await updateEntry(initialEntry.id, prevValues);
+            },
           },
-        },
-      });
+        });
+      } else {
+        const newEntry = await createEntry({
+          kind,
+          category_id: finalCategoryId,
+          amount_minor: amountMinor,
+          occurred_on: date,
+          counterparty: counterparty.trim() || null,
+          description: description.trim() || null,
+        });
+
+        onSaveSuccess?.(newEntry);
+        onClose();
+
+        toast("Saved", {
+          duration: 5000,
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              await softDeleteEntry(newEntry.id);
+            },
+          },
+        });
+      }
     } catch (err: unknown) {
       console.error("Save entry error:", err);
       if (err instanceof Error) {
@@ -243,8 +303,9 @@ function StandardEntryForm({
     }
   };
 
-  const actionTitle =
+  const baseTitle =
     action === "income" ? "Money in" : action === "expense" ? "Money out" : "Giving";
+  const actionTitle = initialEntry ? `Edit ${baseTitle}` : baseTitle;
 
   return (
     <form onSubmit={handleSave} className="flex h-full max-h-full flex-col overflow-hidden">

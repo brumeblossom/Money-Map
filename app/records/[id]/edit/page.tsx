@@ -1,3 +1,6 @@
+import * as React from "react";
+import { EditRecordView } from "@/components/edit-record-view";
+
 export default async function EditRecordPage({
   params,
 }: {
@@ -5,9 +8,8 @@ export default async function EditRecordPage({
 }) {
   const { id } = await params;
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold tracking-tight">Edit entry</h2>
-      <p className="text-sm text-muted-foreground">Editing record: {id}</p>
-    </div>
+    <React.Suspense fallback={null}>
+      <EditRecordView id={id} />
+    </React.Suspense>
   );
 }

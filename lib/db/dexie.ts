@@ -65,3 +65,7 @@ export class MoneyMapDatabase extends Dexie {
 
 // Export singleton database instance
 export const db = new MoneyMapDatabase();
+
+if (typeof window !== "undefined") {
+  (window as unknown as { __db: MoneyMapDatabase }).__db = db;
+}

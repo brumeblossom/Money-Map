@@ -1,3 +1,6 @@
+import * as React from "react";
+import { RecordDetailView } from "@/components/record-detail-view";
+
 export default async function RecordDetailPage({
   params,
 }: {
@@ -5,9 +8,8 @@ export default async function RecordDetailPage({
 }) {
   const { id } = await params;
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold tracking-tight">Entry detail</h2>
-      <p className="text-sm text-muted-foreground">Record ID: {id}</p>
-    </div>
+    <React.Suspense fallback={null}>
+      <RecordDetailView id={id} />
+    </React.Suspense>
   );
 }

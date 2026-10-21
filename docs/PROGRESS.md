@@ -311,6 +311,36 @@
   - All 70 Playwright E2E tests passing project-wide (`bun run e2e`).
   - ESLint (`bun run lint`) and TypeScript (`bun run typecheck`) pass with 0 errors.
 
+### Prompt 8: records
+- **Virtualised List (`/records`)**:
+  - Implemented `/records` view with high-performance virtualization using `@tanstack/react-virtual` with stable key mapping (`getItemKey`), container-level `touch-pan-y` optimization, and memoized row components.
+  - Grouped transactions by day (newest first: `occurred_on` descending, `created_at` descending) with `DD-MM-YYYY` headers and daily signed net totals (`+₦X` or `-₦X`) calculated via `signedAmount`.
+- **Filtering & Search**:
+  - Action chips (multi-select: "Money in", "Money out", "Giving") with active selection highlights and check icons.
+  - Category picker dropdown/popover with "All Categories" and category list.
+  - Period preset chips ("All time", "This week", "This month", "Last 3 months", "This year", "Custom") with DD-MM-YYYY custom date range inputs.
+  - Search box querying description, counterparty (source/recipient), and category name with instant filtering.
+  - Footer displaying `"N entries · total ₦X"` using signed amount summation.
+- **Multi-select & Actions**:
+  - Desktop checkboxes and mobile long-press selection (500ms threshold with haptic vibration).
+  - Floating bottom bar displaying `"N selected, total ₦X"` with "Select all", "Deselect all", and "Clear selection" actions.
+- **Entry Detail & Edit & Delete (`/records/[id]`)**:
+  - Detail page displaying all entry fields: hero formatted amount with kind badge and date, category, counterparty/source/recipient, description, and reference ID.
+  - "Edit" button navigating to `/records/[id]/edit` prefilled with entry data using `EntryForm`.
+  - "Delete" button opening confirmation dialog `"Delete this entry?"`, soft-deleting the entry, and presenting a 5-second toast with an "Undo" action restoring the record.
+- **Mobile Swipe Actions**:
+  - Horizontal swipe-left on mobile rows reveals "Edit" and "Delete" action buttons.
+- **Verification**:
+  - All 100 Vitest unit tests passing (`bun test`).
+  - Playwright E2E suite (`tests/e2e/records-flow.spec.ts`) passing across 390px mobile and 1280px desktop viewports covering:
+    - Creating 3 entries (income, expense, giving), filtering to Money out with matching totals.
+    - Multi-selecting two entries and verifying floating bar total (`+₦70,000.00`).
+    - Editing an amount from ₦30,000 to ₦50,000 and verifying the Home card updates to ₦50,000.00.
+    - Soft-deleting an entry and restoring via the Undo toast.
+    - Mobile swipe-left revealing Edit and Delete buttons.
+    - Seeding 5,000 entries into Dexie and confirming virtualized scrolling remains smooth with no long tasks > 200ms.
+  - ESLint (`bun run lint`) and TypeScript (`bun run typecheck`) pass with 0 errors.
+
 ## Decisions
 
 - Dark mode theme configured using media query `@media (prefers-color-scheme: dark)` in `app/globals.css` to respect the system preference per PRD §9 rather than a class toggle.
@@ -333,6 +363,8 @@
 - Phone drawer utilizes `handleOnly={true}` from vaul so inner form touch scrolling never conflicts with sheet dismiss gestures.
 - Loan countdown strings computed via pure function `loanCountdown` in `lib/calc` to ensure identical presentation across list and detail views.
 - Record payment and edit loan forms isolate initial state via keyed inner components (`key={id}`) to remain strictly compliant with React 19 rendering purity rules.
+- Records virtualization implements `@tanstack/react-virtual` with custom `arePropsEqual` memoization to eliminate row re-renders during high-speed scrolling.
+- Virtual list container and row items utilize `touch-pan-y` CSS property to enable immediate compositor-driven touch scrolling without blocking main-thread touch gesture checks.
 
 ## Database Instructions
 
@@ -346,6 +378,6 @@
 
 ## Next prompt
 
-Prompt 8: records
+Prompt 9: login and guest mode
 
 

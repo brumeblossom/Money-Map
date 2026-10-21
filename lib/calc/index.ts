@@ -758,6 +758,8 @@ export type PeriodPreset =
   | "thisWeek"
   | "thisMonth"
   | "last3Months"
+  | "last6Months"
+  | "last12Months"
   | "thisYear"
   | "custom";
 
@@ -766,6 +768,8 @@ export type PeriodPreset =
  * - thisWeek: Monday start of current week to Sunday end of current week
  * - thisMonth: 1st of month to last day of month
  * - last3Months: 1st of 2 months ago to last day of current month
+ * - last6Months: 1st of 5 months ago to last day of current month
+ * - last12Months: 1st of 11 months ago to last day of current month
  * - thisYear: Jan 1 of year to Dec 31 of year
  * - custom: returns provided or defaults to thisMonth
  */
@@ -813,6 +817,24 @@ export function getPeriodPreset(
       };
     }
 
+    case "last6Months": {
+      const firstDay = new Date(Date.UTC(y, m - 5, 1));
+      const lastDay = new Date(Date.UTC(y, m + 1, 0));
+      return {
+        start: formatDateUtc(firstDay),
+        end: formatDateUtc(lastDay),
+      };
+    }
+
+    case "last12Months": {
+      const firstDay = new Date(Date.UTC(y, m - 11, 1));
+      const lastDay = new Date(Date.UTC(y, m + 1, 0));
+      return {
+        start: formatDateUtc(firstDay),
+        end: formatDateUtc(lastDay),
+      };
+    }
+
     case "thisYear": {
       const firstDay = new Date(Date.UTC(y, 0, 1));
       const lastDay = new Date(Date.UTC(y, 11, 31));
@@ -835,3 +857,17 @@ export function getPeriodPreset(
     }
   }
 }
+
+/**
+ * Returns the inclusive start and end dates for a given "YYYY-MM" month string.
+ */
+export function getMonthPeriod(ym: string): DatePeriod {
+  const [y, m] = ym.split("-").map(Number);
+  const firstDay = new Date(Date.UTC(y, m - 1, 1));
+  const lastDay = new Date(Date.UTC(y, m, 0));
+  return {
+    start: formatDateUtc(firstDay),
+    end: formatDateUtc(lastDay),
+  };
+}
+

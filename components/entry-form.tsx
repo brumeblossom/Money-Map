@@ -22,7 +22,7 @@ import {
   createLoan,
   softDeleteLoan,
 } from "@/lib/repo";
-import { toSlug } from "@/lib/repo/seed";
+import { toSlug, seedDefaultCategories } from "@/lib/repo/seed";
 import {
   incomeFormSchema,
   expenseFormSchema,
@@ -38,6 +38,7 @@ import { AmountField } from "@/components/amount-field";
 import { DateField } from "@/components/date-field";
 import { CategoryPicker, OTHER_CATEGORY_VALUE } from "@/components/category-picker";
 import { Button } from "@/components/ui/button";
+import { formatMonthYear } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 
 export interface EntryFormProps {
@@ -97,7 +98,7 @@ export function EntryForm({
 }
 
 // ============================================================================
-// Standard Entry Form (Money in, Money out, Giving)
+// Standard Entry Form (Income, Expenses, Giving)
 // ============================================================================
 function StandardEntryForm({
   action,
@@ -114,6 +115,7 @@ function StandardEntryForm({
 }) {
   const kind: EntryKind = action;
   const scope: CategoryScope = action;
+  const router = useRouter();
 
   const today = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
 
@@ -145,6 +147,7 @@ function StandardEntryForm({
     let isMounted = true;
     async function loadLastCategory() {
       try {
+        await seedDefaultCategories();
         const activeEntries = await listEntries({ kind });
         activeEntries.sort((a, b) => b.created_at.localeCompare(a.created_at));
         const lastEntry = activeEntries[0];
@@ -259,15 +262,30 @@ function StandardEntryForm({
         onSaveSuccess?.(updatedEntry);
         onClose();
 
-        toast("Saved", {
-          duration: 5000,
-          action: {
-            label: "Undo",
-            onClick: async () => {
-              await updateEntry(initialEntry.id, prevValues);
+        const currentMonthStr = new Date().toISOString().slice(0, 7);
+        const entryMonthStr = date.slice(0, 7);
+        if (entryMonthStr !== currentMonthStr) {
+          const targetMonthName = formatMonthYear(entryMonthStr);
+          toast(`Saved to ${targetMonthName}`, {
+            duration: 6000,
+            action: {
+              label: "View",
+              onClick: () => {
+                router.push(`/?month=${entryMonthStr}`);
+              },
             },
-          },
-        });
+          });
+        } else {
+          toast("Saved", {
+            duration: 5000,
+            action: {
+              label: "Undo",
+              onClick: async () => {
+                await updateEntry(initialEntry.id, prevValues);
+              },
+            },
+          });
+        }
       } else {
         const newEntry = await createEntry({
           kind,
@@ -281,15 +299,30 @@ function StandardEntryForm({
         onSaveSuccess?.(newEntry);
         onClose();
 
-        toast("Saved", {
-          duration: 5000,
-          action: {
-            label: "Undo",
-            onClick: async () => {
-              await softDeleteEntry(newEntry.id);
+        const currentMonthStr = new Date().toISOString().slice(0, 7);
+        const entryMonthStr = date.slice(0, 7);
+        if (entryMonthStr !== currentMonthStr) {
+          const targetMonthName = formatMonthYear(entryMonthStr);
+          toast(`Saved to ${targetMonthName}`, {
+            duration: 6000,
+            action: {
+              label: "View",
+              onClick: () => {
+                router.push(`/?month=${entryMonthStr}`);
+              },
             },
-          },
-        });
+          });
+        } else {
+          toast("Saved", {
+            duration: 5000,
+            action: {
+              label: "Undo",
+              onClick: async () => {
+                await softDeleteEntry(newEntry.id);
+              },
+            },
+          });
+        }
       }
     } catch (err: unknown) {
       console.error("Save entry error:", err);
@@ -304,7 +337,7 @@ function StandardEntryForm({
   };
 
   const baseTitle =
-    action === "income" ? "Money in" : action === "expense" ? "Money out" : "Giving";
+    action === "income" ? "Income" : action === "expense" ? "Expenses" : "Giving";
   const actionTitle = initialEntry ? `Edit ${baseTitle}` : baseTitle;
 
   return (
@@ -360,7 +393,7 @@ function StandardEntryForm({
           required
         />
 
-        {/* 4. Optional Counterparty (Source for Money in; Recipient for Giving) */}
+        {/* 4. Optional Counterparty (Source for Income; Recipient for Giving) */}
         {action === "income" && (
           <div className="flex flex-col gap-1.5">
             <label htmlFor="source-input" className="text-sm font-medium text-foreground">
@@ -495,6 +528,7 @@ function LentEntryForm({
     let isMounted = true;
     async function loadLentCategory() {
       try {
+        await seedDefaultCategories();
         const cats = await db.categories
           .where("scope")
           .equals("lent")
@@ -564,6 +598,18 @@ function LentEntryForm({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("HANDLE SAVE CALLED! canSave =", canSave, {
+      hasBorrower,
+      borrower,
+      isValidAmount,
+      amountMinor,
+      hasValidCategory,
+      categoryId,
+      isValidDates,
+      dateLent,
+      expectedBackBy,
+      isSubmitting,
+    });
     if (!canSave) return;
 
     setIsSubmitting(true);
@@ -612,6 +658,7 @@ function LentEntryForm({
         description: description.trim() || null,
       });
 
+      console.log("LOAN CREATED SUCCESSFULLY! ID:", newLoan.id);
       onClose();
 
       toast("Saved", {
@@ -624,7 +671,7 @@ function LentEntryForm({
         },
       });
     } catch (err: unknown) {
-      console.error("Save loan error:", err);
+      console.log("SAVE LOAN ERROR CAUGHT:", err);
       if (err instanceof Error) {
         setErrorMessage(err.message);
       } else {

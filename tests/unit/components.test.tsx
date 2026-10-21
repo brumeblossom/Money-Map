@@ -43,30 +43,24 @@ describe("AmountField component", () => {
     expect(screen.getByDisplayValue("150,000.00")).toBeInTheDocument();
   });
 
-  it("typing '2500' gives 250000 minor and formats on blur", () => {
+  it("typing '2500' gives 250000 minor and formats live with commas", () => {
     const handleChange = vi.fn();
     render(<AmountField currency="NGN" onChange={handleChange} />);
     const input = screen.getByPlaceholderText("0.00");
 
     fireEvent.change(input, { target: { value: "2500" } });
-    expect(input).toHaveValue("2500");
-    expect(handleChange).toHaveBeenCalledWith(250000);
-
-    fireEvent.blur(input);
     expect(input).toHaveValue("2,500");
+    expect(handleChange).toHaveBeenCalledWith(250000);
   });
 
-  it("typing '1234567.89' gives 123456789 minor and formats on blur", () => {
+  it("typing '1234567.89' gives 123456789 minor and formats live with commas", () => {
     const handleChange = vi.fn();
     render(<AmountField currency="NGN" onChange={handleChange} />);
     const input = screen.getByPlaceholderText("0.00");
 
     fireEvent.change(input, { target: { value: "1234567.89" } });
-    expect(input).toHaveValue("1234567.89");
-    expect(handleChange).toHaveBeenCalledWith(123456789);
-
-    fireEvent.blur(input);
     expect(input).toHaveValue("1,234,567.89");
+    expect(handleChange).toHaveBeenCalledWith(123456789);
   });
 
   it("ignores a third decimal digit", () => {
@@ -101,7 +95,7 @@ describe("AmountField component", () => {
     fireEvent.change(input, { target: { value: "2500" } });
     expect(handleChange).toHaveBeenCalledWith(250000);
 
-    // Backspace: "250"
+    // Backspace: "250" -> live formatted to "250"
     fireEvent.change(input, { target: { value: "250" } });
     expect(input).toHaveValue("250");
     expect(handleChange).toHaveBeenCalledWith(25000);
@@ -118,10 +112,19 @@ describe("AmountField component", () => {
     const input = screen.getByPlaceholderText("0.00");
 
     fireEvent.change(input, { target: { value: "₦2,500.50" } });
-    expect(input).toHaveValue("2500.50");
-    expect(handleChange).toHaveBeenCalledWith(250050);
-
-    fireEvent.blur(input);
     expect(input).toHaveValue("2,500.50");
+    expect(handleChange).toHaveBeenCalledWith(250050);
+  });
+
+  it("handles pasting '2500' and '2,500'", () => {
+    const handleChange = vi.fn();
+    render(<AmountField currency="NGN" onChange={handleChange} />);
+    const input = screen.getByPlaceholderText("0.00");
+
+    fireEvent.change(input, { target: { value: "2500" } });
+    expect(input).toHaveValue("2,500");
+
+    fireEvent.change(input, { target: { value: "2,500" } });
+    expect(input).toHaveValue("2,500");
   });
 });

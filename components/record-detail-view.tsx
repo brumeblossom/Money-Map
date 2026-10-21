@@ -100,7 +100,7 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
   const isExpense = entry.kind === "expense";
   const isGiving = entry.kind === "giving";
 
-  const actionLabel = isIncome ? "Money in" : isExpense ? "Money out" : "Giving";
+  const actionLabel = isIncome ? "Income" : isExpense ? "Expenses" : "Giving";
   const counterpartyLabel = isIncome ? "Source" : isGiving ? "Recipient" : "Counterparty";
 
   const formattedAmount = isIncome
@@ -111,13 +111,20 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
     <div className="space-y-6 pb-20">
       {/* Top Navigation */}
       <div className="flex items-center justify-between">
-        <Link
-          href="/records"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        <button
+          type="button"
+          onClick={() => {
+            if (window.history.length > 1) {
+              router.back();
+            } else {
+              router.push("/records");
+            }
+          }}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
         >
           <ArrowLeft className="size-4" />
           <span>Records</span>
-        </Link>
+        </button>
         <div className="flex items-center gap-2">
           <Link href={`/records/${entry.id}/edit`}>
             <Button

@@ -25,6 +25,7 @@ import {
   habitsSummary,
   smartTip,
   getPeriodPreset,
+  getMonthPeriod,
   diffInDays,
 } from "@/lib/calc";
 
@@ -62,6 +63,35 @@ describe("Calculation Engine (PRD Section 5)", () => {
       expect(totals.giving).toBe(2000000);
       expect(totals.moneyOut).toBe(8000000);  // 6000000 + 2000000
       expect(totals.leftOver).toBe(12000000); // 20000000 - 8000000
+    });
+
+    it("strictly uses occurred_on (not created_at) so an entry dated last month belongs to last month", () => {
+      // Entry was created in October (e.g. today 2026-10-21), but occurred_on is in September (2026-09-15)
+      const septEntry = {
+        kind: "income" as const,
+        amount_minor: 5000000,
+        occurred_on: "2026-09-15",
+        deleted_at: null,
+      };
+
+      const octEntry = {
+        kind: "income" as const,
+        amount_minor: 8000000,
+        occurred_on: "2026-10-05",
+        deleted_at: null,
+      };
+
+      const entries = [septEntry, octEntry];
+
+      // October totals: only includes octEntry
+      const octPeriod = getMonthPeriod("2026-10");
+      const octTotals = periodTotals(entries, octPeriod);
+      expect(octTotals.moneyIn).toBe(8000000);
+
+      // September totals: only includes septEntry
+      const septPeriod = getMonthPeriod("2026-09");
+      const septTotals = periodTotals(entries, septPeriod);
+      expect(septTotals.moneyIn).toBe(5000000);
     });
 
     it("calculates owedToMe across all active loans (not limited to period P)", () => {

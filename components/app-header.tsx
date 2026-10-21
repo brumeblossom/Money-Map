@@ -24,8 +24,8 @@ export function getTitleFromPathname(pathname: string): string {
   if (pathname.startsWith("/new/")) {
     const action = pathname.replace("/new/", "");
     const map: Record<string, string> = {
-      income: "Money in",
-      expense: "Money out",
+      income: "Income",
+      expense: "Expenses",
       giving: "Giving",
       lent: "Money I lent",
     };

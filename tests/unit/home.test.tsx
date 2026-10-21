@@ -15,28 +15,39 @@ describe("Home page", () => {
     expect(screen.getByText("Tap a card to add an entry")).toBeInTheDocument();
   });
 
-  it("renders this-month strip with In, Out, Left over", () => {
+  it("renders month switcher strip with Income, Expenses, Left over", () => {
     render(<Home />);
-    expect(screen.getByText("This month")).toBeInTheDocument();
-    expect(screen.getByTestId("month-strip-money-in")).toBeInTheDocument();
-    expect(screen.getByTestId("month-strip-money-out")).toBeInTheDocument();
+    expect(screen.getByTestId("month-switcher-current")).toBeInTheDocument();
+    expect(screen.getByTestId("month-strip-income")).toBeInTheDocument();
+    expect(screen.getByTestId("month-strip-expenses")).toBeInTheDocument();
     expect(screen.getByTestId("month-strip-left-over")).toBeInTheDocument();
   });
 
   it("renders the 4 action cards in order", () => {
     render(<Home />);
-    expect(screen.getByTestId("action-card-income")).toBeInTheDocument();
-    expect(screen.getByTestId("action-card-expense")).toBeInTheDocument();
-    expect(screen.getByTestId("action-card-giving")).toBeInTheDocument();
-    expect(screen.getByTestId("action-card-lent")).toBeInTheDocument();
+    const incomeContainer = screen.getByTestId("action-card-income");
+    const expenseContainer = screen.getByTestId("action-card-expense");
+    const givingContainer = screen.getByTestId("action-card-giving");
+    const lentContainer = screen.getByTestId("action-card-lent");
 
-    const links = screen.getAllByRole("link");
-    const hrefs = links.map((l) => l.getAttribute("href"));
-    expect(hrefs).toEqual([
-      "/new/income",
-      "/new/expense",
-      "/new/giving",
-      "/new/lent",
-    ]);
+    expect(incomeContainer).toBeInTheDocument();
+    expect(expenseContainer).toBeInTheDocument();
+    expect(givingContainer).toBeInTheDocument();
+    expect(lentContainer).toBeInTheDocument();
+
+    expect(incomeContainer).toHaveTextContent("Income");
+    expect(expenseContainer).toHaveTextContent("Expenses");
+    expect(givingContainer).toHaveTextContent("Giving");
+    expect(lentContainer).toHaveTextContent("Money I lent");
+
+    const incomeCard = incomeContainer.querySelector("a");
+    const expenseCard = expenseContainer.querySelector("a");
+    const givingCard = givingContainer.querySelector("a");
+    const lentCard = lentContainer.querySelector("a");
+
+    expect(incomeCard?.getAttribute("href")).toBe("/new/income");
+    expect(expenseCard?.getAttribute("href")).toBe("/new/expense");
+    expect(givingCard?.getAttribute("href")).toBe("/new/giving");
+    expect(lentCard?.getAttribute("href")).toBe("/new/lent");
   });
 });

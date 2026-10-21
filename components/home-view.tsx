@@ -1,8 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
-import { ArrowDownLeft, ArrowUpRight, Heart, HandCoins } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Heart,
+  HandCoins,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { ActionCard } from "@/components/action-card";
 import { EntryModal } from "@/components/entry-modal";
 import { GuestBanner } from "@/components/guest-banner";
@@ -11,26 +19,36 @@ import { seedDefaultCategories } from "@/lib/repo/seed";
 import { claimGuestData } from "@/lib/repo";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { getPeriodPreset, periodTotals, owedToMe } from "@/lib/calc";
-import { formatMoney } from "@/lib/format";
+import { getMonthPeriod, periodTotals, owedToMe } from "@/lib/calc";
+import { formatMoney, formatMonthYear } from "@/lib/format";
+
+function getPrevMonth(ym: string): string {
+  const [y, m] = ym.split("-").map(Number);
+  const prevDate = new Date(Date.UTC(y, m - 2, 1));
+  const year = prevDate.getUTCFullYear();
+  const month = String(prevDate.getUTCMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+function getNextMonth(ym: string): string {
+  const [y, m] = ym.split("-").map(Number);
+  const nextDate = new Date(Date.UTC(y, m, 1));
+  const year = nextDate.getUTCFullYear();
+  const month = String(nextDate.getUTCMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
 
 export interface HomeViewProps {
   activeAction?: string;
   currency?: string;
 }
 
-export function HomeView({ activeAction: initialAction, currency = "NGN" }: HomeViewProps) {
+export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
   const router = useRouter();
-  const [overrideAction, setOverrideAction] = React.useState<string | null | undefined>(undefined);
-  const [prevInitial, setPrevInitial] = React.useState(initialAction);
+  const searchParams = useSearchParams();
+  const monthParam = searchParams?.get("month");
 
-  if (initialAction !== prevInitial) {
-    setPrevInitial(initialAction);
-    setOverrideAction(undefined);
-  }
-
-  const currentAction =
-    overrideAction !== undefined ? (overrideAction ?? undefined) : initialAction;
+  const currentAction = activeAction;
 
   // Run seed once on mount (idempotent)
   React.useEffect(() => {
@@ -73,20 +91,32 @@ export function HomeView({ activeAction: initialAction, currency = "NGN" }: Home
   }, []);
 
   const today = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const currentMonthStr = React.useMemo(() => today.slice(0, 7), [today]);
+
+  const [overrideMonth, setOverrideMonth] = React.useState<string | null>(null);
+  const [prevMonthParam, setPrevMonthParam] = React.useState(monthParam);
+
+  if (monthParam !== prevMonthParam) {
+    setPrevMonthParam(monthParam);
+    setOverrideMonth(null);
+  }
+
+  const selectedMonth = overrideMonth ?? monthParam ?? currentMonthStr;
 
   const entries = useEntries();
   const loans = useLoans();
   const loanPayments = useLoanPayments();
 
-  // Calculate totals for "thisMonth"
-  const thisMonthPreset = React.useMemo(() => {
-    return getPeriodPreset("thisMonth", today);
-  }, [today]);
+  // Period based on selectedMonth
+  const selectedPeriod = React.useMemo(() => {
+    return getMonthPeriod(selectedMonth);
+  }, [selectedMonth]);
 
   const totals = React.useMemo(() => {
-    return periodTotals(entries ?? [], thisMonthPreset);
-  }, [entries, thisMonthPreset]);
+    return periodTotals(entries ?? [], selectedPeriod);
+  }, [entries, selectedPeriod]);
 
+  // Money I lent always shows total balance still owed (not per month)
   const lentOwed = React.useMemo(() => {
     return owedToMe(loans ?? [], loanPayments ?? []);
   }, [loans, loanPayments]);
@@ -94,17 +124,21 @@ export function HomeView({ activeAction: initialAction, currency = "NGN" }: Home
   const isModalOpen = !!currentAction;
 
   const handleActionClick = (actionKey: string) => {
-    setOverrideAction(actionKey);
-    window.history.pushState(null, "", `/new/${actionKey}`);
+    router.push(`/new/${actionKey}`);
   };
 
   const handleModalClose = (open: boolean) => {
     if (!open) {
-      setOverrideAction(null);
-      if (initialAction) {
-        router.push("/");
+      const hasAppHistory =
+        typeof window !== "undefined" &&
+        window.history.state &&
+        typeof window.history.state.idx === "number" &&
+        window.history.state.idx > 0;
+
+      if (hasAppHistory) {
+        router.back();
       } else {
-        window.history.pushState(null, "", "/");
+        router.push("/");
       }
     }
   };
@@ -123,35 +157,80 @@ export function HomeView({ activeAction: initialAction, currency = "NGN" }: Home
         </p>
       </div>
 
-      {/* This-month strip (In, Out, Left over) */}
+      {/* Month strip with month switcher (Income, Expenses, Left over) */}
       <div data-testid="this-month-strip" className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          This month
+        {/* Month Switcher Header */}
+        <div className="mb-3 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setOverrideMonth(getPrevMonth(selectedMonth))}
+            aria-label="Previous month"
+            data-testid="month-switcher-prev"
+            className="flex size-7 items-center justify-center rounded-lg border border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          >
+            <ChevronLeft className="size-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setOverrideMonth(currentMonthStr)}
+            title="Return to current month"
+            data-testid="month-switcher-current"
+            className="text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-muted/50 cursor-pointer"
+          >
+            {formatMonthYear(selectedMonth)}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setOverrideMonth(getNextMonth(selectedMonth))}
+            disabled={selectedMonth >= currentMonthStr}
+            aria-label="Next month"
+            data-testid="month-switcher-next"
+            className="flex size-7 items-center justify-center rounded-lg border border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+          >
+            <ChevronRight className="size-4" />
+          </button>
         </div>
+
         <div className="grid grid-cols-3 divide-x divide-border/60 text-center">
-          <div className="px-2 first:pl-0">
+          <Link
+            href="/records?tab=income"
+            className="px-2 first:pl-0 block hover:opacity-80 transition-opacity"
+            title="View Income records"
+          >
             <span className="block text-xs font-medium text-muted-foreground">
-              Money in
+              Income
             </span>
             <span
-              data-testid="month-strip-money-in"
-              className="mt-0.5 block text-sm font-bold tracking-tight text-emerald-600 dark:text-emerald-400 sm:text-base"
+              data-testid="month-strip-income"
+              className="mt-0.5 block text-sm font-bold tracking-tight text-emerald-600 dark:text-emerald-400 sm:text-base tabular-nums"
             >
               {formatMoney(totals.moneyIn, currency)}
             </span>
-          </div>
+            <span data-testid="month-strip-money-in" className="sr-only">
+              {formatMoney(totals.moneyIn, currency)}
+            </span>
+          </Link>
 
-          <div className="px-2">
+          <Link
+            href="/records?tab=expenses"
+            className="px-2 block hover:opacity-80 transition-opacity"
+            title="View Expenses records"
+          >
             <span className="block text-xs font-medium text-muted-foreground">
-              Money out
+              Expenses
             </span>
             <span
-              data-testid="month-strip-money-out"
-              className="mt-0.5 block text-sm font-bold tracking-tight text-rose-600 dark:text-rose-400 sm:text-base"
+              data-testid="month-strip-expenses"
+              className="mt-0.5 block text-sm font-bold tracking-tight text-rose-600 dark:text-rose-400 sm:text-base tabular-nums"
             >
               {formatMoney(totals.moneyOut, currency)}
             </span>
-          </div>
+            <span data-testid="month-strip-money-out" className="sr-only">
+              {formatMoney(totals.moneyOut, currency)}
+            </span>
+          </Link>
 
           <div className="px-2 last:pr-0">
             <span className="block text-xs font-medium text-muted-foreground">
@@ -159,7 +238,7 @@ export function HomeView({ activeAction: initialAction, currency = "NGN" }: Home
             </span>
             <span
               data-testid="month-strip-left-over"
-              className="mt-0.5 block text-sm font-bold tracking-tight text-foreground sm:text-base"
+              className="mt-0.5 block text-sm font-bold tracking-tight text-foreground sm:text-base tabular-nums"
             >
               {formatMoney(totals.leftOver, currency)}
             </span>
@@ -167,56 +246,52 @@ export function HomeView({ activeAction: initialAction, currency = "NGN" }: Home
         </div>
       </div>
 
-      {/* Four Action Cards (2x2 on phones, 4 in a row on desktop) */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        {/* 1. Money in */}
-        <div data-testid="action-card-income">
-          <ActionCard
-            label="Money in"
-            amountMinor={totals.moneyIn}
-            currency={currency}
-            icon={ArrowDownLeft}
-            href="/new/income"
-            onClick={() => handleActionClick("income")}
-          />
-        </div>
+      {/* Four Action Cards (2x2 on phones and tablets < 1024px, 4 in a row from 1024px) */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 items-stretch">
+        <ActionCard
+          data-testid="action-card-income"
+          label="Income"
+          amountMinor={totals.moneyIn}
+          currency={currency}
+          icon={ArrowDownLeft}
+          href="/new/income"
+          recordsHref="/records?tab=income"
+          onClick={() => handleActionClick("income")}
+        />
 
-        {/* 2. Money out */}
-        <div data-testid="action-card-expense">
-          <ActionCard
-            label="Money out"
-            amountMinor={totals.expenses}
-            currency={currency}
-            icon={ArrowUpRight}
-            href="/new/expense"
-            onClick={() => handleActionClick("expense")}
-          />
-        </div>
+        <ActionCard
+          data-testid="action-card-expense"
+          label="Expenses"
+          amountMinor={totals.expenses}
+          currency={currency}
+          icon={ArrowUpRight}
+          href="/new/expense"
+          recordsHref="/records?tab=expenses"
+          onClick={() => handleActionClick("expense")}
+        />
 
-        {/* 3. Giving */}
-        <div data-testid="action-card-giving">
-          <ActionCard
-            label="Giving"
-            amountMinor={totals.giving}
-            currency={currency}
-            icon={Heart}
-            href="/new/giving"
-            onClick={() => handleActionClick("giving")}
-          />
-        </div>
+        <ActionCard
+          data-testid="action-card-giving"
+          label="Giving"
+          amountMinor={totals.giving}
+          currency={currency}
+          icon={Heart}
+          href="/new/giving"
+          recordsHref="/records?tab=giving"
+          onClick={() => handleActionClick("giving")}
+        />
 
-        {/* 4. Money I lent */}
-        <div data-testid="action-card-lent">
-          <ActionCard
-            label="Money I lent"
-            amountMinor={lentOwed}
-            currency={currency}
-            icon={HandCoins}
-            href="/new/lent"
-            onClick={() => handleActionClick("lent")}
-            badge="Owed"
-          />
-        </div>
+        <ActionCard
+          data-testid="action-card-lent"
+          label="Money I lent"
+          amountMinor={lentOwed}
+          currency={currency}
+          icon={HandCoins}
+          href="/new/lent"
+          recordsHref="/records?tab=lent"
+          onClick={() => handleActionClick("lent")}
+          badge="Owed"
+        />
       </div>
 
       {/* Entry Modal / Drawer when activeAction is present */}

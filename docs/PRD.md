@@ -4,9 +4,9 @@
 
 ## 1. Overview and rules for the agent
 
-Money Map is a mobile-first, offline-first web app (PWA) where a user records money in four actions (Money in, Money out, Giving, Money I lent) and sees totals, charts and habit reports. v1 ships on Vercel with Next.js, Dexie (local) and Supabase (cloud). Product decisions come from the approved [Phase 1 doc](https://claude.ai/code/artifact/7ba08aa4-d009-42a5-845e-13c734aac22c).
+Money Map is a mobile-first, offline-first web app (PWA) where a user records money in four actions (Income, Expenses, Giving, Money I lent) and sees totals, charts and habit reports. v1 ships on Vercel with Next.js, Dexie (local) and Supabase (cloud). Product decisions come from the approved [Phase 1 doc](https://claude.ai/code/artifact/7ba08aa4-d009-42a5-845e-13c734aac22c).
 
-**v1 scope:** guest mode and login (magic link, Google), four record forms (Money in, Money out, Giving, Money I lent), records list with edit and delete, money received back on loans, repeating-entry reminders, dashboard, category habit reports, PDF export, shareable links, settings (currency, categories, account deletion), full offline use with background sync.
+**v1 scope:** guest mode and login (magic link, Google), four record forms (Income, Expenses, Giving, Money I lent), records list with edit and delete, money received back on loans, repeating-entry reminders, dashboard, category habit reports, PDF export, shareable links, settings (currency, categories, account deletion), full offline use with background sync.
 
 **Rules the coding agent must follow throughout:**
 
@@ -28,6 +28,8 @@ Money Map is a mobile-first, offline-first web app (PWA) where a user records mo
 
 9.  Use Bun for installs, scripts and tests.
 
+10. Every amount input shows thousands commas while typing.
+
 ## 2. Screens and navigation
 
 Four main tabs: Home, Records, Insights, Settings. Phones and tablets (under 1024 px) show a fixed bottom bar; desktop (1024 px and up) shows a 240 px left sidebar with the logo on top and the user's name plus Settings at the bottom. Content is a single centred column (max 560 px) on desktop, except Insights, which uses two columns.
@@ -36,10 +38,12 @@ Four main tabs: Home, Records, Insights, Settings. Phones and tablets (under 102
 |---------------------------------|------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `/welcome`                      | Welcome          | Logo, one-line pitch, buttons: Continue with Google, Continue with email, Try without an account                                                                     |
 | `/auth/check-email`             | Check your email | Shown after a magic link is sent; resend after 60 s                                                                                                                  |
+| `/auth/confirm`                 | Confirm email    | Server OTP token verification with 30-day session cookies, redirects to `/`                                                                                          |
 | `/auth/callback`                | (no UI)          | Supabase auth redirect; merges guest data, then goes to `/`                                                                                                          |
-| `/`                             | Home             | Heading "What are we recording today?", hint "Tap a card to add an entry", this-month strip (In, Out, Left over), four action cards, pending repeat reminders banner |
+| `/auth/error`                   | Auth error       | Friendly error messages with "Try again" button                                                                                                                      |
+| `/`                             | Home             | Heading "What are we recording today?", hint "Tap a card to add an entry", current month strip (with ‹ and › month switcher, e.g. "October 2026"), four action cards (Income, Expenses, Giving, Money I lent), pending repeat reminders banner |
 | `/new/[action]`                 | Entry form       | Bottom sheet on phones, centred modal on desktop, over Home. `action` is one of `income`, `expense`, `giving`, `lent`                                                |
-| `/records`                      | Records          | All income, expense and giving entries grouped by day, filters, search, multi-select sum                                                                             |
+| `/records`                      | Records          | Tabs (Income, Expenses, Giving, Lent). Filter row (search, category, period), top summary, virtualised day-grouped list with inline edit/delete                     |
 | `/records/[id]`                 | Entry detail     | All fields, Edit, Delete                                                                                                                                             |
 | `/records/[id]/edit`            | Edit entry       | Same form as create, pre-filled                                                                                                                                      |
 | `/lent`                         | Money I lent     | Loans with balance left, status and progress bar; Paid off section                                                                                                   |
@@ -51,7 +55,7 @@ Four main tabs: Home, Records, Insights, Settings. Phones and tablets (under 102
 | `/settings`                     | Settings         | Name, currency, manage categories, repeating entries, share links, notifications, sign in or sign out, delete account                                                |
 | `/s/[token]`                    | Shared report    | Public, read-only snapshot; no app chrome, Money Map footer                                                                                                          |
 
-Home cards in order: Money in, Money out, Giving, Money I lent. Grid is 2 by 2 on phones and 4 in a row on desktop. Each card shows its icon, label and this month's total (Money I lent shows the total still owed to the user).
+Home cards in order: Income, Expenses, Giving, Money I lent. Grid is 2 by 2 on phones and tablets (<1024px) and 4 in a row only from 1024px desktop. Each card shows its icon, label and the selected month's total (Money I lent shows the total still owed to the user). Home displays the real month name (e.g. "October 2026") with small ‹ and › month switcher arrows, never "This month". Tapping the month name returns to the current month. › is disabled on the current month.
 
 ## 3. User stories and acceptance criteria
 
@@ -161,7 +165,7 @@ Each story has an ID the prompt pack will reference. A story is done only when e
 
 **US-5.1** As a user, I want rent, salary and similar entries to remind me each time.
 
-- Choosing Repeats Weekly or Monthly on Money in, Money out or Giving creates a `recurring_rules` row with the next due date.
+- Choosing Repeats Weekly or Monthly on Income, Expenses or Giving creates a `recurring_rules` row with the next due date.
 
 - On or after the due date, Home shows a banner card: "Rent ₦150,000 is due today. Add it?" with Add, Edit first, and Skip.
 
@@ -175,7 +179,7 @@ Each story has an ID the prompt pack will reference. A story is done only when e
 
 **US-6.1** As a user, I want to see my money picture for a period.
 
-- `/insights` shows, in order: period switcher, Left over card, four tiles (Money in, Money out, Given, Owed to me), Spending by category donut with ranked list, Money in vs Money out bars, Money I lent block, Smart tip, Recent entries.
+- `/insights` shows, in order: period switcher, Left over card, four tiles (Income, Expenses, Given, Owed to me), Spending by category donut with ranked list, Income vs Expenses bars, Money I lent block, Smart tip, Recent entries.
 
 - All numbers follow section 5 and match the Records totals for the same filter exactly.
 
@@ -239,7 +243,7 @@ These are the final fields from Phase 1, including Chinedum's edits. Every categ
 
 There is NO "More details" section. Every field shows directly on the form. Required fields first, then optional fields marked "(optional)" in the label.
 
-### 4.1 Money in (`kind = income`)
+### 4.1 Income (`kind = income`)
 
 | Field                  | Input                 | Required | Column                 | Notes                                                |
 |------------------------|-----------------------|----------|------------------------|------------------------------------------------------|
@@ -252,7 +256,7 @@ There is NO "More details" section. Every field shows directly on the form. Requ
 
 Categories: Salary, Business sales, Side gig / freelance, Brand partnerships, Digital products, Gift received, Investment returns, Refund, Allowance, Other.
 
-### 4.2 Money out (`kind = expense`)
+### 4.2 Expenses (`kind = expense`)
 
 | Field                  | Input                 | Required | Column                 | Notes                   |
 |------------------------|-----------------------|----------|------------------------|-------------------------|
@@ -304,15 +308,15 @@ All maths lives in one pure module, `lib/calc`, with unit tests for every rule b
 
 | Name                  | Formula                                                                                                                                                                       |
 |-----------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Money in              | sum of `income` entries in P                                                                                                                                                  |
-| Expenses              | sum of `expense` entries in P                                                                                                                                                 |
+| Income                | sum of `income` entries in P                                                                                                                                                  |
+| Expenses (direct)     | sum of `expense` entries in P                                                                                                                                                 |
 | Giving                | sum of `giving` entries in P                                                                                                                                                  |
-| Money out             | Expenses + Giving                                                                                                                                                             |
-| Left over             | Money in − Money out                                                                                                                                                          |
+| Expenses (total)      | Expenses (direct) + Giving                                                                                                                                                    |
+| Left over             | Income − Expenses (total)                                                                                                                                                     |
 | Owed to me            | sum of Balance left over all loans not Paid off (not limited to P)                                                                                                            |
 | Change vs last period | compare with the period of equal length ending the day before P starts: (current − previous) ÷ abs(previous) × 100, rounded to a whole percent; show "New" when previous is 0 |
 
-Money lent out and money received back are not part of Money in or Money out; they appear only on the Money I lent card, the Owed to me tile and the Money I lent block. Records shows only income, expense and giving entries.
+Money lent out and money received back are not part of Income or Expenses; they appear only on the Money I lent card, the Owed to me tile and the Money I lent block. Records shows only income, expense and giving entries.
 
 **Signed amount** (used by multi-select sums and daily totals in Records): income +, expense −, giving −.
 
@@ -557,7 +561,7 @@ The screens never wait for the network: they read and write Dexie through `lib/r
 | Scale          | Smooth with 5,000 entries per user: Records list is virtualised; dashboard calculations under 300 ms on a mid-range Android phone                                                                                                                     |
 | Accessibility  | WCAG 2.2 AA: colour contrast ≥ 4.5:1, every control has a label, tap targets ≥ 44 px, full keyboard use on desktop, charts have a text summary for screen readers                                                                                     |
 | Responsive     | Designed at 360 to 430 px first; tested at 390 px, 768 px and 1280 px; no horizontal scrolling at any width                                                                                                                                           |
-| Visual design  | shadcn/ui on Tailwind, one accent colour, green for money in and red for money out used consistently, light and dark mode following the device setting                                                                                                |
+| Visual design  | shadcn/ui on Tailwind, one accent colour, green for income and red for expenses used consistently, light and dark mode following the device setting                                                                                                |
 | Browsers       | Last 2 versions of Chrome, Safari (iOS 16.4+ for push), Firefox, Edge, Samsung Internet                                                                                                                                                               |
 | Security       | RLS on every table; Zod validation on every endpoint; security headers (CSP, HSTS, X-Frame-Options DENY) via `next.config`; share tokens 22 random URL-safe characters; secrets only in Vercel environment variables; run gstack `/cso` before launch |
 | Privacy        | No analytics or tracking that sends amounts or descriptions anywhere; account deletion removes all data within 1 minute                                                                                                                               |

@@ -465,6 +465,50 @@
   - Playwright E2E tests: 14 tests in `tests/e2e/auth-flow.spec.ts` passing on mobile (390px) and desktop (1280px), including bad token redirect to friendly `/auth/error` page and cross-browser notices.
   - Production build (`bun run build`) passing with 0 errors.
 
+### Prompt 9c: Critical Testing Fixes
+- **Spec Updates**:
+  - `docs/PRD.md`, `CLAUDE.md`, and `AGENTS.md` updated.
+  - User-facing nomenclature updated: "Money in" is now "Income" and "Money out" is now "Expenses" across all labels, cards, forms, toasts, records, charts, PDF text, and tests. Internal code names (`kind: "income" | "expense"`) remain unchanged.
+  - Home shows real month name (e.g. "October 2026"), never "This month".
+  - Added Rule 10 to `CLAUDE.md`: *"Every amount input shows thousands commas while typing."*
+- **1. Home Cards on Desktop**:
+  - Amounts fit cards at every viewport width from 360px to 1920px. Used `min-w-0`, `tabular-nums`, and responsive typography scaling down gracefully for long amounts like `₦999,999,999.99` so no text overflows or cuts off.
+  - Layout: 2x2 on phones and tablets/small laptops (<1024px), 4 in a row from 1024px (`lg:grid-cols-4`). Equal card heights maintained.
+  - Playwright check verified at 1024px, 1280px, and 1440px with `₦999,999,999.99` on every card.
+- **2. Commas While Typing**:
+  - `AmountField` (`components/amount-field.tsx`) formats amounts with live thousands commas as the user types (`1` -> `1`, `1000` -> `1,000`, `1234567.5` -> `1,234,567.5`).
+  - Preserves caret position during typing, deleting, backspacing, or editing in the middle. Pasting `"2500"`, `"2,500"`, or `"₦2,500.50"` parses correctly.
+  - Value stored in Dexie remains integer minor units (`amount_minor`). Added 4 unit tests covering caret calculation and formatting.
+- **3. User-Facing Renaming**:
+  - Grepped and updated all instances of "Money in" to "Income" and "Money out" to "Expenses" across all components, navigation, cards, forms, and tests.
+- **4. Real Month Name & Month Switcher on Home**:
+  - Displays formatted month and year (e.g. "October 2026") with `‹` and `›` navigation arrows.
+  - Month strip (Income, Expenses, Left over) and cards (Income, Expenses, Giving) reflect selected month.
+  - Tapping month name returns to current month. `›` arrow disabled on current month.
+  - "Money I lent" card always displays total balance owed across all loans (not per month).
+- **5. Phone Back Button & Navigation History**:
+  - Sheet and entry modal routes push browser history (`/new/[action]`). Pressing browser Back closes the sheet/modal and returns to the underlying view without page reload.
+  - Records tab, period, and search reside in URL query parameters (`/records?tab=expenses&period=thisMonth`), ensuring Back from record detail returns to the identical tab and filters.
+- **6. Back-Dated Entries**:
+  - **Cause Explanation**: Home view displays totals strictly scoped to the selected calendar month (by default, the current month). A September entry belongs to September, so it was properly recorded in the database but excluded from October totals.
+  - Navigating to September 2026 via the month switcher displays the back-dated entry and includes it in all September totals.
+  - Saving an entry dated in another month displays a toast `"Saved to September 2026"` with a `"View"` button that immediately switches Home to that month.
+  - All totals (Home strip, cards, Records summary) query by `occurred_on` (user-selected date), never `created_at`.
+- **7-10. Records Screen Redesign**:
+  - Segmented top tabs: `Income | Expenses | Giving | Lent`, sticky under header on phones, fitting comfortably at 360px.
+  - Action cards on Home link directly to their corresponding tab (`/records?tab=income`, `/records?tab=expenses`, etc.). Default tab: Income.
+  - Lent tab displays the loans list with borrower, balance left, status, next due date, linking to `/lent/[id]` using `LentListView`.
+  - Filter row under tabs: Search box, Category dropdown (All categories default), Period dropdown (This month default, Last 3 months, Last 6 months, Last 12 months, Custom date range DD-MM-YYYY).
+  - Summary placed at TOP under filter row: `"N entries · ₦X"`.
+  - Desktop inline Edit and Delete icon buttons always visible on every row with tooltips and keyboard focus. Mobile retains swipe-left gestures.
+- **Verification**:
+  - `bun run lint`: 0 errors.
+  - `bun run typecheck`: 0 errors.
+  - `bun run test`: 113 unit tests passing across all 8 suites.
+  - `bun run build`: All 21 routes built successfully.
+  - Playwright E2E: All 12 tests in `tests/e2e/prompt9c-fixes.spec.ts` passing across phone (360px, 390px) and desktop (1024px, 1280px, 1440px). All 6 tests in `tests/e2e/records-flow.spec.ts` and all 6 tests in `tests/e2e/lent-flow.spec.ts` passing.
+  - Screenshots saved to `tests/e2e/screenshots/` (`home-cards-360px.png`, `home-cards-390px.png`, `home-cards-1024px.png`, `home-cards-1280px.png`, `home-cards-1440px.png`, `records-390.png`, `records-1280.png`).
+
 ## Decisions
 
 - Dark mode theme configured using media query `@media (prefers-color-scheme: dark)` in `app/globals.css` to respect the system preference per PRD §9 rather than a class toggle.
@@ -494,6 +538,8 @@
 - Auth session cookies set with 30-day lifetime (`maxAge: 2592000`).
 - Auth flow uses `/auth/confirm` for email links (server OTP verification via `verifyOtp` without PKCE) and `/auth/callback` for Google OAuth (`exchangeCodeForSession`).
 - Claim guest data hook mounted on Home (`/`) to ensure guest entries are claimed and toasted regardless of the login route used.
+- AmountField uses `useEffect` for syncing external `value` prop to satisfy React Compiler while maintaining instant caret position and live comma formatting.
+- Records view parameters (`tab`, `period`, `search`, `category`) are synced bidirectionally to URL search parameters for back-button resilience and shareable filtered states.
 
 ## Database & Auth Instructions
 

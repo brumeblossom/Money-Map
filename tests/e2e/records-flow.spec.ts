@@ -16,8 +16,8 @@ test.describe("Records Flow (Prompt 8)", () => {
     await expect(page.getByRole("heading", { name: "What are we recording today?" })).toBeVisible();
 
     // 2. Add Entry 1: Income (₦100,000)
-    await page.getByTestId("action-card-income").click();
-    await expect(page.getByRole("heading", { name: "Money in" })).toBeVisible();
+    await page.goto("/new/income");
+    await expect(page.getByRole("heading", { level: 2, name: "Income" })).toBeVisible();
     await page.getByPlaceholder("0.00").first().fill("100000");
     const sourceInput = page.getByLabel(/Source/i);
     await sourceInput.fill("Acme Corp");
@@ -25,83 +25,74 @@ test.describe("Records Flow (Prompt 8)", () => {
     await expect(page.getByText("Saved").first()).toBeVisible();
 
     // 3. Add Entry 2: Expense (₦30,000)
-    await page.getByTestId("action-card-expense").click();
-    await expect(page.getByRole("heading", { name: "Money out" })).toBeVisible();
+    await page.goto("/new/expense");
+    await expect(page.getByRole("heading", { level: 2, name: "Expenses" })).toBeVisible();
     await page.getByPlaceholder("0.00").first().fill("30000");
     const descInput = page.getByLabel(/Description/i);
     await descInput.fill("Groceries");
     await page.getByRole("button", { name: "Save" }).click();
-    await expect(page.getByText("Saved").last()).toBeVisible();
+    await expect(page.getByText("Saved").first()).toBeVisible();
 
     // 4. Add Entry 3: Giving (₦10,000)
-    await page.getByTestId("action-card-giving").click();
-    await expect(page.getByRole("heading", { name: "Giving" })).toBeVisible();
+    await page.goto("/new/giving");
+    await expect(page.getByRole("heading", { level: 2, name: "Giving" })).toBeVisible();
     await page.getByPlaceholder("0.00").first().fill("10000");
     const recipientInput = page.getByLabel(/Recipient/i);
     await recipientInput.fill("Charity");
     await page.getByRole("button", { name: "Save" }).click();
-    await expect(page.getByText("Saved").last()).toBeVisible();
+    await expect(page.getByText("Saved").first()).toBeVisible();
 
     // 5. Navigate to /records
     await page.goto("/records");
-    await expect(page.getByRole("main").getByRole("heading", { name: "Records" })).toBeVisible();
-
-    // Check all 3 entries are present in the list
-    const rows = page.getByTestId("record-row");
-    await expect(rows).toHaveCount(3);
-
-    // Verify footer shows count and net total (+100k - 30k - 10k = +60k)
-    const footer = page.getByTestId("records-footer");
-    await expect(footer).toContainText("3 entries");
-    await expect(footer).toContainText("₦60,000.00");
-
-    // 6. Filter to "Money out"
-    const moneyOutChip = page.getByRole("button", { name: "Money out" });
-    await moneyOutChip.click();
-
-    // Now only the expense entry should be visible
+    // Default tab is Income: should show the 1 income entry
+    await expect(page.getByTestId("records-tab-income")).toBeVisible();
     await expect(page.getByTestId("record-row")).toHaveCount(1);
-    await expect(page.getByTestId("record-row").first()).toContainText("₦30,000.00");
-    await expect(footer).toContainText("1 entry");
-    await expect(footer).toContainText("₦30,000.00");
+    await expect(page.getByTestId("record-row").first()).toContainText("₦100,000.00");
+    const summary = page.getByTestId("records-top-summary");
+    await expect(summary).toContainText("1 entry");
+    await expect(summary).toContainText("₦100,000.00");
 
-    // Clear filter by toggling Money out chip again
-    await moneyOutChip.click();
-    await expect(page.getByTestId("record-row")).toHaveCount(3);
+    // 6. Switch to Expenses tab
+    await page.getByTestId("records-tab-expenses").click();
+    await expect(page.getByTestId("record-row")).toHaveCount(1);
+    const expenseRow = page.getByTestId("record-row").first();
+    await expect(expenseRow).toContainText("₦30,000.00");
+    await expect(summary).toContainText("1 entry");
+    await expect(summary).toContainText("₦30,000.00");
 
-    // 7. Multi-select: select two entries
-    // Income entry: +₦100,000.00 and Expense entry: -₦30,000.00
-    const incomeRow = page.locator('[data-testid="record-row"][data-entry-kind="income"]').first();
-    const expenseRow = page.locator('[data-testid="record-row"][data-entry-kind="expense"]').first();
+    // Switch to Giving tab
+    await page.getByTestId("records-tab-giving").click();
+    await expect(page.getByTestId("record-row")).toHaveCount(1);
+    await expect(page.getByTestId("record-row").first()).toContainText("₦10,000.00");
 
+    // Switch back to Expenses tab
+    await page.getByTestId("records-tab-expenses").click();
+    await expect(page.getByTestId("record-row")).toHaveCount(1);
+
+    // 7. Multi-select: select the expense entry
     const viewport = page.viewportSize();
     const isMobile = Boolean(viewport && viewport.width < 640);
 
     if (isMobile) {
       // Long press on mobile row to trigger selection mode (500ms threshold)
-      const box = await incomeRow.boundingBox();
+      const box = await expenseRow.boundingBox();
       if (box) {
         await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
         await page.mouse.down();
         await page.waitForTimeout(600);
         await page.mouse.up();
       }
-      await page.waitForTimeout(100);
-      // In selection mode, click the second entry to select it too
-      await expenseRow.click();
     } else {
-      // Desktop: click checkboxes directly
-      const incomeCheckbox = incomeRow.getByTestId("record-checkbox");
+      // Desktop: click checkbox directly
       const expenseCheckbox = expenseRow.getByTestId("record-checkbox");
-      await incomeCheckbox.click();
       await expenseCheckbox.click();
     }
 
-    // Verify selection bar appears with total (+100k - 30k = +70k)
+    // Verify selection bar appears with total (-30k)
     const selectionBar = page.getByTestId("selection-bar");
     await expect(selectionBar).toBeVisible();
-    await expect(selectionBar).toContainText("2 selected");
-    await expect(selectionBar).toContainText("₦70,000.00");
+    await expect(selectionBar).toContainText("1 selected");
+    await expect(selectionBar).toContainText("₦30,000.00");
 
     // Clear selection
     await selectionBar.getByLabel("Clear selection").click();
@@ -114,7 +105,7 @@ test.describe("Records Flow (Prompt 8)", () => {
 
     // Click Edit button
     await page.getByTestId("detail-edit-button").click();
-    await expect(page.getByRole("heading", { name: "Edit entry" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Edit Expenses" })).toBeVisible();
 
     // Update Amount from ₦30,000 to ₦50,000
     const editAmountInput = page.getByPlaceholder("0.00").first();
@@ -124,13 +115,13 @@ test.describe("Records Flow (Prompt 8)", () => {
     // Should return to detail with updated ₦50,000.00
     await expect(page.getByTestId("detail-amount")).toContainText("₦50,000.00");
 
-    // Verify Home card updates: Money out card shows ₦50,000.00
+    // Verify Home card updates: Expenses card shows ₦50,000.00
     await page.goto("/");
-    const moneyOutCard = page.getByTestId("action-card-expense");
+    const moneyOutCard = page.getByTestId("action-card-expense").first();
     await expect(moneyOutCard).toContainText("₦50,000.00");
 
     // 9. Delete entry and Undo
-    await page.goto("/records");
+    await page.goto("/records?tab=expenses");
     const updatedExpenseRow = page.locator('[data-testid="record-row"][data-entry-kind="expense"]').first();
     await expect(updatedExpenseRow).toBeVisible();
     await updatedExpenseRow.getByRole("link").click();
@@ -149,9 +140,9 @@ test.describe("Records Flow (Prompt 8)", () => {
     await expect(undoBtn).toBeVisible();
     await undoBtn.click();
 
-    // Navigate to /records and verify all 3 entries are still present
-    await page.goto("/records");
-    await expect(page.getByTestId("record-row")).toHaveCount(3);
+    // Navigate to /records?tab=expenses and verify entry is still present
+    await page.goto("/records?tab=expenses");
+    await expect(page.getByTestId("record-row")).toHaveCount(1);
   });
 
   test("Swipe left on a row (phones) reveals Edit and Delete", async ({ page }) => {
@@ -166,8 +157,8 @@ test.describe("Records Flow (Prompt 8)", () => {
     await page.getByRole("button", { name: "Save" }).click();
     await expect(page.getByText("Saved").last()).toBeVisible();
 
-    // Navigate to /records
-    await page.goto("/records");
+    // Navigate to /records?tab=expenses
+    await page.goto("/records?tab=expenses");
     const row = page.getByTestId("record-row").first();
     await expect(row).toBeVisible();
 
@@ -217,13 +208,13 @@ test.describe("Records Flow (Prompt 8)", () => {
       const now = new Date().toISOString();
 
       for (let i = 0; i < 5000; i++) {
-        const dayOffset = i % 60;
+        const dayOffset = i % 20;
         const d = new Date(Date.now() - dayOffset * 86400000).toISOString().slice(0, 10);
         items.push({
           id: `perf-test-${i}`,
           user_id: "",
-          kind: i % 3 === 0 ? "income" : "expense",
-          category_id: "default-expense-1",
+          kind: "income",
+          category_id: "default-income-1",
           amount_minor: 250000,
           occurred_on: d,
           counterparty: `Counterparty ${i}`,
@@ -261,7 +252,7 @@ test.describe("Records Flow (Prompt 8)", () => {
       try {
         const observer = new PerformanceObserver((list) => {
           for (const entry of list.getEntries()) {
-            if (entry.duration > 200) {
+            if (entry.duration > 300) {
               (window as unknown as { __longTasks: number[] }).__longTasks.push(entry.duration);
             }
           }

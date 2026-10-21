@@ -22,4 +22,6 @@ The full spec is `docs/PRD.md`.
 
 9.  Use Bun for installs, scripts and tests.
 
+10. Every amount input shows thousands commas while typing.
+
 Read docs/PROGRESS.md before starting any task and update it when finishing.

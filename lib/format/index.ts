@@ -231,3 +231,22 @@ export function fromMinor(amountMinor: bigint | number): string {
   const minorStr = minor.toString().padStart(2, "0");
   return `${isNegative ? "-" : ""}${major.toString()}.${minorStr}`;
 }
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+/**
+ * Formats YYYY-MM or ISO date string to "Month YYYY", e.g. "2026-10" -> "October 2026".
+ */
+export function formatMonthYear(ymOrDate: string): string {
+  if (!ymOrDate || typeof ymOrDate !== "string") return "";
+  const match = ymOrDate.match(/^(\d{4})-(\d{2})/);
+  if (!match) return "";
+  const year = match[1];
+  const monthIdx = Number.parseInt(match[2], 10) - 1;
+  if (monthIdx < 0 || monthIdx > 11) return "";
+  return `${MONTH_NAMES[monthIdx]} ${year}`;
+}
+

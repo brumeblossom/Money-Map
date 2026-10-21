@@ -69,13 +69,14 @@ test.describe("Money I Lent Flow (Prompt 7)", () => {
 
     // Toast appears
     await expect(page.getByText("Saved").first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Money I lent" })).toBeHidden();
 
     // 3. Verify Home Screen:
     // - Money I lent card shows total balance left ₦55,000.00
-    await expect(lentCard).toContainText("₦55,000.00");
+    await expect(page.getByTestId("action-card-lent").first()).toContainText("₦55,000.00");
 
     // - Money lent does not change Money in, Money out or Left over on Home
-    await expect(monthStrip).toContainText("₦0.00");
+    await expect(page.getByTestId("this-month-strip").first()).toContainText("₦0.00");
 
     // 4. Navigate to /lent
     await page.goto("/lent");
@@ -189,7 +190,7 @@ test.describe("Money I Lent Flow (Prompt 7)", () => {
     const threeDaysFormatted = `${dd}-${mm}-${yyyy}`;
 
     await page.goto("/new/lent");
-    await expect(page.getByRole("heading", { name: "Money I lent" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Money I lent" }).first()).toBeVisible();
 
     await page.getByPlaceholder("Who did you lend to?").fill("Bisi");
     await page.getByPlaceholder("0.00").first().fill("20000");

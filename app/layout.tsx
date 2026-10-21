@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Money Map",
-  description: "Record your money in, money out, giving and money you lent.",
+  description: "Record your income, expenses, giving and money you lent.",
 };
 
 export const viewport: Viewport = {

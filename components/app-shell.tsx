@@ -6,9 +6,16 @@ import { cn } from "cn";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppBottomNav } from "@/components/app-bottom-nav";
 import { AppHeader } from "@/components/app-header";
+import { seedDefaultCategories } from "@/lib/repo/seed";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+
+  React.useEffect(() => {
+    seedDefaultCategories().catch((err) => {
+      console.error("Failed to seed default categories in AppShell", err);
+    });
+  }, []);
 
   // Routes that do not render the main app shell chrome (PRD section 2)
   const isNoChromeRoute =
@@ -20,7 +27,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return <div className="min-h-screen bg-background text-foreground">{children}</div>;
   }
 
-  const isInsightsRoute = pathname.startsWith("/insights");
+  const isWideRoute =
+    pathname === "/" ||
+    pathname.startsWith("/new/") ||
+    pathname.startsWith("/records") ||
+    pathname.startsWith("/insights") ||
+    pathname.startsWith("/lent");
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -36,7 +48,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main
           className={cn(
             "flex-1 w-full px-4 py-6 pb-24 lg:pb-12",
-            isInsightsRoute
+            isWideRoute
               ? "max-w-[560px] lg:max-w-5xl mx-auto"
               : "max-w-[560px] mx-auto",
           )}

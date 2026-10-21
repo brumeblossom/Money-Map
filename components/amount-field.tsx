@@ -19,7 +19,7 @@ export interface AmountFieldProps {
   error?: string;
 }
 
-function getCurrencySymbol(currency: string): string {
+export function getCurrencySymbol(currency: string): string {
   switch (currency.toUpperCase()) {
     case "NGN":
       return "₦";
@@ -34,38 +34,69 @@ function getCurrencySymbol(currency: string): string {
   }
 }
 
-export function formatAmountWithCommas(raw: string): string {
-  if (!raw) return "";
-  const cleaned = raw.replace(/,/g, "");
-  const parts = cleaned.split(".");
-  const intPart = parts[0] ? BigInt(parts[0]).toLocaleString("en-US") : "0";
-  if (parts.length > 1) {
-    return `${intPart}.${parts[1]}`;
-  }
-  return intPart;
-}
+/**
+ * Live formatting of amount inputs with thousands separators while typing.
+ * Accepts partial values like "1234567.5", numbers with commas, or pasted amounts with currency symbols.
+ */
+export function formatAmountLive(input: string): string {
+  if (!input) return "";
 
-export function sanitizeAmountInput(input: string): string {
-  // Strip currency symbols, spaces, commas, etc.
+  // 1. Strip everything except digits and decimal point
   let cleaned = input.replace(/[^0-9.]/g, "");
+  if (!cleaned) return "";
 
-  // If starts with ".", prepend "0"
+  // 2. If it starts with a dot, prepend "0"
   if (cleaned.startsWith(".")) {
     cleaned = "0" + cleaned;
   }
 
-  // At most one decimal point and at most 2 decimal digits
-  const dotIndex = cleaned.indexOf(".");
-  if (dotIndex !== -1) {
-    const intPart = cleaned.slice(0, dotIndex);
-    const decPart = cleaned.slice(dotIndex + 1).replace(/\./g, "").slice(0, 2);
-    // Integer part up to 12 digits (999,999,999,999)
-    const cappedInt = intPart.slice(0, 12);
-    return `${cappedInt}.${decPart}`;
+  // 3. Separate integer and decimal parts
+  const hasDot = cleaned.includes(".");
+  const parts = cleaned.split(".");
+  const intPart = parts[0].slice(0, 12); // Maximum 12 digits (999,999,999,999)
+
+  // Format integer part with thousands commas
+  const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+  if (hasDot) {
+    // Keep at most 2 decimal digits
+    const decPart = parts.slice(1).join("").replace(/\./g, "").slice(0, 2);
+    return `${formattedInt}.${decPart}`;
   }
 
-  // Up to 12 integer digits
-  return cleaned.slice(0, 12);
+  return formattedInt;
+}
+
+/**
+ * Calculates the updated caret position when thousands commas are added or removed.
+ */
+export function calculateCaretPosition(
+  oldValue: string,
+  newValue: string,
+  oldCaret: number,
+): number {
+  if (oldCaret <= 0) return 0;
+  if (oldCaret >= oldValue.length) return newValue.length;
+
+  // Count how many non-comma characters were to the left of oldCaret in oldValue
+  let nonCommasBefore = 0;
+  for (let i = 0; i < oldCaret && i < oldValue.length; i++) {
+    if (oldValue[i] !== ",") {
+      nonCommasBefore++;
+    }
+  }
+
+  // Find index in newValue that has nonCommasBefore non-comma characters
+  let newCaret = 0;
+  let count = 0;
+  while (newCaret < newValue.length && count < nonCommasBefore) {
+    if (newValue[newCaret] !== ",") {
+      count++;
+    }
+    newCaret++;
+  }
+
+  return newCaret;
 }
 
 export function AmountField({
@@ -85,54 +116,95 @@ export function AmountField({
   const generatedId = React.useId();
   const inputId = id || generatedId;
   const symbol = getCurrencySymbol(currency);
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
   const initialMinor = value ?? defaultValue;
   const initialText = React.useMemo(() => {
     if (initialMinor === undefined || initialMinor === 0) return "";
-    return formatAmountWithCommas(fromMinor(initialMinor));
+    return formatAmountLive(fromMinor(initialMinor));
   }, [initialMinor]);
 
   const [rawText, setRawText] = React.useState<string>(initialText);
-  const [lastEmittedMinor, setLastEmittedMinor] = React.useState<number | undefined>(initialMinor);
-  const [prevValue, setPrevValue] = React.useState(value);
+  const lastEmittedRef = React.useRef<number | undefined>(initialMinor);
 
-  if (value !== undefined && value !== prevValue) {
-    setPrevValue(value);
-    if (value !== lastEmittedMinor) {
-      setLastEmittedMinor(value);
-      setRawText(value === 0 ? "" : formatAmountWithCommas(fromMinor(value)));
+  React.useEffect(() => {
+    if (value !== undefined && value !== lastEmittedRef.current) {
+      lastEmittedRef.current = value;
+      setRawText(value === 0 ? "" : formatAmountLive(fromMinor(value)));
     }
-  }
+  }, [value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputVal = e.target.value;
+    const input = e.target;
+    const inputVal = input.value;
+    const oldCaret = input.selectionStart ?? inputVal.length;
 
     if (inputVal === "") {
       setRawText("");
-      setLastEmittedMinor(0);
+      lastEmittedRef.current = 0;
       onChange?.(0);
       return;
     }
 
-    const sanitized = sanitizeAmountInput(inputVal);
-    setRawText(sanitized);
+    const formatted = formatAmountLive(inputVal);
+    const newCaret = calculateCaretPosition(inputVal, formatted, oldCaret);
 
-    // Convert to minor units
+    setRawText(formatted);
+
+    // Convert to integer minor units
     let minor = 0;
-    if (sanitized && sanitized !== "0.") {
+    const unformatted = formatted.replace(/,/g, "");
+    if (unformatted && unformatted !== "0.") {
       try {
-        minor = toMinor(sanitized);
+        minor = toMinor(unformatted);
       } catch {
         minor = 0;
       }
     }
-    setLastEmittedMinor(minor);
+    lastEmittedRef.current = minor;
     onChange?.(minor);
+
+    // Restore caret position smoothly
+    requestAnimationFrame(() => {
+      if (inputRef.current) {
+        inputRef.current.setSelectionRange(newCaret, newCaret);
+      }
+    });
   };
 
-  const handleBlur = () => {
-    if (rawText && rawText !== "0.") {
-      setRawText(formatAmountWithCommas(rawText));
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace") {
+      const input = inputRef.current;
+      if (input && input.selectionStart === input.selectionEnd) {
+        const pos = input.selectionStart ?? 0;
+        // If caret is positioned immediately after a comma, delete the digit before the comma
+        if (pos > 1 && input.value[pos - 1] === ",") {
+          e.preventDefault();
+          const val = input.value;
+          const updated = val.slice(0, pos - 2) + val.slice(pos);
+          const formatted = formatAmountLive(updated);
+          const newPos = calculateCaretPosition(val, formatted, pos - 2);
+
+          setRawText(formatted);
+          const unformatted = formatted.replace(/,/g, "");
+          let minor = 0;
+          if (unformatted && unformatted !== "0.") {
+            try {
+              minor = toMinor(unformatted);
+            } catch {
+              minor = 0;
+            }
+          }
+          lastEmittedRef.current = minor;
+          onChange?.(minor);
+
+          requestAnimationFrame(() => {
+            if (inputRef.current) {
+              inputRef.current.setSelectionRange(newPos, newPos);
+            }
+          });
+        }
+      }
     }
   };
 
@@ -156,6 +228,7 @@ export function AmountField({
         </span>
 
         <input
+          ref={inputRef}
           id={inputId}
           name={name}
           type="text"
@@ -163,12 +236,12 @@ export function AmountField({
           placeholder="0.00"
           value={rawText}
           onChange={handleChange}
-          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
           disabled={disabled}
           required={required}
           autoFocus={autoFocus}
           aria-invalid={!!error}
-          className="w-full bg-transparent text-3xl font-semibold tracking-tight text-foreground placeholder:text-muted-foreground/40 outline-none"
+          className="w-full bg-transparent text-3xl font-semibold tracking-tight text-foreground placeholder:text-muted-foreground/40 outline-none tabular-nums"
         />
       </div>
 

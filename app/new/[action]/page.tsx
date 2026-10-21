@@ -1,16 +1,23 @@
 import * as React from "react";
 import { HomeView } from "@/components/home-view";
 
-export default async function NewEntryPage({
+async function NewEntryContent({
   params,
 }: {
   params: Promise<{ action: string }>;
 }) {
   const { action } = await params;
+  return <HomeView activeAction={action} />;
+}
+
+export default function NewEntryPage({
+  params,
+}: {
+  params: Promise<{ action: string }>;
+}) {
   return (
     <React.Suspense fallback={null}>
-      <HomeView activeAction={action} />
+      <NewEntryContent params={params} />
     </React.Suspense>
   );
 }
-

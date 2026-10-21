@@ -11,13 +11,13 @@ test.describe("Entry Flow", () => {
   }) => {
     await page.goto("/");
 
-    // Open Money out
+    // Open Expenses
     const moneyOutCard = page.getByTestId("action-card-expense");
     await expect(moneyOutCard).toBeVisible();
     await moneyOutCard.click();
 
-    // Check modal opened with Money out title
-    await expect(page.getByRole("heading", { name: "Money out" })).toBeVisible();
+    // Check modal opened with Expenses title
+    await expect(page.getByRole("heading", { name: "Expenses" })).toBeVisible();
 
     // Verify date is formatted as DD-MM-YYYY
     const dateInput = page.getByPlaceholder("DD-MM-YYYY");
@@ -43,8 +43,8 @@ test.describe("Entry Flow", () => {
     const startTime = Date.now();
     await page.goto("/");
 
-    // Tap Money out card
-    await page.getByTestId("action-card-expense").click();
+    // Tap Expenses card
+    await page.getByTestId("action-card-expense").first().click();
 
     // Amount input is focused on open; enter 2500
     const amountInput = page.getByPlaceholder("0.00");
@@ -64,28 +64,28 @@ test.describe("Entry Flow", () => {
     expect(elapsedTime).toBeLessThan(15); // Must complete in under 15 seconds
 
     // Wait for modal to close
-    await expect(page.getByRole("heading", { name: "Money out" })).toBeHidden();
+    await expect(page.getByRole("heading", { name: "Expenses" })).toBeHidden();
     await page.waitForURL("/");
 
     // Toast "Saved" appears with "Undo"
-    const toastElement = page.getByText("Saved");
+    const toastElement = page.getByText("Saved").first();
     await expect(toastElement).toBeVisible();
     const undoButton = page.getByRole("button", { name: "Undo" });
     await expect(undoButton).toBeVisible();
 
-    // Money out card shows ₦2,500.00
-    const moneyOutCard = page.getByTestId("action-card-expense");
+    // Expenses card shows ₦2,500.00
+    const moneyOutCard = page.getByTestId("action-card-expense").first();
     await expect(moneyOutCard).toContainText("₦2,500.00");
 
-    // Strip also shows ₦2,500.00 for Money out
-    await expect(page.getByTestId("month-strip-money-out")).toContainText("₦2,500.00");
+    // Strip also shows ₦2,500.00 for Expenses
+    await expect(page.getByTestId("month-strip-expenses").first()).toContainText("₦2,500.00");
 
     // Click Undo
     await undoButton.click();
 
-    // Money out card reverts to ₦0.00
+    // Expenses card reverts to ₦0.00
     await expect(moneyOutCard).toContainText("₦0.00");
-    await expect(page.getByTestId("month-strip-money-out")).toContainText("₦0.00");
+    await expect(page.getByTestId("month-strip-expenses").first()).toContainText("₦0.00");
   });
 
   test("custom category flow ('Other') creates category and selects it next time", async ({
@@ -93,9 +93,9 @@ test.describe("Entry Flow", () => {
   }) => {
     await page.goto("/");
 
-    // Open Money out
-    await page.getByTestId("action-card-expense").click();
-    await expect(page.getByRole("heading", { name: "Money out" })).toBeVisible();
+    // Open Expenses
+    await page.getByTestId("action-card-expense").first().click();
+    await expect(page.getByRole("heading", { level: 2, name: "Expenses" })).toBeVisible();
 
     // Select "Other (type your own)"
     const categorySelect = page.locator("select").first();
@@ -110,23 +110,23 @@ test.describe("Entry Flow", () => {
     await customInput.fill(customCatName);
 
     // Enter amount
-    const amountInput = page.getByPlaceholder("0.00");
+    const amountInput = page.getByPlaceholder("0.00").first();
     await amountInput.fill("1200");
 
     // Save
     await page.getByRole("button", { name: "Save", exact: true }).click();
 
     // Wait for modal to close
-    await expect(page.getByRole("heading", { name: "Money out" })).toBeHidden();
+    await expect(page.getByRole("heading", { level: 2, name: "Expenses" })).toBeHidden();
     await page.waitForURL("/");
 
     // Verify toast
-    await expect(page.getByText("Saved")).toBeVisible();
-    await expect(page.getByTestId("action-card-expense")).toContainText("₦1,200.00");
+    await expect(page.getByText("Saved").first()).toBeVisible();
+    await expect(page.getByTestId("action-card-expense").first()).toContainText("₦1,200.00");
 
-    // Re-open Money out
-    await page.getByTestId("action-card-expense").click();
-    await expect(page.getByRole("heading", { name: "Money out" })).toBeVisible();
+    // Re-open Expenses
+    await page.getByTestId("action-card-expense").first().click();
+    await expect(page.getByRole("heading", { level: 2, name: "Expenses" })).toBeVisible();
 
     // Verify the newly created custom category is present in the options!
     const customOption = page.locator("select option", { hasText: customCatName });
@@ -138,8 +138,8 @@ test.describe("Entry Flow", () => {
   // Save button visibility without scrolling, saving, and screenshot capture
   // --------------------------------------------------------------------------
   const forms = [
-    { actionKey: "income", cardTestId: "action-card-income", title: "Money in" },
-    { actionKey: "expense", cardTestId: "action-card-expense", title: "Money out" },
+    { actionKey: "income", cardTestId: "action-card-income", title: "Income" },
+    { actionKey: "expense", cardTestId: "action-card-expense", title: "Expenses" },
     { actionKey: "giving", cardTestId: "action-card-giving", title: "Giving" },
     { actionKey: "lent", cardTestId: "action-card-lent", title: "Money I lent" },
   ];
@@ -154,7 +154,7 @@ test.describe("Entry Flow", () => {
       // Heading is visible
       await expect(page.getByRole("heading", { name: f.title })).toBeVisible();
 
-      // For Money in, verify Source (optional) is visible directly on form
+      // For Income, verify Source (optional) is visible directly on form
       if (f.actionKey === "income") {
         await expect(page.getByLabel(/Source/i)).toBeVisible();
       }
@@ -172,13 +172,13 @@ test.describe("Entry Flow", () => {
       const amountInput = page.getByPlaceholder("0.00").first();
       await expect(amountInput).toBeVisible();
 
-      // Type 2500 and verify accepted
+      // Type 2500 and verify formatted with commas
       await amountInput.fill("2500");
-      expect(await amountInput.inputValue()).toBe("2500");
+      expect(await amountInput.inputValue()).toBe("2,500");
 
-      // Type 1234567.89 and verify accepted
+      // Type 1234567.89 and verify formatted with commas
       await amountInput.fill("1234567.89");
-      expect(await amountInput.inputValue()).toBe("1234567.89");
+      expect(await amountInput.inputValue()).toBe("1,234,567.89");
 
       // Save button is visible in sticky footer WITHOUT scrolling
       const saveButton = page.getByRole("button", { name: "Save", exact: true });
@@ -210,7 +210,7 @@ test.describe("Entry Flow", () => {
     await page.goto("/");
 
     // Open Money I lent
-    await page.getByTestId("action-card-lent").click();
+    await page.getByTestId("action-card-lent").first().click();
     await expect(page.getByRole("heading", { name: "Money I lent" })).toBeVisible();
 
     // Fill Borrower
@@ -231,7 +231,7 @@ test.describe("Entry Flow", () => {
     await expect(undoButton).toBeVisible();
 
     // Lent card shows ₦50,000.00
-    const lentCard = page.getByTestId("action-card-lent");
+    const lentCard = page.getByTestId("action-card-lent").first();
     await expect(lentCard).toContainText("₦50,000.00");
 
     // Undo removes it
@@ -248,7 +248,7 @@ test.describe("Entry Flow", () => {
     await page.goto("/");
 
     for (const f of forms) {
-      await page.getByTestId(f.cardTestId).click();
+      await page.getByTestId(f.cardTestId).first().click();
       await expect(page.getByRole("heading", { name: f.title })).toBeVisible();
 
       // Verify no horizontal document overflow
@@ -269,8 +269,8 @@ test.describe("Entry Flow", () => {
     if (testInfo.project.name !== "desktop") return;
 
     await page.goto("/");
-    await page.getByTestId("action-card-lent").click();
-    await expect(page.getByRole("heading", { name: "Money I lent" })).toBeVisible();
+    await page.getByTestId("action-card-lent").first().click();
+    await expect(page.getByRole("heading", { name: "Money I lent" }).first()).toBeVisible();
 
     const dialog = page.locator("[data-slot='dialog-content']");
     await expect(dialog).toBeVisible();
@@ -283,6 +283,6 @@ test.describe("Entry Flow", () => {
 
     // Verify background overlay exists and page behind is present
     await expect(page.locator("[data-slot='dialog-overlay']")).toBeVisible();
-    await expect(page.getByText("What are we recording today?")).toBeAttached();
+    await expect(page.getByText("What are we recording today?").first()).toBeAttached();
   });
 });

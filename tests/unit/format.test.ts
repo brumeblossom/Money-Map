@@ -3,6 +3,7 @@ import {
   formatDate,
   formatMoney,
   fromMinor,
+  formatMonthYear,
   isValidDisplayDate,
   parseDisplayDate,
   toMinor,
@@ -135,6 +136,19 @@ describe("lib/format", () => {
     it("handles negative amounts cleanly", () => {
       expect(toMinor("-50.25")).toBe(-5025);
       expect(fromMinor(-5025)).toBe("-50.25");
+    });
+  });
+
+  describe("formatMonthYear", () => {
+    it("formats YYYY-MM to Month YYYY", () => {
+      expect(formatMonthYear("2026-10")).toBe("October 2026");
+      expect(formatMonthYear("2026-09")).toBe("September 2026");
+      expect(formatMonthYear("2027-01")).toBe("January 2027");
+    });
+
+    it("formats full date YYYY-MM-DD to Month YYYY", () => {
+      expect(formatMonthYear("2026-10-21")).toBe("October 2026");
+      expect(formatMonthYear("2026-09-15")).toBe("September 2026");
     });
   });
 });

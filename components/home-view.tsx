@@ -8,6 +8,9 @@ import { EntryModal } from "@/components/entry-modal";
 import { GuestBanner } from "@/components/guest-banner";
 import { useEntries, useLoans, useLoanPayments } from "@/lib/repo/hooks";
 import { seedDefaultCategories } from "@/lib/repo/seed";
+import { claimGuestData } from "@/lib/repo";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 import { getPeriodPreset, periodTotals, owedToMe } from "@/lib/calc";
 import { formatMoney } from "@/lib/format";
 
@@ -34,6 +37,39 @@ export function HomeView({ activeAction: initialAction, currency = "NGN" }: Home
     seedDefaultCategories().catch((err) => {
       console.error("Failed to seed default categories", err);
     });
+  }, []);
+
+  // Claim guest data if signed in
+  React.useEffect(() => {
+    async function syncGuestSession() {
+      try {
+        const supabase = createClient();
+        let userId: string | null = null;
+        const { data: sessionData } = await supabase.auth.getSession();
+        userId = sessionData?.session?.user?.id ?? null;
+
+        if (!userId && typeof document !== "undefined") {
+          const match = document.cookie.match(/moneymap_mock_user=([^;]+)/);
+          if (match) userId = match[1];
+        }
+
+        if (userId) {
+          if (typeof document !== "undefined") {
+            document.cookie =
+              "moneymap_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+          }
+
+          const claimed = await claimGuestData(userId);
+          if (claimed > 0) {
+            toast(`Your ${claimed} entries are now saved to your account`);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to sync guest session", e);
+      }
+    }
+
+    syncGuestSession();
   }, []);
 
   const today = React.useMemo(() => new Date().toISOString().slice(0, 10), []);

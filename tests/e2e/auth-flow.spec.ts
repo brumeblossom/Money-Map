@@ -314,4 +314,48 @@ test.describe("Auth and Guest Mode Flow (Prompt 9)", () => {
       page.getByRole("heading", { name: "What are we recording today?" }),
     ).toBeVisible();
   });
+
+  test("/auth/confirm with a bad token redirects to friendly /auth/error page", async ({
+    page,
+    context,
+  }) => {
+    await context.clearCookies();
+
+    // Navigate to /auth/confirm with a bad/expired token
+    await page.goto("/auth/confirm?token_hash=bad-token-invalid&type=email");
+
+    // Must redirect to /auth/error?reason=expired
+    await expect(page).toHaveURL(/\/auth\/error\?reason=expired/);
+
+    // Displays friendly error message
+    const errorMsg = page.getByTestId("auth-error-message");
+    await expect(errorMsg).toBeVisible();
+    await expect(errorMsg).toHaveText(
+      "This sign-in link has expired or was already used. Ask for a new one."
+    );
+
+    // Click 'Try again' button
+    const tryAgainBtn = page.getByTestId("auth-error-try-again");
+    await expect(tryAgainBtn).toBeVisible();
+    await tryAgainBtn.click();
+
+    // Returns to /welcome
+    await expect(page).toHaveURL(/\/welcome/);
+    await expect(page.getByRole("heading", { name: "Money Map" })).toBeVisible();
+  });
+
+  test("/auth/error displays other_browser notice when opened across browsers", async ({
+    page,
+    context,
+  }) => {
+    await context.clearCookies();
+
+    await page.goto("/auth/error?reason=other_browser");
+    const errorMsg = page.getByTestId("auth-error-message");
+    await expect(errorMsg).toBeVisible();
+    await expect(errorMsg).toHaveText(
+      "Open the sign-in link in the same browser where you asked for it, or continue with Google."
+    );
+  });
 });
+

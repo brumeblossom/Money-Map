@@ -52,8 +52,7 @@ export async function middleware(request: NextRequest) {
   if (
     path.startsWith("/_next") ||
     path.startsWith("/api") ||
-    path.startsWith("/auth/callback") ||
-    path.startsWith("/auth/check-email") ||
+    path.startsWith("/auth/") ||
     path.includes(".")
   ) {
     return response;

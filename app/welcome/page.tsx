@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Mail, Loader2, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { emailAuthSchema } from "@/lib/schemas";
+import { mapAuthErrorMessage } from "@/lib/auth/errors";
 
 function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -34,11 +35,13 @@ export default function WelcomePage() {
   const [showEmailForm, setShowEmailForm] = React.useState(false);
   const [email, setEmail] = React.useState("");
   const [emailError, setEmailError] = React.useState<string | null>(null);
+  const [googleError, setGoogleError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
 
   const handleContinueWithGoogle = async () => {
     setIsGoogleLoading(true);
+    setGoogleError(null);
     try {
       const supabase = createClient();
       const origin = window.location.origin;
@@ -49,11 +52,11 @@ export default function WelcomePage() {
         },
       });
       if (error) {
-        console.error("Google sign in error", error);
+        setGoogleError(mapAuthErrorMessage(error));
         setIsGoogleLoading(false);
       }
     } catch (err) {
-      console.error("Unexpected Google sign-in failure", err);
+      setGoogleError(mapAuthErrorMessage(err));
       setIsGoogleLoading(false);
     }
   };
@@ -75,12 +78,12 @@ export default function WelcomePage() {
       const { error } = await supabase.auth.signInWithOtp({
         email: validation.data.email,
         options: {
-          emailRedirectTo: `${origin}/auth/callback`,
+          emailRedirectTo: `${origin}/auth/confirm`,
         },
       });
 
       if (error) {
-        setEmailError(error.message || "Enter a valid email");
+        setEmailError(mapAuthErrorMessage(error));
         setIsLoading(false);
         return;
       }
@@ -88,7 +91,7 @@ export default function WelcomePage() {
       router.push(`/auth/check-email?email=${encodeURIComponent(validation.data.email)}`);
     } catch (err) {
       console.error("Failed to send OTP", err);
-      setEmailError("Enter a valid email");
+      setEmailError(mapAuthErrorMessage(err));
       setIsLoading(false);
     }
   };
@@ -121,20 +124,30 @@ export default function WelcomePage() {
         {/* Action Buttons */}
         <div className="space-y-3">
           {/* Continue with Google */}
-          <button
-            type="button"
-            data-testid="welcome-google"
-            onClick={handleContinueWithGoogle}
-            disabled={isGoogleLoading || isLoading}
-            className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold text-foreground shadow-xs transition hover:bg-accent/60 active:scale-[0.98] disabled:opacity-50"
-          >
-            {isGoogleLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            ) : (
-              <GoogleIcon />
+          <div className="space-y-1.5">
+            <button
+              type="button"
+              data-testid="welcome-google"
+              onClick={handleContinueWithGoogle}
+              disabled={isGoogleLoading || isLoading}
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold text-foreground shadow-xs transition hover:bg-accent/60 active:scale-[0.98] disabled:opacity-50"
+            >
+              {isGoogleLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              ) : (
+                <GoogleIcon />
+              )}
+              <span>Continue with Google</span>
+            </button>
+            {googleError && (
+              <p
+                data-testid="welcome-google-error"
+                className="text-xs font-medium text-destructive px-1 text-left"
+              >
+                {googleError}
+              </p>
             )}
-            <span>Continue with Google</span>
-          </button>
+          </div>
 
           {/* Email Flow */}
           {!showEmailForm ? (

@@ -437,6 +437,34 @@
 ```
 5. Click **Save**.
 
+### Prompt 9b: Login fixes (Email link, Google and error messages)
+- Added `app/auth/confirm/route.ts` route handler:
+  - Reads `token_hash` and `type` from the URL.
+  - Verifies the OTP via `supabase.auth.verifyOtp({ token_hash, type })` with the server client, setting the 30-day auth session cookie.
+  - Works across different browsers and in-app browsers (e.g. Gmail app) without needing a PKCE code verifier.
+  - On failure, redirects to `/auth/error?reason=expired` (or reason determined from error).
+  - Clears `moneymap_guest` cookie on success and redirects to `/`.
+- Maintained `app/auth/callback/page.tsx` for Google OAuth code exchange via `supabase.auth.exchangeCodeForSession(code)`.
+- Added automatic guest data migration check in `components/home-view.tsx` on Home mount:
+  - When landing on `/` after sign-in (via `/auth/confirm` or `/auth/callback`), if the user is authenticated and has guest rows in IndexedDB, runs `claimGuestData(userId)`.
+  - Sets `user_id` on all guest entries, categories, and loans, queues each into the sync `outbox`, and displays the toast `"Your N entries are now saved to your account"`.
+- Built dynamic redirect addresses:
+  - Both Google `redirectTo` (`${origin}/auth/callback`) and email `emailRedirectTo` (`${origin}/auth/confirm`) dynamically use `window.location.origin` (or `process.env.NEXT_PUBLIC_APP_URL`), eliminating hardcoded localhost URLs.
+- Created dedicated friendly `/auth/error` page (`app/auth/error/page.tsx`):
+  - Expired or already-used link: *"This sign-in link has expired or was already used. Ask for a new one."*
+  - Cross-browser PKCE failure: *"Open the sign-in link in the same browser where you asked for it, or continue with Google."*
+  - Fallback / unexpected: *"We couldn't sign you in. Please try again."*
+  - Includes prominent *"Try again"* button navigating back to `/welcome`.
+- Implemented error message mapping in `lib/auth/errors.ts` for `/welcome` and `/auth/check-email`:
+  - 429 rate limit exceeded: *"Too many emails sent. Please wait a few minutes and try again, or continue with Google."*
+  - Google provider disabled: *"Google sign-in isn't ready yet. Use email for now."*
+  - Invalid email: *"Enter a valid email"*
+  - Visible 60-second countdown before "Resend" is allowed on `/auth/check-email`.
+- Verified:
+  - Unit tests: 7 tests in `tests/unit/auth-errors.test.ts` passing (109 total unit tests passing across all 8 suites).
+  - Playwright E2E tests: 14 tests in `tests/e2e/auth-flow.spec.ts` passing on mobile (390px) and desktop (1280px), including bad token redirect to friendly `/auth/error` page and cross-browser notices.
+  - Production build (`bun run build`) passing with 0 errors.
+
 ## Decisions
 
 - Dark mode theme configured using media query `@media (prefers-color-scheme: dark)` in `app/globals.css` to respect the system preference per PRD §9 rather than a class toggle.
@@ -464,9 +492,17 @@
 - `claimGuestData` updates all guest rows across `entries`, `loans`, `loan_payments`, `categories`, `recurring_rules`, `profiles` in a single Dexie transaction and queues each to outbox.
 - Guest banner dismissal stores `guest_banner_dismissed_until` timestamp in Dexie `meta` store for 7 days.
 - Auth session cookies set with 30-day lifetime (`maxAge: 2592000`).
+- Auth flow uses `/auth/confirm` for email links (server OTP verification via `verifyOtp` without PKCE) and `/auth/callback` for Google OAuth (`exchangeCodeForSession`).
+- Claim guest data hook mounted on Home (`/`) to ensure guest entries are claimed and toasted regardless of the login route used.
 
-## Database Instructions
+## Database & Auth Instructions
 
+- **Supabase URL Configuration**:
+  - Site URL: `https://money-map-tau.vercel.app`
+  - Redirect URLs: `https://money-map-tau.vercel.app/**` and `http://localhost:3000/**`
+- **Auth Routes**:
+  - Email magic links: handled by `app/auth/confirm/route.ts` via token_hash verification.
+  - Google OAuth: handled by `app/auth/callback/page.tsx` via code exchange.
 - **How to run the local DB**: If Docker is installed on the host machine, run `bunx supabase start` (resets with `bunx supabase db reset`). Without Docker, development connects to the linked remote project (`jiktrplyuneakhhoayde`) via `bunx supabase db query --linked`.
 - **How to regenerate types**: Run `bun run db:types`.
 - **Schema cloud push status**: The schema has been pushed to the cloud project (`jiktrplyuneakhhoayde`).

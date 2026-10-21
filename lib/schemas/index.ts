@@ -165,3 +165,10 @@ export const categoryFormSchema = z.object({
 });
 
 export type CategoryFormData = z.infer<typeof categoryFormSchema>;
+
+// Auth schemas (PRD section 10, E1 US-1.1, US-1.2)
+export const emailAuthSchema = z.object({
+  email: z.string().trim().email("Enter a valid email"),
+});
+
+export type EmailAuthData = z.infer<typeof emailAuthSchema>;

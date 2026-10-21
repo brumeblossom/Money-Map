@@ -29,7 +29,7 @@ export {
   type InterestKind,
   type SyncableTable,
 };
-import { getCurrentUserId } from "./user";
+import { getCurrentUserId, setCurrentUserId } from "./user";
 
 export * from "./user";
 export * from "./seed";
@@ -45,14 +45,18 @@ async function executeWrite<T>(
   const tableRef = database.table(table);
   const outboxRef = database.outbox;
   const now = new Date().toISOString();
+  const userId = getCurrentUserId();
 
   return await database.transaction("rw", [tableRef, outboxRef], async () => {
     const result = await operation();
-    await outboxRef.add({
-      table,
-      row_id: rowId,
-      created_at: now,
-    });
+    // Only queue to outbox if user is signed in (guest rows are queued on claimGuestData)
+    if (userId) {
+      await outboxRef.add({
+        table,
+        row_id: rowId,
+        created_at: now,
+      });
+    }
     return result;
   });
 }
@@ -789,3 +793,151 @@ export async function listProfiles(
 ): Promise<ProfileRow[]> {
   return await database.profiles.toArray();
 }
+
+// -------------------------------------------------------------
+// 7. Guest Data Migration & Guest Banner (PRD Section 8, US-1.3)
+// -------------------------------------------------------------
+export async function claimGuestData(
+  newUserId: string,
+  database: MoneyMapDatabase = db,
+): Promise<number> {
+  setCurrentUserId(newUserId);
+  const now = new Date().toISOString();
+
+  return await database.transaction(
+    "rw",
+    [
+      database.entries,
+      database.loans,
+      database.loan_payments,
+      database.categories,
+      database.recurring_rules,
+      database.profiles,
+      database.outbox,
+    ],
+    async () => {
+      let claimedEntriesCount = 0;
+
+      // 1. Entries
+      const guestEntries = await database.entries
+        .filter((row) => !row.user_id || row.user_id === "")
+        .toArray();
+      claimedEntriesCount = guestEntries.length;
+      for (const entry of guestEntries) {
+        await database.entries.update(entry.id, {
+          user_id: newUserId,
+          updated_at: now,
+        });
+        await database.outbox.add({
+          table: "entries",
+          row_id: entry.id,
+          created_at: now,
+        });
+      }
+
+      // 2. Loans
+      const guestLoans = await database.loans
+        .filter((row) => !row.user_id || row.user_id === "")
+        .toArray();
+      for (const loan of guestLoans) {
+        await database.loans.update(loan.id, {
+          user_id: newUserId,
+          updated_at: now,
+        });
+        await database.outbox.add({
+          table: "loans",
+          row_id: loan.id,
+          created_at: now,
+        });
+      }
+
+      // 3. Loan Payments
+      const guestPayments = await database.loan_payments
+        .filter((row) => !row.user_id || row.user_id === "")
+        .toArray();
+      for (const payment of guestPayments) {
+        await database.loan_payments.update(payment.id, {
+          user_id: newUserId,
+          updated_at: now,
+        });
+        await database.outbox.add({
+          table: "loan_payments",
+          row_id: payment.id,
+          created_at: now,
+        });
+      }
+
+      // 4. Categories
+      const guestCategories = await database.categories
+        .filter((row) => !row.user_id || row.user_id === "")
+        .toArray();
+      for (const cat of guestCategories) {
+        await database.categories.update(cat.id, {
+          user_id: newUserId,
+          updated_at: now,
+        });
+        await database.outbox.add({
+          table: "categories",
+          row_id: cat.id,
+          created_at: now,
+        });
+      }
+
+      // 5. Recurring Rules
+      const guestRules = await database.recurring_rules
+        .filter((row) => !row.user_id || row.user_id === "")
+        .toArray();
+      for (const rule of guestRules) {
+        await database.recurring_rules.update(rule.id, {
+          user_id: newUserId,
+          updated_at: now,
+        });
+        await database.outbox.add({
+          table: "recurring_rules",
+          row_id: rule.id,
+          created_at: now,
+        });
+      }
+
+      // 6. Profiles
+      const guestProfiles = await database.profiles
+        .filter((row) => !row.user_id || row.user_id === "")
+        .toArray();
+      for (const prof of guestProfiles) {
+        await database.profiles.delete(prof.user_id);
+        await database.profiles.put({
+          ...prof,
+          user_id: newUserId,
+          updated_at: now,
+        });
+        await database.outbox.add({
+          table: "profiles",
+          row_id: newUserId,
+          created_at: now,
+        });
+      }
+
+      return claimedEntriesCount;
+    },
+  );
+}
+
+export async function isGuestBannerDismissed(
+  database: MoneyMapDatabase = db,
+): Promise<boolean> {
+  const meta = await database.meta.get("guest_banner_dismissed_until");
+  if (!meta || typeof meta.value !== "string") return false;
+  return new Date(meta.value).getTime() > Date.now();
+}
+
+export async function dismissGuestBanner(
+  days = 7,
+  database: MoneyMapDatabase = db,
+): Promise<void> {
+  const dismissedUntil = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+  await database.meta.put({
+    key: "guest_banner_dismissed_until",
+    value: dismissedUntil,
+  });
+}
+

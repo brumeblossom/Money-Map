@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { setGuestCookie } from "./test-helpers";
 
 test.describe("Entry Flow", () => {
+  test.beforeEach(async ({ context }) => {
+    await setGuestCookie(context);
+  });
+
   test("save is disabled until required fields are valid and date displays DD-MM-YYYY", async ({
     page,
   }) => {

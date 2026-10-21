@@ -25,6 +25,9 @@ import {
   DEFAULT_CATEGORIES,
   setCurrentUserId,
   toSlug,
+  claimGuestData,
+  isGuestBannerDismissed,
+  dismissGuestBanner,
 } from "@/lib/repo";
 
 describe("Local Data Layer (Dexie Repository & Outbox)", () => {
@@ -33,7 +36,7 @@ describe("Local Data Layer (Dexie Repository & Outbox)", () => {
   beforeEach(async () => {
     // Unique in-memory database for each test
     testDb = new MoneyMapDatabase(`test-moneymap-${crypto.randomUUID()}`);
-    setCurrentUserId(null); // default to guest
+    setCurrentUserId("test-user-id");
   });
 
   it("create adds a row and exactly one outbox item in the same transaction", async () => {
@@ -298,5 +301,74 @@ describe("Local Data Layer (Dexie Repository & Outbox)", () => {
     expect(toSlug("Offering & seed")).toBe("offering-seed");
     expect(toSlug("Customer (credit sale)")).toBe("customer-credit-sale");
   });
+
+  it("guest writes do not append to outbox until claimGuestData is called", async () => {
+    setCurrentUserId(null); // Guest mode
+
+    const entry1 = await createEntry(
+      {
+        kind: "income",
+        amount_minor: 500000,
+        category_id: crypto.randomUUID(),
+        occurred_on: "2026-10-21",
+        description: "Guest entry 1",
+      },
+      testDb,
+    );
+
+    const entry2 = await createEntry(
+      {
+        kind: "expense",
+        amount_minor: 200000,
+        category_id: crypto.randomUUID(),
+        occurred_on: "2026-10-21",
+        description: "Guest entry 2",
+      },
+      testDb,
+    );
+
+    // Guest writes should not be queued to outbox
+    expect(await testDb.outbox.count()).toBe(0);
+
+    // Rows should have empty/null user_id
+    const row1 = await testDb.entries.get(entry1.id);
+    const row2 = await testDb.entries.get(entry2.id);
+    expect(row1?.user_id).toBe("");
+    expect(row2?.user_id).toBe("");
+
+    // Now sign in and claim guest data
+    const newUserId = "signed-in-user-456";
+    const claimedCount = await claimGuestData(newUserId, testDb);
+
+    expect(claimedCount).toBe(2);
+
+    // After claim, user_id should be updated
+    const updatedRow1 = await testDb.entries.get(entry1.id);
+    const updatedRow2 = await testDb.entries.get(entry2.id);
+    expect(updatedRow1?.user_id).toBe(newUserId);
+    expect(updatedRow2?.user_id).toBe(newUserId);
+
+    // Outbox should now have 2 items queued for sync
+    const outboxItems = await testDb.outbox.toArray();
+    expect(outboxItems).toHaveLength(2);
+    expect(outboxItems.map((o) => o.row_id)).toEqual(
+      expect.arrayContaining([entry1.id, entry2.id]),
+    );
+  });
+
+  it("handles guest banner dismissal state stored in Dexie meta for 7 days", async () => {
+    expect(await isGuestBannerDismissed(testDb)).toBe(false);
+
+    // Dismiss banner for 7 days
+    await dismissGuestBanner(7, testDb);
+
+    expect(await isGuestBannerDismissed(testDb)).toBe(true);
+
+    const meta = await testDb.meta.get("guest_banner_dismissed_until");
+    expect(meta).toBeDefined();
+    expect(typeof meta?.value).toBe("string");
+    expect(new Date(meta?.value as string).getTime()).toBeGreaterThan(Date.now());
+  });
 });
+
 

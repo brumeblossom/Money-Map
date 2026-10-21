@@ -1,27 +1,213 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+"use client";
+
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { Mail, Loader2, Sparkles } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { emailAuthSchema } from "@/lib/schemas";
+
+function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" {...props}>
+      <path
+        fill="#4285F4"
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+      />
+    </svg>
+  );
+}
 
 export default function WelcomePage() {
+  const router = useRouter();
+  const [showEmailForm, setShowEmailForm] = React.useState(false);
+  const [email, setEmail] = React.useState("");
+  const [emailError, setEmailError] = React.useState<string | null>(null);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
+
+  const handleContinueWithGoogle = async () => {
+    setIsGoogleLoading(true);
+    try {
+      const supabase = createClient();
+      const origin = window.location.origin;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${origin}/auth/callback`,
+        },
+      });
+      if (error) {
+        console.error("Google sign in error", error);
+        setIsGoogleLoading(false);
+      }
+    } catch (err) {
+      console.error("Unexpected Google sign-in failure", err);
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const handleSendLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEmailError(null);
+
+    const validation = emailAuthSchema.safeParse({ email });
+    if (!validation.success) {
+      setEmailError("Enter a valid email");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const supabase = createClient();
+      const origin = window.location.origin;
+      const { error } = await supabase.auth.signInWithOtp({
+        email: validation.data.email,
+        options: {
+          emailRedirectTo: `${origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        setEmailError(error.message || "Enter a valid email");
+        setIsLoading(false);
+        return;
+      }
+
+      router.push(`/auth/check-email?email=${encodeURIComponent(validation.data.email)}`);
+    } catch (err) {
+      console.error("Failed to send OTP", err);
+      setEmailError("Enter a valid email");
+      setIsLoading(false);
+    }
+  };
+
+  const handleTryWithoutAccount = () => {
+    // Set 30-day guest cookie
+    document.cookie = "moneymap_guest=true; path=/; max-age=2592000; SameSite=Lax";
+    router.push("/");
+    router.refresh();
+  };
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6 text-center">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Welcome</h1>
-          <p className="text-muted-foreground">
-            Track your money: expenses, income, savings, giving and loans.
-          </p>
+    <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-radial-[at_50%_0%] from-emerald-500/10 via-background to-background text-foreground">
+      <div className="w-full max-w-sm space-y-8 text-center">
+        {/* Brand Header */}
+        <div className="space-y-3">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-600 shadow-lg shadow-emerald-600/25 ring-8 ring-emerald-500/10 dark:bg-emerald-500">
+            <Sparkles className="h-8 w-8 text-white dark:text-neutral-950" />
+          </div>
+          <div className="space-y-1">
+            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+              Money Map
+            </h1>
+            <p className="text-sm font-medium text-muted-foreground sm:text-base">
+              Track your money effortlessly with zero clutter. Private, offline-first personal finance.
+            </p>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-3">
-          <Button className="w-full" variant="default">
-            Continue with Google
-          </Button>
-          <Button className="w-full" variant="outline">
-            Continue with email
-          </Button>
-          <Button asChild variant="ghost" className="w-full">
-            <Link href="/">Try without an account</Link>
-          </Button>
+        {/* Action Buttons */}
+        <div className="space-y-3">
+          {/* Continue with Google */}
+          <button
+            type="button"
+            data-testid="welcome-google"
+            onClick={handleContinueWithGoogle}
+            disabled={isGoogleLoading || isLoading}
+            className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold text-foreground shadow-xs transition hover:bg-accent/60 active:scale-[0.98] disabled:opacity-50"
+          >
+            {isGoogleLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            ) : (
+              <GoogleIcon />
+            )}
+            <span>Continue with Google</span>
+          </button>
+
+          {/* Email Flow */}
+          {!showEmailForm ? (
+            <button
+              type="button"
+              data-testid="welcome-email-toggle"
+              onClick={() => setShowEmailForm(true)}
+              disabled={isGoogleLoading || isLoading}
+              className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold text-foreground shadow-xs transition hover:bg-accent/60 active:scale-[0.98] disabled:opacity-50"
+            >
+              <Mail className="h-4 w-4 text-muted-foreground" />
+              <span>Continue with email</span>
+            </button>
+          ) : (
+            <form onSubmit={handleSendLink} noValidate className="space-y-3 text-left">
+              <div className="space-y-1.5">
+                <input
+                  type="email"
+                  data-testid="welcome-email-input"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (emailError) setEmailError(null);
+                  }}
+                  placeholder="name@example.com"
+                  autoFocus
+                  className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground shadow-xs transition placeholder:text-muted-foreground focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+                {emailError && (
+                  <p
+                    data-testid="welcome-email-error"
+                    className="text-xs font-medium text-destructive px-1"
+                  >
+                    {emailError}
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                data-testid="welcome-email-submit"
+                disabled={isLoading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-600/20 transition hover:bg-emerald-700 active:scale-[0.98] disabled:opacity-50 dark:bg-emerald-500 dark:text-neutral-950 dark:hover:bg-emerald-400"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <span>Send me a link</span>
+                )}
+              </button>
+            </form>
+          )}
+
+          <div className="relative py-1">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border/60" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground font-medium">
+                or
+              </span>
+            </div>
+          </div>
+
+          {/* Try without an account */}
+          <button
+            type="button"
+            data-testid="welcome-try-guest"
+            onClick={handleTryWithoutAccount}
+            className="w-full rounded-xl px-4 py-3 text-sm font-semibold text-muted-foreground transition hover:bg-accent/40 hover:text-foreground active:scale-[0.98]"
+          >
+            Try without an account
+          </button>
         </div>
       </div>
     </main>

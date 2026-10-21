@@ -1,12 +1,13 @@
 import { test, expect } from "@playwright/test";
 import * as path from "node:path";
 import * as fs from "node:fs";
+import { setGuestCookie } from "./test-helpers";
 
 const PRD_ROUTES = [
   { path: "/", title: "Home" },
-  { path: "/welcome", title: "Welcome" },
+  { path: "/welcome?intent=signin", title: "Money Map" },
   { path: "/auth/check-email", title: "Check your email" },
-  { path: "/auth/callback", title: "(no UI)" },
+  { path: "/auth/callback", title: "Signing you in..." },
   { path: "/new/income", title: "Entry form" },
   { path: "/new/expense", title: "Entry form" },
   { path: "/new/giving", title: "Entry form" },
@@ -30,6 +31,10 @@ test.describe("App Shell & Responsive Navigation", () => {
     if (!fs.existsSync(screenshotsDir)) {
       fs.mkdirSync(screenshotsDir, { recursive: true });
     }
+  });
+
+  test.beforeEach(async ({ context }) => {
+    await setGuestCookie(context);
   });
 
   test("responsive visibility and screenshot capture", async ({ page, isMobile }, testInfo) => {
@@ -80,10 +85,14 @@ test.describe("App Shell & Responsive Navigation", () => {
       const response = await page.goto(route.path);
       expect(response?.status()).toBeLessThan(400);
 
-      // Verify the page title is present in the DOM
-      await expect(
-        page.getByRole("heading", { name: route.title }).first(),
-      ).toBeVisible();
+      // Verify page title or label is present in the DOM
+      if (route.path.startsWith("/auth/callback")) {
+        await expect(page.getByText(route.title).first()).toBeVisible();
+      } else {
+        await expect(
+          page.getByRole("heading", { name: route.title }).first(),
+        ).toBeVisible();
+      }
     });
   }
 });

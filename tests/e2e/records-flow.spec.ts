@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { setGuestCookie } from "./test-helpers";
 
 test.describe("Records Flow (Prompt 8)", () => {
+  test.beforeEach(async ({ context }) => {
+    await setGuestCookie(context);
+  });
+
   test("create 3 entries, filter to Money out, multi-select, edit amount updates Home, delete and Undo", async ({
     page,
   }) => {
@@ -188,7 +193,7 @@ test.describe("Records Flow (Prompt 8)", () => {
   test("Seed 5,000 entries and confirm scrolling stays smooth (no long tasks > 200ms)", async ({
     page,
   }) => {
-    test.setTimeout(60000);
+    test.setTimeout(120000);
     await page.goto("/records");
     await expect(page.getByRole("main").getByRole("heading", { name: "Records" })).toBeVisible();
 

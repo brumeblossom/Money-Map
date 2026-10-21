@@ -341,6 +341,102 @@
     - Seeding 5,000 entries into Dexie and confirming virtualized scrolling remains smooth with no long tasks > 200ms.
   - ESLint (`bun run lint`) and TypeScript (`bun run typecheck`) pass with 0 errors.
 
+### Prompt 9: Login and guest mode
+- **Supabase SSR Client & Middleware**:
+  - Implemented browser client (`lib/supabase/client.ts`) and server client (`lib/supabase/server.ts`) using `@supabase/ssr` with 30-day cookie session lifetime (`maxAge: 60 * 60 * 24 * 30`).
+  - Implemented Next.js edge middleware (`middleware.ts`) that refreshes the Supabase auth session cookie on every request, redirects unauthenticated first-time visitors to `/welcome`, allows guests (`moneymap_guest=true` cookie) and signed-in users straight to Home (`/`), and redirects authed/guest visitors from `/welcome` to `/` unless `?intent=signin` is specified.
+- **Welcome Page (`/welcome`)**:
+  - Brand header with logo and one-line pitch: *"Track your money effortlessly with zero clutter. Private, offline-first personal finance."*
+  - Action buttons:
+    - **"Continue with Google"**: initiates `supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } })`.
+    - **"Continue with email"**: reveals input for email and **"Send me a link"** button. Validates format via `emailAuthSchema` in `lib/schemas`, displaying `"Enter a valid email"` on failure. On submit, calls `supabase.auth.signInWithOtp` and navigates to `/auth/check-email`.
+    - **"Try without an account"**: sets `moneymap_guest=true` (30-day max-age) and transitions to Home (`/`) in <1s.
+- **Check Email Page (`/auth/check-email`)**:
+  - Displays heading *"Check your email"*, recipient email confirmation, and instruction to tap the link.
+  - **"Resend"** button with a 60-second countdown timer (`Resend (60s)` disabled -> `Resend link` active when timer reaches 0). Clicking triggers OTP re-send and resets the 60s timer.
+- **Auth Callback & Guest Migration (`/auth/callback`)**:
+  - Client-side route that exchanges code for session, retrieves user, and runs `claimGuestData(newUserId)` on Dexie IndexedDB.
+  - In a single atomic Dexie transaction: updates `user_id = newUserId` on all guest rows across `entries`, `loans`, `loan_payments`, `categories`, `recurring_rules`, `profiles`, appends an outbox record for each row so sync can push them, and clears the `moneymap_guest` cookie.
+  - Displays toast `"Your N entries are now saved to your account"` using sonner and redirects to `/`.
+- **Guest Banner (`components/guest-banner.tsx`)**:
+  - Prompts guest users after saving their 3rd entry: *"Save your data: sign in so you don't lose it"*.
+  - Includes a *"Sign in"* button navigating to `/welcome?intent=signin` and a dismiss (X) button that stores `guest_banner_dismissed_until` (7 days in future) in Dexie `meta`.
+- **Verification**:
+  - 102 Vitest unit tests passing (`bun run test`).
+  - Playwright E2E suite (`tests/e2e/auth-flow.spec.ts`) passing across 390px mobile and 1280px desktop viewports covering:
+    - First-time visitor redirection to `/welcome` and transition to Home via "Try without an account" in <1s.
+    - Email validation showing `"Enter a valid email"` and routing to `/auth/check-email` with 60s countdown on Resend.
+    - Guest banner appearing only after 3rd saved entry, and staying dismissed for 7 days.
+    - Guest recording 2 entries, signing in via `/auth/callback`, verifying Dexie entries are claimed with user_id and added to outbox, toast appearing, and redirecting to Home.
+    - 30-day session cookie persistence (simulating 1 day passing stays on Home).
+  - All existing Playwright suites (`home.spec.ts`, `app-shell.spec.ts`, `entry-flow.spec.ts`, `lent-flow.spec.ts`, `records-flow.spec.ts`) passing.
+
+## Step-by-Step Auth Setup Instructions
+
+### 1. Supabase Dashboard Configuration
+1. Open the [Supabase Dashboard](https://supabase.com/dashboard/project/jiktrplyuneakhhoayde).
+2. **Enable Email Provider**:
+   - Go to **Authentication** > **Providers** > **Email**.
+   - Ensure **Enable Email provider** is turned **ON**.
+   - Ensure **Confirm email** or **Magic Link** is enabled.
+3. **Enable Google Provider**:
+   - In **Authentication** > **Providers**, select **Google**.
+   - Toggle **Enable Sign in with Google** to **ON**.
+   - Copy the **Callback URL (for OAuth)** shown in the Supabase Google provider modal:
+     `https://jiktrplyuneakhhoayde.supabase.co/auth/v1/callback`
+   - Paste your **Client ID** and **Client Secret** obtained from Google Cloud (see step 2 below) and click **Save**.
+4. **Configure Site URL and Redirect URLs**:
+   - Go to **Authentication** > **URL Configuration**.
+   - Set **Site URL** to:
+     - Development: `http://localhost:3000`
+     - Production: Your production Vercel URL (e.g. `https://money-map.vercel.app`).
+   - Under **Redirect URLs**, click **Add URL** and add:
+     - `http://localhost:3000/auth/callback`
+     - `https://*.vercel.app/auth/callback` (or your specific Vercel URL e.g. `https://money-map.vercel.app/auth/callback`)
+   - Click **Save**.
+
+### 2. Google Cloud Console Configuration
+1. Open the [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials).
+2. Under **OAuth 2.0 Client IDs**, select your Web application client ID (or click **Create Credentials** > **OAuth client ID** > Web application).
+3. Under **Authorized JavaScript origins**, add:
+   - `http://localhost:3000`
+   - `https://jiktrplyuneakhhoayde.supabase.co`
+   - Your production Vercel URL (e.g. `https://money-map.vercel.app`)
+4. Under **Authorized redirect URIs**, paste the exact callback URI from your Supabase project:
+   - `https://jiktrplyuneakhhoayde.supabase.co/auth/v1/callback`
+5. Click **Save**.
+6. Copy the **Client ID** and **Client Secret** and paste them into the Supabase Google Provider settings.
+
+### 3. Customizing Magic Link Email with Money Map Branding
+1. In the Supabase Dashboard, go to **Authentication** > **Email Templates**.
+2. Select the **Magic Link** template.
+3. Set the **Subject line**:
+   `Your Money Map magic link`
+4. Set the **Message body (HTML)**:
+```html
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 20px; background-color: #ffffff; color: #171717;">
+  <div style="margin-bottom: 24px;">
+    <h1 style="font-size: 24px; font-weight: 800; color: #059669; margin: 0 0 8px 0;">Money Map</h1>
+    <p style="font-size: 14px; color: #737373; margin: 0;">Clear, private, offline-first personal finance.</p>
+  </div>
+  
+  <p style="font-size: 16px; line-height: 24px; color: #262626; margin: 0 0 24px 0;">
+    Tap the button below to sign in to your Money Map account. This link will expire in 24 hours.
+  </p>
+  
+  <div style="margin: 28px 0;">
+    <a href="{{ .ConfirmationURL }}" style="display: inline-block; background-color: #059669; color: #ffffff; font-size: 15px; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 12px; box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);">
+      Sign in to Money Map
+    </a>
+  </div>
+  
+  <p style="font-size: 13px; color: #a3a3a3; line-height: 20px; margin: 24px 0 0 0;">
+    If you didn't request this email, you can safely ignore it.
+  </p>
+</div>
+```
+5. Click **Save**.
+
 ## Decisions
 
 - Dark mode theme configured using media query `@media (prefers-color-scheme: dark)` in `app/globals.css` to respect the system preference per PRD §9 rather than a class toggle.
@@ -356,7 +452,6 @@
 - Tested IndexedDB locally via `fake-indexeddb` to allow full unit test execution in Node/Vitest environments.
 - All calculations in `lib/calc` operate on integer minor units (kobo/cents) with no floating-point math for money.
 - Date arithmetic in `lib/calc` uses UTC calendar methods to avoid local timezone drift.
-- PRD Section 5 left no open decisions; all calculation rules implemented precisely as specified.
 - Responsive entry modal utilizes `React.useSyncExternalStore` for SSR-safe viewport match-media detection avoiding React 19 cascading re-render warnings.
 - HomeView maintains entry modal state with `window.history.pushState` on card clicks to allow instant modal transitions over Home without unmounting or duplicate route DOM mounts.
 - All form fields shown directly without "More details" collapsibles, with required fields first followed by optional fields marked "(optional)".
@@ -365,6 +460,10 @@
 - Record payment and edit loan forms isolate initial state via keyed inner components (`key={id}`) to remain strictly compliant with React 19 rendering purity rules.
 - Records virtualization implements `@tanstack/react-virtual` with custom `arePropsEqual` memoization to eliminate row re-renders during high-speed scrolling.
 - Virtual list container and row items utilize `touch-pan-y` CSS property to enable immediate compositor-driven touch scrolling without blocking main-thread touch gesture checks.
+- Guest writes (entries, categories, loans) store `user_id = ""` and do not add to outbox until `claimGuestData(newUserId)` runs on sign-in.
+- `claimGuestData` updates all guest rows across `entries`, `loans`, `loan_payments`, `categories`, `recurring_rules`, `profiles` in a single Dexie transaction and queues each to outbox.
+- Guest banner dismissal stores `guest_banner_dismissed_until` timestamp in Dexie `meta` store for 7 days.
+- Auth session cookies set with 30-day lifetime (`maxAge: 2592000`).
 
 ## Database Instructions
 
@@ -378,6 +477,6 @@
 
 ## Next prompt
 
-Prompt 9: login and guest mode
+Prompt 10: sync
 
 

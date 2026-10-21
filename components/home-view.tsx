@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowDownLeft, ArrowUpRight, Heart, HandCoins } from "lucide-react";
 import { ActionCard } from "@/components/action-card";
 import { EntryModal } from "@/components/entry-modal";
+import { GuestBanner } from "@/components/guest-banner";
 import { useEntries, useLoans, useLoanPayments } from "@/lib/repo/hooks";
 import { seedDefaultCategories } from "@/lib/repo/seed";
 import { getPeriodPreset, periodTotals, owedToMe } from "@/lib/calc";
@@ -74,6 +75,8 @@ export function HomeView({ activeAction: initialAction, currency = "NGN" }: Home
 
   return (
     <div className="flex flex-col gap-6 py-2">
+      <GuestBanner />
+
       {/* Header section */}
       <div className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">

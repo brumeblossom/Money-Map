@@ -104,11 +104,13 @@ export async function seedDefaultCategories(database = db): Promise<CategoryRow[
           };
 
           await database.categories.add(row);
-          await database.outbox.add({
-            table: "categories",
-            row_id: row.id,
-            created_at: now,
-          });
+          if (currentUserId) {
+            await database.outbox.add({
+              table: "categories",
+              row_id: row.id,
+              created_at: now,
+            });
+          }
 
           inserted.push(row);
         }

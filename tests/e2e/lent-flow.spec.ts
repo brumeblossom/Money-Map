@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { setGuestCookie } from "./test-helpers";
 
 test.describe("Money I Lent Flow (Prompt 7)", () => {
+  test.beforeEach(async ({ context }) => {
+    await setGuestCookie(context);
+  });
+
   test("full lend flow: Ada ₦50k over 2 months @ 10%, repayments, paid off, home strip unaffected", async ({
     page,
   }) => {

@@ -121,24 +121,26 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
     return owedToMe(loans ?? [], loanPayments ?? []);
   }, [loans, loanPayments]);
 
-  const isModalOpen = !!currentAction;
+  const [overrideClosed, setOverrideClosed] = React.useState(false);
+  const [prevActiveAction, setPrevActiveAction] = React.useState(activeAction);
+
+  if (activeAction !== prevActiveAction) {
+    setPrevActiveAction(activeAction);
+    setOverrideClosed(false);
+  }
+
+  const isModalOpen = !overrideClosed && !!activeAction;
 
   const handleActionClick = (actionKey: string) => {
+    setOverrideClosed(false);
     router.push(`/new/${actionKey}`);
   };
 
   const handleModalClose = (open: boolean) => {
     if (!open) {
-      const hasAppHistory =
-        typeof window !== "undefined" &&
-        window.history.state &&
-        typeof window.history.state.idx === "number" &&
-        window.history.state.idx > 0;
-
-      if (hasAppHistory) {
-        router.back();
-      } else {
-        router.push("/");
+      setOverrideClosed(true);
+      if (typeof window !== "undefined" && window.location.pathname.startsWith("/new/")) {
+        window.history.replaceState(null, "", "/");
       }
     }
   };

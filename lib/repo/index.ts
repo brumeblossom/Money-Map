@@ -31,6 +31,8 @@ export {
 };
 import { getCurrentUserId, setCurrentUserId } from "./user";
 
+import { scheduleDebouncedSync, run as runSync } from "@/lib/sync";
+
 export * from "./user";
 export * from "./seed";
 export * from "./hooks";
@@ -47,8 +49,8 @@ async function executeWrite<T>(
   const now = new Date().toISOString();
   const userId = getCurrentUserId();
 
-  return await database.transaction("rw", [tableRef, outboxRef], async () => {
-    const result = await operation();
+  const result = await database.transaction("rw", [tableRef, outboxRef], async () => {
+    const res = await operation();
     // Only queue to outbox if user is signed in (guest rows are queued on claimGuestData)
     if (userId) {
       await outboxRef.add({
@@ -57,8 +59,15 @@ async function executeWrite<T>(
         created_at: now,
       });
     }
-    return result;
+    return res;
   });
+
+  // PRD Section 8: 2 s debounced sync after local writes when signed in
+  if (userId && typeof window !== "undefined") {
+    scheduleDebouncedSync(2000, database);
+  }
+
+  return result;
 }
 
 // -------------------------------------------------------------
@@ -804,7 +813,7 @@ export async function claimGuestData(
   setCurrentUserId(newUserId);
   const now = new Date().toISOString();
 
-  return await database.transaction(
+  const claimedCount = await database.transaction(
     "rw",
     [
       database.entries,
@@ -867,7 +876,7 @@ export async function claimGuestData(
         });
       }
 
-      // 4. Categories
+      // 4. Categories (update user_id on all, only queue custom to outbox)
       const guestCategories = await database.categories
         .filter((row) => !row.user_id || row.user_id === "")
         .toArray();
@@ -876,11 +885,13 @@ export async function claimGuestData(
           user_id: newUserId,
           updated_at: now,
         });
-        await database.outbox.add({
-          table: "categories",
-          row_id: cat.id,
-          created_at: now,
-        });
+        if (!cat.is_default) {
+          await database.outbox.add({
+            table: "categories",
+            row_id: cat.id,
+            created_at: now,
+          });
+        }
       }
 
       // 5. Recurring Rules
@@ -920,6 +931,15 @@ export async function claimGuestData(
       return claimedEntriesCount;
     },
   );
+
+  // Run sync immediately on first sign in after claim (PRD Section 8)
+  if (typeof window !== "undefined") {
+    runSync(database).catch((err) => {
+      console.error("Sync after claimGuestData error:", err);
+    });
+  }
+
+  return claimedCount;
 }
 
 export async function isGuestBannerDismissed(

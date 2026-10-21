@@ -7,6 +7,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { AppBottomNav } from "@/components/app-bottom-nav";
 import { AppHeader } from "@/components/app-header";
 import { seedDefaultCategories } from "@/lib/repo/seed";
+import { initSync } from "@/lib/sync";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -15,6 +16,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     seedDefaultCategories().catch((err) => {
       console.error("Failed to seed default categories in AppShell", err);
     });
+    const cleanupSync = initSync();
+    return () => {
+      cleanupSync();
+    };
   }, []);
 
   // Routes that do not render the main app shell chrome (PRD section 2)

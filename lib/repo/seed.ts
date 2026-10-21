@@ -68,7 +68,7 @@ export async function seedDefaultCategories(database = db): Promise<CategoryRow[
   const now = new Date().toISOString();
   const inserted: CategoryRow[] = [];
 
-  await database.transaction("rw", [database.categories, database.outbox], async () => {
+  await database.transaction("rw", [database.categories], async () => {
     for (const [scopeKey, names] of Object.entries(DEFAULT_CATEGORIES)) {
       const scope = scopeKey as CategoryScope;
 
@@ -104,14 +104,6 @@ export async function seedDefaultCategories(database = db): Promise<CategoryRow[
           };
 
           await database.categories.add(row);
-          if (currentUserId) {
-            await database.outbox.add({
-              table: "categories",
-              row_id: row.id,
-              created_at: now,
-            });
-          }
-
           inserted.push(row);
         }
       }

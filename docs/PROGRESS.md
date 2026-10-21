@@ -553,12 +553,66 @@
 - **How to regenerate types**: Run `bun run db:types`.
 - **Schema cloud push status**: The schema has been pushed to the cloud project (`jiktrplyuneakhhoayde`).
 
+### Prompt 10: Sync engine
+- **Endpoints (`POST /api/sync/push` & `GET /api/sync/pull`) (PRD Section 7)**:
+  - Zod schemas in `lib/schemas/index.ts` validate push (`syncPushSchema`) and pull (`syncPullQuerySchema`).
+  - Auth enforced via `@supabase/ssr` server client reading cookies: missing session returns `401 {"error":"unauthorized"}`.
+  - Zod validation errors return `422 {"error":"invalid","issues":[...]}`.
+  - Sliding-window in-memory rate limiter (`lib/sync/rate-limit.ts`) enforces max 60 requests per minute per user on `/api/sync/*`, returning `429 {"error":"rate_limited"}`.
+  - Push endpoint (`/api/sync/push`):
+    - Caps change count at 500 changes per batch.
+    - Forces `user_id` to the authenticated caller session ID on all changes.
+    - Processes changes in foreign key dependency order: `profiles` -> `categories` -> `loans` -> `entries` -> `loan_payments` -> `recurring_rules`.
+    - Implements Last-Write-Wins (LWW) conflict resolution using `updated_at`: skips any change where the server copy has a later `updated_at`.
+    - Returns `200 {"applied": [...], "skipped": [...]}`.
+  - Pull endpoint (`/api/sync/pull`):
+    - Queries rows with `server_updated_at > since` (or all rows if `since` omitted), including soft-deleted rows (`deleted_at is not null`).
+    - Paginates up to 2,000 rows per table with `has_more: boolean` indicating whether additional pages exist.
+    - Returns `200 {"rows": { categories, entries, loans, loan_payments, recurring_rules, profiles }, "server_time": string, "has_more": boolean}`.
+- **Client Sync Cycle & Background Scheduler (`lib/sync/index.ts`) (PRD Section 8)**:
+  - `run()`: Executes push followed by pull.
+    - Concurrency lock: strictly guarantees only one sync cycle runs at any given time; any requests queued while a sync is in progress are coalesced into a single follow-up cycle upon completion.
+    - Push: Reads up to 500 items ordered by `seq` from Dexie `outbox`, sends to `/api/sync/push`, and removes applied/skipped IDs from `outbox`. Loops until outbox is empty.
+    - Pull: Calls `/api/sync/pull?since=<last_pull_at>` in a loop until `has_more` is false. Merges server copies using Last-Write-Wins on `updated_at`. Saves `server_time` into Dexie `meta.last_pull_at`.
+  - Triggers:
+    - On app initialization (`initSync`).
+    - On the browser's `online` event.
+    - 2 seconds debounced after any local Dexie write via `executeWrite()` in `lib/repo`.
+    - Every 60 seconds while the document is visible (`visibilityState === "visible"`).
+    - When switching back to the app (`visibilitychange` event).
+  - Backoff:
+    - Retries failed network syncs with exponential backoff: 5 s, 15 s, 60 s, then every 5 min.
+- **Guest Category Merge (`lib/sync/category-merge.ts`) (PRD Section 8 Step 2)**:
+  - On first sync after claim, merges default categories (`is_default: true`) matching a server category by `slug`.
+  - Re-points all referencing `entries`, `loans`, and `recurring_rules` to the server's category ID.
+  - Deletes the local duplicate category from Dexie `categories` and removes it from `outbox`.
+- **Header Sync Badge (`components/app-header.tsx`)**:
+  - Live reactive indicator reading `db.outbox.count()` via `useLiveQuery` and network/sync states via `useSyncExternalStore`.
+  - Renders:
+    - `Synced`: Green cloud icon with checkmark when online and outbox count is 0.
+    - `Syncing`: Animated spinning refresh icon while push or pull cycle is active.
+    - `Offline (N changes waiting)` / `Offline (1 change waiting)` / `Offline`: Amber cloud-off badge when offline or server unreachable, indicating the exact count of pending outbox modifications.
+- **Sign Out Flow (`lib/sync/index.ts` & `app/settings/page.tsx`)**:
+  - Settings page provides a "Sign out" action with a confirmation dialog: *"Sign out of this device? Unsynced changes will be lost if you continue."*
+  - `signOut()`: Runs one final push if online, invokes `supabase.auth.signOut()`, clears every Dexie table (`entries`, `categories`, `loans`, `loan_payments`, `recurring_rules`, `profiles`, `outbox`, `meta`), and redirects to `/welcome`.
+- **Verification**:
+  - `bun run lint`: 0 errors.
+  - `bun run typecheck`: 0 errors.
+  - `bun test`: All 129 Vitest tests passing across 10 test suites, including:
+    - Integration tests in `tests/unit/sync.test.ts`: multi-device concurrent sync with LWW, soft deletes, idempotence, guest category slug merge, rate limit handling, sign out table clearance.
+    - Route tests in `tests/unit/sync-routes.test.ts`: 401 unauthenticated, 422 schema validation, 429 rate limit thresholds, 200 push/pull.
+  - Playwright E2E (`tests/e2e/sync-flow.spec.ts`):
+    - Passes on mobile phone (390px) and desktop (1280px).
+    - Simulates going offline (`context.setOffline(true)`), saving an entry, verifying header badge displays `"Offline (1 change waiting)"` and outbox contains 1 change.
+    - Restores connection (`context.setOffline(false)`), verifies badge returns to `"Synced"` within 5 seconds, outbox drains to 0, and row is transmitted in the push payload.
+  - Next.js production build (`bun run build`): All 23 routes built successfully with `/api/sync/push` and `/api/sync/pull` generated as dynamic endpoints.
+
 ## Known issues
 
 - None.
 
 ## Next prompt
 
-Prompt 10: sync
+Prompt 11: offline app shell
 
 

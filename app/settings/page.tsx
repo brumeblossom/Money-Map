@@ -6,6 +6,8 @@ import { LogOut } from "lucide-react";
 import { db } from "@/lib/db/dexie";
 import { signOut } from "@/lib/sync";
 
+import { InstallPwaCard } from "@/components/install-pwa-card";
+
 export default function SettingsPage() {
   const router = useRouter();
   const [showConfirm, setShowConfirm] = React.useState(false);
@@ -30,6 +32,9 @@ export default function SettingsPage() {
           Name, currency, manage categories, repeating entries, share links, notifications, sign in or sign out, delete account.
         </p>
       </div>
+
+      {/* Add to Home Screen Section (Prompt 11 / US-10.1) */}
+      <InstallPwaCard />
 
       {/* Account Section */}
       <div className="rounded-xl border border-border bg-card p-5 shadow-xs">

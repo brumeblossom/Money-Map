@@ -607,12 +607,55 @@
     - Restores connection (`context.setOffline(false)`), verifies badge returns to `"Synced"` within 5 seconds, outbox drains to 0, and row is transmitted in the push payload.
   - Next.js production build (`bun run build`): All 23 routes built successfully with `/api/sync/push` and `/api/sync/pull` generated as dynamic endpoints.
 
+### Prompt 11: Offline support and Add to Home Screen (App shell)
+- **Serwist Service Worker (`@serwist/next`, `@serwist/sw`, `@serwist/window`)**:
+  - Configured `@serwist/next` via `next.config.ts` using `swSrc: "app/sw.ts"` and `swDest: "public/sw.js"`.
+  - Service worker caching strategy in `app/sw.ts`:
+    - `NetworkFirst` strategy with 3-second timeout for navigations and Next.js RSC payload requests, falling back to cached pages and code.
+    - `CacheFirst` for static JavaScript chunks, CSS, and fonts (`_next/static`, Google Fonts).
+    - `StaleWhileRevalidate` for images and icons.
+    - Offline fallback to `/offline` when an uncached route is requested without connectivity.
+    - Listens for `SKIP_WAITING` message to activate updated service workers.
+- **Web App Manifest & Metadata**:
+  - Manifest created at `app/manifest.ts` and `public/manifest.json`:
+    - `name: "Money Map"`, `short_name: "Money Map"`, `start_url: "/"`, `display: "standalone"`.
+    - `theme_color: "#059669"`, `background_color: "#ffffff"`.
+    - 192px and 512px icons for both `any` and `maskable` purposes.
+  - Apple touch icons and meta tags:
+    - 180x180 `apple-touch-icon.png` in `public/icons/`.
+    - Added Apple meta tags in `app/layout.tsx`: `appleWebApp: { capable: true, statusBarStyle: "default", title: "Money Map" }` and `apple-mobile-web-app-capable: "yes"`.
+- **Add to Home Screen Help (Settings)**:
+  - Created `components/install-pwa-card.tsx` in `app/settings/page.tsx`:
+    - On Android/Chrome, captures the `beforeinstallprompt` event and displays an "Install app" button triggering the native browser install prompt when available.
+    - On iOS Safari / iPhone, shows clear steps: "Tap Share, then Add to Home Screen".
+    - When already running in standalone mode, displays an "Installed" confirmation.
+    - Strictly never shows an unsolicited pop-up or nagging banner on its own.
+- **Update Notification Toast**:
+  - `lib/pwa/index.ts` and `components/pwa-manager.tsx`:
+    - Listens for service worker updates (`waiting` worker).
+    - Checks `isFormActive()` (active inputs or textarea elements with user input or open dialogs) and NEVER auto-reloads while a form is open.
+    - Displays a "New version available" toast with a "Reload" button that messages `SKIP_WAITING` and reloads only upon user confirmation.
+- **Offline Fallback Page (`/offline`)**:
+  - Created `app/offline/page.tsx` with wifi-off icon and exact PRD text:
+    - *"You're offline. Your entries are saved on this device and will sync when you're back online."*
+    - Includes a "Return to Home" link.
+- **Verification**:
+  - `bun run build` with `--webpack` succeeds, generating `public/sw.js` (46 KB).
+  - All 129 Vitest tests passing across 10 test files.
+  - ESLint (0 errors) and TypeScript strict check (0 errors).
+  - Playwright E2E test suite `tests/e2e/offline-pwa.spec.ts` passes 8 of 8 tests across both 390px mobile phone and 1280px desktop viewports:
+    - Tests manifest, icons, and Apple meta tags.
+    - Verifies Settings > Add to Home Screen card and iOS Share instructions without unsolicited modals.
+    - Simulates offline navigation (`context.setOffline(true)`) and verifies cached Home, Records, Insights, and forms open and work offline.
+    - Verifies saving transactions works completely offline with Dexie.
+    - Verifies uncached routes show the clean `/offline` fallback page.
+
 ## Known issues
 
 - None.
 
 ## Next prompt
 
-Prompt 11: offline app shell
+Prompt 12: dashboard
 
 

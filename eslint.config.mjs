@@ -20,6 +20,8 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "blob-report/**",
     ".agents/**",
+    "public/sw.js",
+    "public/**/*.js",
   ]),
 ]);
 

@@ -48,11 +48,16 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isSignInIntent = request.nextUrl.searchParams.get("intent") === "signin";
 
-  // Public/system routes that should never redirect
+  // Public/system routes and static assets that should never redirect
   if (
     path.startsWith("/_next") ||
     path.startsWith("/api") ||
     path.startsWith("/auth/") ||
+    path.startsWith("/icons/") ||
+    path.startsWith("/images/") ||
+    path.includes("manifest") ||
+    path === "/sw.js" ||
+    path === "/favicon.ico" ||
     path.includes(".")
   ) {
     return response;
@@ -81,6 +86,17 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico
+     * - icons
+     * - images
+     * - manifest (manifest.json, manifest.webmanifest)
+     * - sw.js
+     * - any file with an extension (e.g. .css, .js, .png, etc.)
+     */
+    "/((?!_next/static|_next/image|favicon\\.ico|icons|images|manifest|sw\\.js|.*\\.[a-zA-Z0-9]+$).*)",
   ],
 };

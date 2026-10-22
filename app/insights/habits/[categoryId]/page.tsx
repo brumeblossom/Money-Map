@@ -1,13 +1,22 @@
+import * as React from "react";
+import { CategoryHabitDetailView } from "@/components/category-habit-detail-view";
+
 export default async function CategoryReportPage({
   params,
 }: {
   params: Promise<{ categoryId: string }>;
 }) {
   const { categoryId } = await params;
+
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold tracking-tight">Category report</h2>
-      <p className="text-sm text-muted-foreground">Full report for category: {categoryId}</p>
-    </div>
+    <React.Suspense
+      fallback={
+        <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+          Loading category habit report...
+        </div>
+      }
+    >
+      <CategoryHabitDetailView categoryId={categoryId} />
+    </React.Suspense>
   );
 }

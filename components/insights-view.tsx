@@ -464,11 +464,21 @@ export function InsightsView() {
                 Top 5 expense categories plus Other
               </p>
             </div>
-            {spendingByCategory.total_minor > 0 && (
-              <span className="text-xs font-semibold text-muted-foreground tabular-nums">
-                {formatMoney(spendingByCategory.total_minor, currency)} total
-              </span>
-            )}
+            <div className="flex items-center gap-3">
+              {spendingByCategory.total_minor > 0 && (
+                <span className="hidden text-xs font-semibold text-muted-foreground tabular-nums sm:inline">
+                  {formatMoney(spendingByCategory.total_minor, currency)} total
+                </span>
+              )}
+              <Link
+                href="/insights/habits"
+                data-testid="see-habits-link"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-primary transition-colors hover:underline"
+              >
+                See habits
+                <ArrowRight className="size-3.5" />
+              </Link>
+            </div>
           </div>
 
           {/* Screen reader text summary */}

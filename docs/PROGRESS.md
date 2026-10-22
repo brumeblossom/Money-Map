@@ -709,12 +709,50 @@
   - TypeScript strict: 0 errors (`bun run typecheck`).
   - Lint: 0 errors (`bun run lint`).
 
+### Prompt 13: Habit reports (`/insights/habits` and `/insights/habits/[categoryId]`)
+- **Calculation Engine (`lib/calc/habits.ts`)**:
+  - Implemented client-side calculation functions:
+    - `computeHabitsOverview()`: Groups expenses by category over the selected period and 6-month trailing window, computes habit labels (`Rising`, `Falling`, `Spike`, `Steady`, or `Not enough data yet`), rank-orders categories by amount spent, and synthesizes plain-English top 3 rising and falling habit summaries.
+    - `computeCategoryDetailReport()`: Computes total spent, share of all expenses, 6-month month-by-month spend and entry counts, average spend per entry, busiest weekday by volume, biggest entry in the period (with ID, amount, description, and DD-MM-YYYY date), and habit label with one-line explanation of why (e.g., "Up more than 15% two months in a row", "Single month spend is more than double 6-month median", "Fewer than 3 entries recorded").
+    - Pure offline computations with integer minor units (`amount_minor`) without floating-point math.
+- **Habits Overview (`/insights/habits`)**:
+  - Habits summary at the top: displays top 3 rising categories and top 3 falling categories in clean, plain-English sentences.
+  - Period switcher (`This month`, `3 months`, `Year`, `Custom`) with DD-MM-YYYY inputs controlling period scope.
+  - Category habit cards ranked by total amount in the selected period:
+    - Category icon, name, total formatted in user's currency, and share percentage of total expenses.
+    - Habit badge (`Rising` in rose/red, `Falling` in emerald/green, `Spike` in amber, `Steady` in blue, `Not enough data yet` in neutral gray).
+    - Compact 6-month SVG sparkline with gradient fill and smooth stroke.
+    - Tapping any card navigates to `/insights/habits/[categoryId]`.
+- **Category Habit Detail (`/insights/habits/[categoryId]`)**:
+  - Summary header with back navigation to `/insights/habits`, category name, total amount, and share of expenses in selected period.
+  - Habit status banner displaying habit badge and one-line explanation of why.
+  - 6-month trend line chart powered by Recharts (responsive container, curve, active dot, custom tooltip, accessible screen reader table).
+  - Statistics 3-column grid: Total entries count, Average per entry, and Busiest weekday.
+  - Biggest entry card showing counterparty/description, formatted amount, and DD-MM-YYYY date; tappable linking directly to `/records/${id}`.
+- **Dashboard Integration**:
+  - Added "See habits" link in `components/insights-view.tsx` header for the "Spending by category" block, navigating directly to `/insights/habits`.
+- **Verification**:
+  - Unit tests (`tests/unit/habits.test.ts`): 5 comprehensive tests verifying Rising (+20% 2 months in a row), Spike (one-off big month), Not enough data yet (2 entries), overview ranking by spend, and category detail reports. All 142 unit tests passing.
+  - E2E tests (`tests/e2e/insights-habits.spec.ts`):
+    - Tested on both phone (390px) and desktop (1280px) viewports.
+    - Verified network offline functionality with `context.setOffline(true)`.
+    - Verified navigation from Dashboard "See habits" link.
+    - Verified fixture assertions: Food shows "Rising", Entertainment shows "Spike", Shopping shows "Not enough data yet".
+    - Verified detail page stats, Recharts chart, and biggest entry link to `/records/${id}`.
+  - Screenshots captured:
+    - `tests/e2e/screenshots/habits-390.png`
+    - `tests/e2e/screenshots/habits-1280.png`
+    - `tests/e2e/screenshots/habit-detail-390.png`
+    - `tests/e2e/screenshots/habit-detail-1280.png`
+  - TypeScript strict: 0 errors (`bun run typecheck`).
+  - Lint: 0 errors (`bun run lint`).
+
 ## Known issues
 
 - None.
 
 ## Next prompt
 
-Prompt 13: habit reports
+Prompt 14: repeating entries
 
 

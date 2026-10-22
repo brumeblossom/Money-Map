@@ -680,12 +680,41 @@
   - `bun run build`: Production build succeeded.
   - Playwright E2E test suite (`tests/e2e/prompt10b-fixes.spec.ts`): All 6 tests passing across both mobile (390x844) and desktop (1280x800) viewports.
 
+### Prompt 12: Dashboard / Insights (`/insights`)
+- **Period Switcher**:
+  - Implemented switcher with presets: `This week`, `This month`, `3 months`, `Year`, and `Custom` with two DD-MM-YYYY date inputs (`DateField`).
+  - Switcher updates the URL query string (`?period=...&from=...&to=...`) and controls all metrics, charts, lent loans, and recent entries across the dashboard.
+- **7 Blocks in Exact PRD Order**:
+  1. **Left over card**: Big prominent balance, green (`#10b981`) if `>= 0`, rose/red (`#f43f5e`) if negative; includes date span in DD-MM-YYYY and change badge vs previous equivalent period (`+X%`, `-X%`, or `New vs last period`).
+  2. **Four tiles 2x2 grid**: `Income`, `Expenses`, `Given`, `Owed to me` with direction icons, colored badges, and formatted minor unit amounts.
+  3. **Spending by category**: Interactive Recharts donut chart with top 5 expense categories + "Other" slice; ranked list underneath showing color swatch, category name, percentage badge, and total amount; tapping any slice or list row navigates to `/records?tab=expenses&category=...` filtered.
+  4. **Income vs Expenses grouped bar chart**: Grouped bars comparing Money In vs Expenses; uses daily bars with `DD-MM` axis for short periods (<= 21 days / this week) and monthly bars with month names for 3m / year periods.
+  5. **Money I lent**: Displays total owed in header, plus individual active loan cards with repayment progress bar, borrower name, status badge (`DUE SOON`, `OVERDUE`, `ACTIVE`), amount left, and next expected repayment date with countdown.
+  6. **Smart tip card**: Dynamic AI/rule-based tip sentence powered by `lib/calc` `smartTip()` analyzing user savings rate, giving percentage, and spending trends.
+  7. **Recent entries**: Last 5 transactions in the selected period with direction icon, category name, counterparty/description, DD-MM-YYYY date, and formatted amount; includes "See all ->" link to `/records`.
+- **Layout & Accessibility**:
+  - Mobile (< 1024px): Single-column clean scrollable stack.
+  - Desktop (>= 1024px): Balanced two-column grid (`grid-cols-2`).
+  - Screen readers: Every chart includes an accessible `<div className="sr-only" aria-live="polite">` text summary detailing exact values and breakdowns.
+  - Empty states: Friendly messages and icons with "Add your first entry" button opening `EntryModal`.
+- **Performance**:
+  - Pure calculation engine in `lib/calc/dashboard.ts` (`computeDashboardData`, `computeSpendingByCategory`, `computeCashFlowSeries`, `computeActiveLoans`).
+  - Benchmark test in `tests/unit/dashboard.test.ts` measures calculation time over 5,000 entries: **59.19 ms** (well under the 300 ms requirement).
+- **Verification**:
+  - Unit tests: 137 tests passing across 12 test suites (`bun run test`).
+  - Playwright E2E: `tests/e2e/insights-dashboard.spec.ts` verifies all 4 tests pass on both 390px and 1280px viewports; tests verify that every dashboard number matches Records footer totals exactly.
+  - Screenshots captured and verified:
+    - Mobile (390px): `tests/e2e/screenshots/insights-390.png`
+    - Desktop (1280px): `tests/e2e/screenshots/insights-1280.png`
+  - TypeScript strict: 0 errors (`bun run typecheck`).
+  - Lint: 0 errors (`bun run lint`).
+
 ## Known issues
 
 - None.
 
 ## Next prompt
 
-Prompt 11
+Prompt 13: habit reports
 
 

@@ -874,5 +874,6 @@ export function getMonthPeriod(ym: string): DatePeriod {
 export * from "./dashboard";
 export * from "./habits";
 export * from "./recurring";
+export * from "./reminders";
 
 

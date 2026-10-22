@@ -7,13 +7,35 @@ import { db } from "@/lib/db/dexie";
 import { signOut } from "@/lib/sync";
 
 import Link from "next/link";
+import { toast } from "sonner";
 import { InstallPwaCard } from "@/components/install-pwa-card";
 import { RecurringRulesList } from "@/components/recurring-rules-list";
+import { useProfile } from "@/lib/repo/hooks";
+import { updateProfile, createProfile } from "@/lib/repo";
+import { getCurrentUserId } from "@/lib/repo/user";
 
 export default function SettingsPage() {
   const router = useRouter();
   const [showConfirm, setShowConfirm] = React.useState(false);
   const [isSigningOut, setIsSigningOut] = React.useState(false);
+
+  const profile = useProfile();
+
+  const handleToggleEmailReminders = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = e.target.checked;
+    const userId = getCurrentUserId() || profile?.user_id || "guest";
+    try {
+      if (profile) {
+        await updateProfile(profile.user_id, { notifications_enabled: enabled });
+      } else {
+        await createProfile({ user_id: userId, notifications_enabled: enabled });
+      }
+      toast(enabled ? "Daily email reminders enabled" : "Daily email reminders disabled");
+    } catch (err) {
+      console.error("Failed to update reminder settings", err);
+      toast("Failed to update settings. Please try again.");
+    }
+  };
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -54,6 +76,31 @@ export default function SettingsPage() {
         </div>
 
         <RecurringRulesList />
+      </div>
+
+      {/* Reminders Section (Prompt 15 / US-4.3 / US-5.1) */}
+      <div id="reminders" className="rounded-xl border border-border bg-card p-5 shadow-xs">
+        <h3 className="text-base font-semibold text-foreground">Reminders</h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Receive daily notifications for due loans and repeating entries.
+        </p>
+
+        <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
+          <label
+            htmlFor="email-reminders-toggle"
+            className="text-sm font-medium text-foreground cursor-pointer select-none"
+          >
+            Email me a daily reminder
+          </label>
+          <input
+            id="email-reminders-toggle"
+            data-testid="email-reminders-switch"
+            type="checkbox"
+            checked={profile?.notifications_enabled ?? false}
+            onChange={handleToggleEmailReminders}
+            className="size-5 rounded border-border accent-primary cursor-pointer"
+          />
+        </div>
       </div>
 
       {/* Add to Home Screen Section (Prompt 11 / US-10.1) */}

@@ -799,12 +799,79 @@
   - Lint: 0 errors (`bun run lint`).
   - Production build: succeeded (`bun run build`).
 
+### Prompt 15: Reminders (US-4.3, US-5.1)
+- **Home "Due" Section (`components/recurring-banners.tsx`, `components/home-view.tsx`)**:
+  - Implemented the unified "Due" section (`[data-testid="home-due-section"]`) positioned directly above the summary cards on the Home screen.
+  - Automatically hides when there are no due loans and no due repeating entries.
+  - **Lent Money Reminders**:
+    - Discovers active loans with `remind !== false`, `balance > 0`, not deleted, and expected repayment date within 3 days or overdue (`diffInDays <= 3`).
+    - Format: `"{Borrower} is due to pay back {Amount} on {DD-MM-YYYY}"` (e.g. `"Ada is due to pay back ₦27,500 on 20-10-2026"`).
+    - Tapping the loan card navigates directly to `/lent/[id]`.
+    - Fully paid loans, loans with `remind = false`, or loans with due date > 3 days out do not appear.
+  - **Repeating Entries Reminders**:
+    - Identifies recurring rules due today or missed (`next_due_on <= today`).
+    - Display: `"{Name} {Amount} is due today"` with action buttons `"Add it"` and `"Skip"`.
+    - Tapping `"Add it"` creates the entry dated today and advances the rule's next due date by one period.
+    - Computed entirely on the device via `lib/calc/reminders.ts` and `lib/calc/recurring.ts`, working 100% offline.
+- **Settings > Reminders (`app/settings/page.tsx`)**:
+  - Added dedicated "Reminders" card to `/settings` with switch: `"Email me a daily reminder"` (`[data-testid="email-reminders-switch"]`, default off).
+  - Toggling persists `notifications_enabled` to user's profile in Dexie and stages an outbox upsert for sync.
+  - Added reactive `useProfile()` hook in `lib/repo/hooks.ts` with LiveQuery support.
+- **Daily Email Reminder Cron API (`app/api/cron/reminders/route.ts`, `vercel.json`)**:
+  - Configured Vercel Cron in `vercel.json` scheduled for `"0 6 * * *"` (6:00 AM UTC daily).
+  - Route handler `GET /api/cron/reminders`:
+    - Secured with `Authorization: Bearer CRON_SECRET` check; returns `401 Unauthorized` if header is missing or invalid.
+    - If `RESEND_API_KEY` is not configured, safely returns `{ sent: 0, skipped: "email not configured" }` with status 200 without attempting external calls.
+    - Uses Supabase service role client (`lib/supabase/admin.ts`) to fetch profiles where `notifications_enabled = true`.
+    - For each opted-in user, queries their loans, loan payments, and recurring rules strictly scoped by `user_id`.
+    - Filters due items using `getDueLoans` and `getDueRecurringRules`.
+    - Generates clean HTML email digest using `buildReminderEmailHtml` in `lib/calc/reminders.ts`.
+    - Sends daily summary email via Resend API to the user's registered email address from `EMAIL_FROM`.
+    - Strict cross-user data isolation: no user ever receives or sees another user's reminders.
+- **Push Notification Scope**:
+  - v1 has NO push notifications (no `/api/push/*` routes, no VAPID keys, no push service worker handlers). The `push_subscriptions` database table remains completely unused as specified.
+- **Verification**:
+  - **Unit Tests (`tests/unit/reminders.test.ts`)**: 11 comprehensive tests:
+    - Loans due within 2 days show in due list.
+    - Paid-off loans (balance = 0) are excluded.
+    - Future loans (> 3 days) are excluded.
+    - Loans with `remind = false` are excluded.
+    - Overdue loans (past due date) are included with exact DD-MM-YYYY format.
+    - Multi-instalment loans correctly calculate remaining balance.
+    - Multi-user isolation test: user 1's due reminders are completely isolated from user 2's reminders.
+    - Cron route security: missing / wrong bearer token returns 401.
+    - Cron route graceful degradation: missing `RESEND_API_KEY` returns `{ sent: 0, skipped: "email not configured" }`.
+    - All 180 unit tests passing (`bun run test`).
+  - **Playwright E2E (`tests/e2e/reminders.spec.ts`)**:
+    - Mobile (390px) and desktop (1280px) viewports passed:
+      1. Due section displays Ada's loan expected in 2 days with exact text and link to `/lent/loan-ada-1`.
+      2. Paid-off loan and future loan do not show.
+      3. Repeating entry shows "Add it" and "Skip".
+      4. Tapping "Add it" saves entry and removes item from Due section.
+      5. Settings > Reminders switch toggles "Email me a daily reminder" state.
+  - **Regression E2E (`tests/e2e/recurring-entries.spec.ts`)**: All 4 tests passed.
+  - **Screenshots**:
+    - `tests/e2e/screenshots/reminders-home-390.png`
+    - `tests/e2e/screenshots/reminders-home-1280.png`
+    - `tests/e2e/screenshots/reminders-settings-390.png`
+    - `tests/e2e/screenshots/reminders-settings-1280.png`
+  - **TypeScript strict**: 0 errors (`bun run typecheck`).
+  - **Lint**: 0 errors (`bun run lint`).
+
+## Environment variables for Vercel
+
+The following environment variables need to be set in Vercel project settings:
+1. `CRON_SECRET`: Required secret token for authorizing Vercel Cron jobs (`Authorization: Bearer <CRON_SECRET>`).
+2. `SUPABASE_SERVICE_ROLE_KEY`: Required service role key for cron route to query Supabase across users with RLS bypass.
+3. `RESEND_API_KEY`: (Optional) Resend API key for sending daily email reminder digests. If left unset, cron returns `{ sent: 0, skipped: "email not configured" }`.
+4. `EMAIL_FROM`: (Optional) Sender email address for Resend reminders (e.g. `"Money Map <reminders@yourdomain.com>"` or `"onboarding@resend.dev"`).
+
 ## Known issues
 
 - None.
 
 ## Next prompt
 
-Prompt 15: reminders
+Prompt 16: PDF
 
 

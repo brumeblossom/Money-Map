@@ -8,6 +8,7 @@ import {
   type LoanRow,
   type LoanPaymentRow,
   type RecurringRuleRow,
+  type ProfileRow,
   type CategoryScope,
 } from "@/lib/db/dexie";
 import { listEntries, type EntryFilter } from "./index";
@@ -122,3 +123,19 @@ export function useRecurringRules(
     [includeDeleted],
   );
 }
+
+/**
+ * Live reactive hook for the current user's profile.
+ */
+export function useProfile(): ProfileRow | undefined {
+  return useLiveQuery(async () => {
+    const userId = getCurrentUserId();
+    if (!userId) {
+      // Check for first profile or guest
+      const all = await db.profiles.toArray();
+      return all[0];
+    }
+    return await db.profiles.get(userId);
+  }, []);
+}
+

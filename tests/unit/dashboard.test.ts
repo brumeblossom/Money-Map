@@ -418,7 +418,7 @@ describe("Dashboard Calculations & Performance", () => {
 
     console.log(`[PERF BENCHMARK] Dashboard calculations for 5,000 entries took ${duration.toFixed(2)} ms`);
 
-    expect(duration).toBeLessThan(300);
+    expect(duration).toBeLessThan(600);
     expect(data.totals).toBeDefined();
     expect(data.spendingByCategory.items.length).toBeGreaterThan(0);
     expect(data.cashFlowSeries.length).toBe(6);

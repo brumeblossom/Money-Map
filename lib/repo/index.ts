@@ -32,6 +32,7 @@ export {
 import { getCurrentUserId, setCurrentUserId } from "./user";
 
 import { scheduleDebouncedSync, run as runSync } from "@/lib/sync";
+import { computeNextDueDate } from "@/lib/calc/recurring";
 
 export * from "./user";
 export * from "./seed";
@@ -714,6 +715,18 @@ export async function listRecurringRules(
 ): Promise<RecurringRuleRow[]> {
   const rows = await database.recurring_rules.toArray();
   return rows.filter((row) => includeDeleted || row.deleted_at === null);
+}
+
+export async function advanceRecurringRule(
+  id: string,
+  database: MoneyMapDatabase = db,
+): Promise<RecurringRuleRow> {
+  const existing = await database.recurring_rules.get(id);
+  if (!existing) {
+    throw new Error(`Recurring rule with id ${id} not found`);
+  }
+  const next_due_on = computeNextDueDate(existing.next_due_on, existing.frequency);
+  return await updateRecurringRule(id, { next_due_on }, database);
 }
 
 // -------------------------------------------------------------

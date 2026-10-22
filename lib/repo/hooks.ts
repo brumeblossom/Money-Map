@@ -7,6 +7,7 @@ import {
   type CategoryRow,
   type LoanRow,
   type LoanPaymentRow,
+  type RecurringRuleRow,
   type CategoryScope,
 } from "@/lib/db/dexie";
 import { listEntries, type EntryFilter } from "./index";
@@ -104,5 +105,20 @@ export function useLoanPayments(
         }),
       ),
     [loanId, includeDeleted],
+  );
+}
+
+/**
+ * Live reactive hook for recurring rules list.
+ */
+export function useRecurringRules(
+  includeDeleted = false,
+): RecurringRuleRow[] | undefined {
+  return useLiveQuery(
+    () =>
+      db.recurring_rules
+        .toArray()
+        .then((rows) => rows.filter((row) => includeDeleted || row.deleted_at === null)),
+    [includeDeleted],
   );
 }

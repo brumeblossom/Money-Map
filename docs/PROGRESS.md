@@ -747,12 +747,64 @@
   - TypeScript strict: 0 errors (`bun run typecheck`).
   - Lint: 0 errors (`bun run lint`).
 
+### Prompt 14: Repeating entries (US-5.1)
+- **Calculation & Due Date Logic (`lib/calc/recurring.ts`)**:
+  - Implemented `computeNextDueDate(currentDateIso, frequency)`: end-of-month and leap-year safe date math.
+    - Weekly: advances by exactly 7 days across month and year boundaries.
+    - Monthly: advances month safely clamping to the target month's maximum days (e.g. 31-01 -> 28-02 in common years or 29-02 in leap years; 31-03 -> 30-04; 31-05 -> 30-06; 31-08 -> 30-09; 31-10 -> 30-11; 31-12 -> 31-01 next year; 29-02 leap year -> 29-03).
+  - Implemented `getDueRecurringRules(rules, todayIso)`: filters active (non-paused, non-deleted) rules with `next_due_on <= todayIso`, sorted ascending by due date.
+  - Implemented `getRecurringBannerMessage(rule, categoryName, currency, todayIso)`: returns exact prompt wording for rules due today ("{Name} {Amount} is due today. Add it?") or past due ("{Name} {Amount} was due on DD-MM-YYYY. Add it?").
+- **Database & Repository Operations (`lib/repo/index.ts`, `lib/repo/hooks.ts`)**:
+  - Added `advanceRecurringRule(id, database)`: advances `next_due_on` by one frequency period, updates `updated_at`, and stages an `upsert` mutation into the outbox for background sync.
+  - Added `useRecurringRules(includeDeleted)`: LiveQuery reactive hook returning live recurring rules from Dexie.
+- **Entry Form Integration (`components/entry-form.tsx`, `components/entry-modal.tsx`)**:
+  - Wired the "Repeats" field (`No`, `Weekly`, `Monthly`) for Income, Expenses, and Giving.
+  - When saving an entry with `repeats === "Weekly" || repeats === "Monthly"`:
+    - Creates the entry in `entries`.
+    - Automatically creates a corresponding row in `recurring_rules` copying `kind`, `amount_minor`, `category_id`, `counterparty`, `description`, setting `frequency` to `weekly` or `monthly`, and setting `next_due_on = computeNextDueDate(entryDate, frequency)`.
+  - Added `recurringRuleIdToAdvance` prop to `EntryForm`: when an entry is created via "Edit first", saving the form automatically advances that recurring rule's `next_due_on` by one period.
+- **Home Banner Cards (`components/recurring-banners.tsx`, `components/home-view.tsx`)**:
+  - Displays reminder banner card for every non-paused, non-deleted rule with `next_due_on <= today`.
+  - Includes action buttons:
+    - **Add**: creates the entry dated today (`currentToday`) and advances `next_due_on` by one period without user needing to fill form.
+    - **Edit first**: opens pre-filled entry modal with the recurring rule's values and today's date, advancing the rule upon saving.
+    - **Skip**: advances `next_due_on` by one period without creating any entry.
+    - Nothing is added automatically without an explicit tap.
+- **Settings Management (`components/recurring-rules-list.tsx`, `app/settings/page.tsx`, `app/settings/repeating/page.tsx`)**:
+  - Added "Repeating entries" navigation card to Settings.
+  - Dedicated management view at `/settings/repeating` listing all repeating rules with:
+    - Rule name / category / description, kind badge, active/paused status badge.
+    - Amount formatted with currency, frequency label (`Weekly` / `Monthly`), and formatted next due date (`DD-MM-YYYY`).
+    - **Pause / Resume**: toggles `is_paused` flag in Dexie and outbox. Paused rules never show banner cards on Home.
+    - **Delete**: soft-deletes the rule (`deleted_at = now`) in Dexie and outbox.
+    - Clean empty state with icon and description when no repeating rules exist.
+- **Verification**:
+  - **Unit tests** (`tests/unit/recurring.test.ts`): 27 comprehensive tests passing across leap year February 29th, 31st of months with 30 days, year boundaries, rule filtering, and banner message text. All 169 unit tests passing across 14 test suites.
+  - **Playwright E2E** (`tests/e2e/recurring-entries.spec.ts`):
+    - All 4 tests passing with zero failures across phone (390px) and desktop (1280px) viewports:
+      1. Creates monthly repeating expense, moves clock forward a month with `page.clock`, verifies banner appears with exact wording.
+      2. Taps `Add`: creates exactly 1 entry dated today and advances date to next month.
+      3. Moves clock forward another month, verifies banner reappears.
+      4. Taps `Skip`: creates zero entries and advances date to following month.
+      5. Verifies Settings > Repeating entries lists rule with amount, frequency, next date (`DD-MM-YYYY`).
+      6. Verifies Pause stops banner from appearing, Resume restores it.
+      7. Verifies Delete removes rule.
+      8. Verifies "Edit first" opens pre-filled form, modifying amount and saving creates entry and advances rule.
+  - **Screenshots**:
+    - `tests/e2e/screenshots/recurring-banner-390.png`
+    - `tests/e2e/screenshots/recurring-banner-1280.png`
+    - `tests/e2e/screenshots/recurring-settings-390.png`
+    - `tests/e2e/screenshots/recurring-settings-1280.png`
+  - TypeScript strict: 0 errors (`bun run typecheck`).
+  - Lint: 0 errors (`bun run lint`).
+  - Production build: succeeded (`bun run build`).
+
 ## Known issues
 
 - None.
 
 ## Next prompt
 
-Prompt 14: repeating entries
+Prompt 15: reminders
 
 

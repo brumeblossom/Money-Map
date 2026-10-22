@@ -21,6 +21,8 @@ import {
   listEntries,
   createLoan,
   softDeleteLoan,
+  createRecurringRule,
+  advanceRecurringRule,
 } from "@/lib/repo";
 import { toSlug, seedDefaultCategories } from "@/lib/repo/seed";
 import {
@@ -33,6 +35,7 @@ import {
   totalToGetBack,
   instalmentCount,
   suggestedInstalment,
+  computeNextDueDate,
 } from "@/lib/calc";
 import { AmountField } from "@/components/amount-field";
 import { DateField } from "@/components/date-field";
@@ -44,6 +47,15 @@ import { Input } from "@/components/ui/input";
 export interface EntryFormProps {
   action?: string;
   initialEntry?: EntryRow;
+  initialValues?: {
+    amount_minor?: number;
+    category_id?: string;
+    counterparty?: string | null;
+    description?: string | null;
+    occurred_on?: string;
+    repeats?: "No" | "Weekly" | "Monthly";
+  };
+  recurringRuleIdToAdvance?: string;
   onClose?: () => void;
   currency?: string;
   onSaveSuccess?: (entry: EntryRow) => void;
@@ -52,6 +64,8 @@ export interface EntryFormProps {
 export function EntryForm({
   action: propAction,
   initialEntry,
+  initialValues,
+  recurringRuleIdToAdvance,
   onClose,
   currency = "NGN",
   onSaveSuccess,
@@ -90,6 +104,8 @@ export function EntryForm({
     <StandardEntryForm
       action={action as "income" | "expense" | "giving"}
       initialEntry={initialEntry}
+      initialValues={initialValues}
+      recurringRuleIdToAdvance={recurringRuleIdToAdvance}
       onClose={handleClose}
       currency={currency}
       onSaveSuccess={onSaveSuccess}
@@ -103,12 +119,23 @@ export function EntryForm({
 function StandardEntryForm({
   action,
   initialEntry,
+  initialValues,
+  recurringRuleIdToAdvance,
   onClose,
   currency,
   onSaveSuccess,
 }: {
   action: "income" | "expense" | "giving";
   initialEntry?: EntryRow;
+  initialValues?: {
+    amount_minor?: number;
+    category_id?: string;
+    counterparty?: string | null;
+    description?: string | null;
+    occurred_on?: string;
+    repeats?: "No" | "Weekly" | "Monthly";
+  };
+  recurringRuleIdToAdvance?: string;
   onClose: () => void;
   currency: string;
   onSaveSuccess?: (entry: EntryRow) => void;
@@ -120,30 +147,32 @@ function StandardEntryForm({
   const today = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   const [amountMinor, setAmountMinor] = React.useState<number>(
-    initialEntry ? initialEntry.amount_minor : 0,
+    initialEntry ? initialEntry.amount_minor : (initialValues?.amount_minor ?? 0),
   );
   const [categoryId, setCategoryId] = React.useState<string>(
-    initialEntry ? initialEntry.category_id : "",
+    initialEntry ? initialEntry.category_id : (initialValues?.category_id ?? ""),
   );
   const [customCategoryName, setCustomCategoryName] = React.useState<string>("");
   const [date, setDate] = React.useState<string>(
-    initialEntry ? initialEntry.occurred_on : today,
+    initialEntry ? initialEntry.occurred_on : (initialValues?.occurred_on ?? today),
   );
   const [counterparty, setCounterparty] = React.useState<string>(
-    initialEntry?.counterparty ?? "",
+    initialEntry?.counterparty ?? initialValues?.counterparty ?? "",
   );
-  const [repeats, setRepeats] = React.useState<"No" | "Weekly" | "Monthly">("No");
+  const [repeats, setRepeats] = React.useState<"No" | "Weekly" | "Monthly">(
+    initialValues?.repeats ?? "No",
+  );
   const [description, setDescription] = React.useState<string>(
-    initialEntry?.description ?? "",
+    initialEntry?.description ?? initialValues?.description ?? "",
   );
 
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
-  const userSelectedRef = React.useRef(Boolean(initialEntry));
+  const userSelectedRef = React.useRef(Boolean(initialEntry || initialValues?.category_id));
 
-  // Set default category to last used for this action (if not editing)
+  // Set default category to last used for this action (if not editing or pre-filled)
   React.useEffect(() => {
-    if (initialEntry) return;
+    if (initialEntry || initialValues?.category_id) return;
     let isMounted = true;
     async function loadLastCategory() {
       try {
@@ -179,7 +208,7 @@ function StandardEntryForm({
     return () => {
       isMounted = false;
     };
-  }, [kind, scope, initialEntry]);
+  }, [kind, scope, initialEntry, initialValues?.category_id]);
 
   const isOther = categoryId === OTHER_CATEGORY_VALUE;
   const hasValidCategory = isOther ? customCategoryName.trim().length > 0 : categoryId.length > 0;
@@ -239,9 +268,6 @@ function StandardEntryForm({
         });
       }
 
-      // TODO(prompt-14): wire recurring rule storage for repeats value
-      // repeats state: "No" | "Weekly" | "Monthly"
-
       if (initialEntry) {
         const prevValues = {
           category_id: initialEntry.category_id,
@@ -258,6 +284,23 @@ function StandardEntryForm({
           counterparty: counterparty.trim() || null,
           description: description.trim() || null,
         });
+
+        // If repeats set on edit, create recurring rule
+        if (repeats === "Weekly" || repeats === "Monthly") {
+          const frequency = repeats === "Weekly" ? "weekly" : "monthly";
+          const next_due_on = computeNextDueDate(date, frequency);
+
+          await createRecurringRule({
+            kind,
+            frequency,
+            amount_minor: amountMinor,
+            category_id: finalCategoryId,
+            counterparty: counterparty.trim() || null,
+            description: description.trim() || null,
+            next_due_on,
+            is_paused: false,
+          });
+        }
 
         onSaveSuccess?.(updatedEntry);
         onClose();
@@ -295,6 +338,28 @@ function StandardEntryForm({
           counterparty: counterparty.trim() || null,
           description: description.trim() || null,
         });
+
+        // Wire recurring rule creation (US-5.1 Prompt 14)
+        if (repeats === "Weekly" || repeats === "Monthly") {
+          const frequency = repeats === "Weekly" ? "weekly" : "monthly";
+          const next_due_on = computeNextDueDate(date, frequency);
+
+          await createRecurringRule({
+            kind,
+            frequency,
+            amount_minor: amountMinor,
+            category_id: finalCategoryId,
+            counterparty: counterparty.trim() || null,
+            description: description.trim() || null,
+            next_due_on,
+            is_paused: false,
+          });
+        }
+
+        // Advance recurring rule if created from "Edit first" on a banner card
+        if (recurringRuleIdToAdvance) {
+          await advanceRecurringRule(recurringRuleIdToAdvance);
+        }
 
         onSaveSuccess?.(newEntry);
         onClose();
@@ -367,6 +432,7 @@ function StandardEntryForm({
 
         {/* 1. Amount (Required) */}
         <AmountField
+          id="amount-input"
           label="Amount"
           value={amountMinor}
           onChange={(val) => setAmountMinor(val)}

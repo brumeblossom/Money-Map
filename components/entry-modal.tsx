@@ -18,6 +18,15 @@ export interface EntryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currency?: string;
+  initialValues?: {
+    amount_minor?: number;
+    category_id?: string;
+    counterparty?: string | null;
+    description?: string | null;
+    occurred_on?: string;
+    repeats?: "No" | "Weekly" | "Monthly";
+  };
+  recurringRuleIdToAdvance?: string;
 }
 
 function subscribeToMediaQuery(callback: () => void) {
@@ -39,6 +48,8 @@ export function EntryModal({
   open,
   onOpenChange,
   currency = "NGN",
+  initialValues,
+  recurringRuleIdToAdvance,
 }: EntryModalProps) {
   const isDesktop = React.useSyncExternalStore(
     subscribeToMediaQuery,
@@ -58,7 +69,14 @@ export function EntryModal({
           className="w-[480px] max-w-[480px] sm:max-w-[480px] max-h-[min(640px,80vh)] h-[min(640px,80vh)] p-0 overflow-hidden rounded-2xl flex flex-col border border-border bg-background shadow-2xl"
         >
           <DialogTitle className="sr-only">Entry form</DialogTitle>
-          <EntryForm key={action} action={action} onClose={handleClose} currency={currency} />
+          <EntryForm
+            key={action}
+            action={action}
+            initialValues={initialValues}
+            recurringRuleIdToAdvance={recurringRuleIdToAdvance}
+            onClose={handleClose}
+            currency={currency}
+          />
         </DialogContent>
       </Dialog>
     );
@@ -68,7 +86,14 @@ export function EntryModal({
     <Drawer open={open} onOpenChange={onOpenChange} handleOnly={true}>
       <DrawerContent className="data-[vaul-drawer-direction=bottom]:max-h-[90dvh] max-h-[90dvh] h-[90dvh] rounded-t-3xl p-0 overflow-hidden flex flex-col border-t border-border bg-background">
         <DrawerTitle className="sr-only">Entry form</DrawerTitle>
-        <EntryForm key={action} action={action} onClose={handleClose} currency={currency} />
+        <EntryForm
+          key={action}
+          action={action}
+          initialValues={initialValues}
+          recurringRuleIdToAdvance={recurringRuleIdToAdvance}
+          onClose={handleClose}
+          currency={currency}
+        />
       </DrawerContent>
     </Drawer>
   );

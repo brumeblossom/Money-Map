@@ -6,7 +6,9 @@ import { LogOut } from "lucide-react";
 import { db } from "@/lib/db/dexie";
 import { signOut } from "@/lib/sync";
 
+import Link from "next/link";
 import { InstallPwaCard } from "@/components/install-pwa-card";
+import { RecurringRulesList } from "@/components/recurring-rules-list";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -31,6 +33,27 @@ export default function SettingsPage() {
         <p className="mt-1 text-sm text-muted-foreground">
           Name, currency, manage categories, repeating entries, share links, notifications, sign in or sign out, delete account.
         </p>
+      </div>
+
+      {/* Repeating Entries Section (US-5.1 Prompt 14) */}
+      <div id="repeating-entries" className="rounded-xl border border-border bg-card p-5 shadow-xs">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-base font-semibold text-foreground">Repeating entries</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Manage reminders for weekly and monthly recurring entries.
+            </p>
+          </div>
+          <Link
+            href="/settings/repeating"
+            data-testid="settings-repeating-entries-link"
+            className="text-xs font-semibold text-primary hover:underline"
+          >
+            Manage
+          </Link>
+        </div>
+
+        <RecurringRulesList />
       </div>
 
       {/* Add to Home Screen Section (Prompt 11 / US-10.1) */}

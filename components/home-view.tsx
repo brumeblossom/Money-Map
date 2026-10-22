@@ -14,9 +14,11 @@ import {
 import { ActionCard } from "@/components/action-card";
 import { EntryModal } from "@/components/entry-modal";
 import { GuestBanner } from "@/components/guest-banner";
+import { RecurringBanners } from "@/components/recurring-banners";
 import { useEntries, useLoans, useLoanPayments } from "@/lib/repo/hooks";
 import { seedDefaultCategories } from "@/lib/repo/seed";
 import { claimGuestData } from "@/lib/repo";
+import type { RecurringRuleRow } from "@/lib/db/dexie";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { getMonthPeriod, periodTotals, owedToMe } from "@/lib/calc";
@@ -129,6 +131,9 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
     setOverrideClosed(false);
   }
 
+  const [editingRecurringRule, setEditingRecurringRule] =
+    React.useState<RecurringRuleRow | null>(null);
+
   const isModalOpen = !overrideClosed && !!activeAction;
 
   const handleActionClick = (actionKey: string) => {
@@ -148,6 +153,13 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
   return (
     <div className="flex flex-col gap-6 py-2">
       <GuestBanner />
+
+      {/* Recurring reminders banner cards (US-5.1 Prompt 14) */}
+      <RecurringBanners
+        today={today}
+        currency={currency}
+        onEditRule={(rule) => setEditingRecurringRule(rule)}
+      />
 
       {/* Header section */}
       <div className="space-y-1">
@@ -303,6 +315,27 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
           open={isModalOpen}
           onOpenChange={handleModalClose}
           currency={currency}
+        />
+      )}
+
+      {/* Entry Modal when editing a due recurring rule ("Edit first") */}
+      {editingRecurringRule && (
+        <EntryModal
+          action={editingRecurringRule.kind}
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setEditingRecurringRule(null);
+          }}
+          currency={currency}
+          initialValues={{
+            amount_minor: editingRecurringRule.amount_minor,
+            category_id: editingRecurringRule.category_id,
+            counterparty: editingRecurringRule.counterparty,
+            description: editingRecurringRule.description,
+            occurred_on: today,
+            repeats: "No",
+          }}
+          recurringRuleIdToAdvance={editingRecurringRule.id}
         />
       )}
     </div>

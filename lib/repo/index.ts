@@ -54,6 +54,11 @@ async function executeWrite<T>(
     const res = await operation();
     // Only queue to outbox if user is signed in (guest rows are queued on claimGuestData)
     if (userId) {
+      // Keep only the latest change per record (merge repeated edits to the same row)
+      const existing = await outboxRef.where({ table, row_id: rowId }).toArray();
+      if (existing.length > 0) {
+        await outboxRef.bulkDelete(existing.map((e) => e.seq!).filter((s) => s !== undefined));
+      }
       await outboxRef.add({
         table,
         row_id: rowId,

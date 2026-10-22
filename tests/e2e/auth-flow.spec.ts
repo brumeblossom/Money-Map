@@ -95,7 +95,8 @@ test.describe("Auth and Guest Mode Flow (Prompt 9)", () => {
     // Shows "Enter a valid email"
     await expect(page.getByTestId("welcome-email-error")).toHaveText("Enter a valid email");
 
-    // Type valid email and submit
+    // Fill first name and type valid email and submit
+    await page.getByTestId("welcome-first-name-input").fill("Chinedu");
     await emailInput.fill("chinedu@example.com");
     await page.getByTestId("welcome-email-submit").click();
 
@@ -162,6 +163,7 @@ test.describe("Auth and Guest Mode Flow (Prompt 9)", () => {
 
     // Now Banner MUST be visible!
     await page.goto("/");
+    await page.waitForFunction(() => Boolean((window as unknown as { __db?: unknown }).__db));
     const banner = page.getByTestId("guest-banner");
     await expect(banner).toBeVisible();
     await expect(banner).toContainText(
@@ -255,13 +257,16 @@ test.describe("Auth and Guest Mode Flow (Prompt 9)", () => {
     // 3. Navigate to /auth/callback?code=mock-code
     await page.goto("/auth/callback?code=mock-code", { waitUntil: "domcontentloaded" });
 
+    // Lands on / and displays non-silent guest entries prompt (Prompt 15b Item 6)
+    await expect(page).toHaveURL("http://localhost:3000/");
+    const addThemBtn = page.getByRole("button", { name: /Add them/i });
+    await expect(addThemBtn).toBeVisible();
+    await addThemBtn.click();
+
     // Toast "Your 2 entries are now saved to your account" appears
     await expect(
       page.getByText("Your 2 entries are now saved to your account"),
     ).toBeVisible();
-
-    // Redirects to /
-    await expect(page).toHaveURL("http://localhost:3000/");
 
     // Check Dexie entries now have user_id set and are queued in outbox
     const migrationResult = await page.evaluate(async () => {

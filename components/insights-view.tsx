@@ -401,14 +401,14 @@ export function InsightsView() {
             </div>
           </div>
 
-          {/* Tile 3: Given */}
+          {/* Tile 3: Giving */}
           <div
             data-testid="insights-tile-given-card"
             className="group flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-4 shadow-xs transition-all hover:border-amber-500/30 sm:p-5"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Given
+                Giving
               </span>
               <div className="rounded-full bg-amber-500/10 p-2 text-amber-600 dark:text-amber-400">
                 <Heart className="size-4" />
@@ -424,14 +424,14 @@ export function InsightsView() {
             </div>
           </div>
 
-          {/* Tile 4: Owed to me */}
+          {/* Tile 4: Money I lent */}
           <div
             data-testid="insights-tile-owed-card"
             className="group flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-4 shadow-xs transition-all hover:border-indigo-500/30 sm:p-5"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Owed to me
+                Money I lent
               </span>
               <div className="rounded-full bg-indigo-500/10 p-2 text-indigo-600 dark:text-indigo-400">
                 <HandCoins className="size-4" />

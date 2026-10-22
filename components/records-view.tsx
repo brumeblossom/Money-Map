@@ -18,8 +18,17 @@ import {
 import { toast } from "sonner";
 import { db, type EntryRow, type CategoryRow } from "@/lib/db/dexie";
 import { softDeleteEntry, restoreEntry } from "@/lib/repo";
-import { signedAmount, getPeriodPreset, type PeriodPreset } from "@/lib/calc";
-import { formatDate, formatMoney } from "@/lib/format";
+import { useLoans, useLoanPayments } from "@/lib/repo/hooks";
+import {
+  signedAmount,
+  getPeriodPreset,
+  type PeriodPreset,
+  totalToGetBack,
+  receivedSoFar,
+  balanceLeft,
+  owedToMe,
+} from "@/lib/calc";
+import { formatDate, formatMoney, formatMonthYear } from "@/lib/format";
 import { DateField } from "@/components/date-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,27 +44,32 @@ export const TAB_CONFIG: Record<
     action: "income" | "expense" | "giving" | "lent";
     desktopLabel: string;
     fabLabel: string;
+    summaryLabel: string;
   }
 > = {
   income: {
     action: "income",
-    desktopLabel: "+ Add income",
+    desktopLabel: "Add income",
     fabLabel: "Add income",
+    summaryLabel: "TOTAL INCOME",
   },
   expenses: {
     action: "expense",
-    desktopLabel: "+ Add expense",
+    desktopLabel: "Add expense",
     fabLabel: "Add expense",
+    summaryLabel: "TOTAL EXPENSES",
   },
   giving: {
     action: "giving",
-    desktopLabel: "+ Add giving",
+    desktopLabel: "Add giving",
     fabLabel: "Add giving",
+    summaryLabel: "TOTAL GIVING",
   },
   lent: {
     action: "lent",
-    desktopLabel: "+ Lend money",
+    desktopLabel: "Lend money",
     fabLabel: "Lend money",
+    summaryLabel: "OWED TO YOU",
   },
 };
 
@@ -314,6 +328,54 @@ export function RecordsView() {
   const currentTabTotalMinor = React.useMemo(() => {
     return filteredEntries.reduce((acc, curr) => acc + curr.amount_minor, 0);
   }, [filteredEntries]);
+
+  // Loans metrics for Lent tab
+  const rawLoans = useLoans();
+  const rawPayments = useLoanPayments();
+  const loans = React.useMemo(() => rawLoans ?? [], [rawLoans]);
+  const loanPayments = React.useMemo(() => rawPayments ?? [], [rawPayments]);
+
+  const activeLoans = React.useMemo(() => {
+    return loans.filter((loan) => {
+      if (loan.deleted_at !== null) return false;
+      const payments = loanPayments.filter((p) => p.loan_id === loan.id && p.deleted_at === null);
+      const total = totalToGetBack(loan.principal_minor, loan.interest_type, loan.interest_value);
+      const received = receivedSoFar(payments);
+      const balance = balanceLeft(total, received);
+      return balance > 0;
+    });
+  }, [loans, loanPayments]);
+
+  const totalLentOwed = React.useMemo(() => {
+    return owedToMe(loans, loanPayments);
+  }, [loans, loanPayments]);
+
+  const periodDescription = React.useMemo(() => {
+    if (periodPreset === "thisMonth") {
+      return formatMonthYear(today.slice(0, 7));
+    }
+    if (periodPreset === "last3Months") return "Last 3 months";
+    if (periodPreset === "last6Months") return "Last 6 months";
+    if (periodPreset === "last12Months") return "Last 12 months";
+    if (periodPreset === "custom") {
+      return `${formatDate(customRange.start)} - ${formatDate(customRange.end)}`;
+    }
+    return formatMonthYear(today.slice(0, 7));
+  }, [periodPreset, today, customRange]);
+
+  const summarySubtitle = React.useMemo(() => {
+    if (activeTab === "lent") {
+      return `${activeLoans.length} active loan${activeLoans.length === 1 ? "" : "s"}`;
+    }
+    return `${filteredEntries.length} ${filteredEntries.length === 1 ? "entry" : "entries"} · ${periodDescription}`;
+  }, [activeTab, activeLoans.length, filteredEntries.length, periodDescription]);
+
+  const summaryAmount = React.useMemo(() => {
+    if (activeTab === "lent") {
+      return totalLentOwed;
+    }
+    return currentTabTotalMinor;
+  }, [activeTab, totalLentOwed, currentTabTotalMinor]);
 
   // Flatten filtered entries into daily groups with headers
   const flattenedItems = React.useMemo(() => {
@@ -594,17 +656,6 @@ export function RecordsView() {
               </div>
             )}
           </div>
-
-          {/* Desktop Add button at the right end of the filter row */}
-          <Button
-            type="button"
-            onClick={() => handleOpenAdd(activeTab)}
-            data-testid="records-desktop-add-button"
-            className="hidden lg:inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold shadow-xs shrink-0 cursor-pointer"
-          >
-            <Plus className="size-4" />
-            <span>{TAB_CONFIG[activeTab].desktopLabel}</span>
-          </Button>
         </div>
 
         {/* Custom from/to date pickers (DD-MM-YYYY) */}
@@ -624,7 +675,46 @@ export function RecordsView() {
         )}
       </div>
 
-      {/* 3. Tab content: Lent or Entries */}
+      {/* 3. Summary Header Row Styled Like Home Cards */}
+      <div
+        data-testid="records-summary-card"
+        className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5 shadow-xs"
+      >
+        <div className="space-y-0.5 sm:space-y-1">
+          <span
+            data-testid="records-summary-label"
+            className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+          >
+            {TAB_CONFIG[activeTab].summaryLabel}
+          </span>
+          <div
+            data-testid="records-summary-amount"
+            className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground tabular-nums"
+          >
+            {formatMoney(summaryAmount, currency)}
+          </div>
+          <p
+            data-testid="records-footer"
+            className="text-xs text-muted-foreground"
+          >
+            {summarySubtitle}
+            <span className="sr-only"> · {formatMoney(summaryAmount, currency)}</span>
+          </p>
+        </div>
+
+        {/* Single Add button per tab in the summary row with ONE plus icon, no "+" in text */}
+        <Button
+          type="button"
+          onClick={() => handleOpenAdd(activeTab)}
+          data-testid="records-summary-add-button"
+          className="inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-xs shrink-0 cursor-pointer w-full sm:w-auto"
+        >
+          <Plus className="size-4 shrink-0" />
+          <span>{TAB_CONFIG[activeTab].desktopLabel}</span>
+        </Button>
+      </div>
+
+      {/* 4. Tab content: Lent or Entries */}
       {activeTab === "lent" ? (
         <div className="pt-2">
           <LentListView
@@ -636,18 +726,6 @@ export function RecordsView() {
         </div>
       ) : (
         <>
-          {/* 4. Summary at TOP, under the filter row: "12 entries · ₦245,000.00" */}
-          <div
-            data-testid="records-top-summary"
-            className="flex items-center justify-between px-1 py-1 text-sm font-semibold text-muted-foreground"
-          >
-            <span data-testid="records-footer">
-              {filteredEntries.length} {filteredEntries.length === 1 ? "entry" : "entries"} ·{" "}
-              <strong className="font-bold text-foreground">
-                {formatMoney(currentTabTotalMinor, currency)}
-              </strong>
-            </span>
-          </div>
 
           {/* 5. Virtualized Entries List */}
           <div

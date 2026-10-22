@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Plus, HandCoins, ChevronDown, ChevronRight, Pencil, Trash2, Calendar } from "lucide-react";
+import { HandCoins, ChevronDown, ChevronRight, Pencil, Trash2, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EditLoanModal } from "@/components/edit-loan-modal";
 import { useLoans, useLoanPayments } from "@/lib/repo/hooks";
@@ -43,7 +43,6 @@ export function LentListView({
   currency = "NGN",
   searchQuery = "",
   categoryId = "all",
-  onAddClick,
 }: LentListViewProps) {
   const rawLoans = useLoans();
   const rawPayments = useLoanPayments();
@@ -107,10 +106,6 @@ export function LentListView({
   const paidOffLoans = React.useMemo(() => {
     return filteredLoans.filter((item) => item.status === "Paid off");
   }, [filteredLoans]);
-
-  const totalOwed = React.useMemo(() => {
-    return activeLoans.reduce((sum, item) => sum + item.balance, 0);
-  }, [activeLoans]);
 
   const handleDeleteLoan = async (loan: LoanRow, e: React.MouseEvent) => {
     e.preventDefault();
@@ -260,37 +255,6 @@ export function LentListView({
 
   return (
     <div className="flex flex-col gap-6 py-2 pb-16">
-      {/* Header section */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Money I lent
-          </h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            {activeLoans.length > 0
-              ? `${formatMoney(totalOwed, currency)} owed to you across ${activeLoans.length} active loan${activeLoans.length === 1 ? "" : "s"}`
-              : "Track loans, instalment schedules, and repayments"}
-          </p>
-        </div>
-
-        {onAddClick ? (
-          <Button
-            type="button"
-            onClick={onAddClick}
-            data-testid="lent-header-add-button"
-            className="w-full rounded-xl px-4 font-semibold sm:w-auto cursor-pointer"
-          >
-            <Plus className="mr-1.5 size-4" /> Lend money
-          </Button>
-        ) : (
-          <Link href="/new/lent">
-            <Button className="w-full rounded-xl px-4 font-semibold sm:w-auto">
-              <Plus className="mr-1.5 size-4" /> Lend money
-            </Button>
-          </Link>
-        )}
-      </div>
-
       {/* Empty State */}
       {loans.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-card/50 px-6 py-12 text-center shadow-xs">
@@ -302,17 +266,6 @@ export function LentListView({
             Keep track of money you lend out to friends, family, or colleagues with instalment
             timelines and automated reminders.
           </p>
-          {onAddClick ? (
-            <Button onClick={onAddClick} className="mt-5 rounded-xl px-5 font-semibold cursor-pointer">
-              <Plus className="mr-1.5 size-4" /> Lend money
-            </Button>
-          ) : (
-            <Link href="/new/lent" className="mt-5">
-              <Button className="rounded-xl px-5 font-semibold">
-                <Plus className="mr-1.5 size-4" /> Lend money
-              </Button>
-            </Link>
-          )}
         </div>
       ) : (
         <div className="space-y-6">

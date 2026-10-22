@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Loader2, Sparkles } from "lucide-react";
+import { Mail, Loader2, Sparkles, ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { emailAuthSchema } from "@/lib/schemas";
+import { emailSignUpSchema } from "@/lib/schemas";
 import { mapAuthErrorMessage } from "@/lib/auth/errors";
 
 function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -33,15 +33,31 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
 export default function WelcomePage() {
   const router = useRouter();
   const [showEmailForm, setShowEmailForm] = React.useState(false);
+  const [firstName, setFirstName] = React.useState("");
   const [email, setEmail] = React.useState("");
+  const [isSharedDevice, setIsSharedDevice] = React.useState(false);
+  const [nameError, setNameError] = React.useState<string | null>(null);
   const [emailError, setEmailError] = React.useState<string | null>(null);
   const [googleError, setGoogleError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
 
+  const applySharedDeviceFlag = () => {
+    if (typeof window !== "undefined") {
+      if (isSharedDevice) {
+        sessionStorage.setItem("moneymap_shared_device", "true");
+        localStorage.setItem("moneymap_was_shared_device", "true");
+      } else {
+        sessionStorage.removeItem("moneymap_shared_device");
+        localStorage.removeItem("moneymap_was_shared_device");
+      }
+    }
+  };
+
   const handleContinueWithGoogle = async () => {
     setIsGoogleLoading(true);
     setGoogleError(null);
+    applySharedDeviceFlag();
     try {
       const supabase = createClient();
       const origin = window.location.origin;
@@ -63,22 +79,40 @@ export default function WelcomePage() {
 
   const handleSendLink = async (e: React.FormEvent) => {
     e.preventDefault();
+    setNameError(null);
     setEmailError(null);
 
-    const validation = emailAuthSchema.safeParse({ email });
+    const validation = emailSignUpSchema.safeParse({
+      firstName,
+      email,
+    });
+
     if (!validation.success) {
-      setEmailError("Enter a valid email");
+      const fieldErrors = validation.error.flatten().fieldErrors;
+      if (fieldErrors.firstName?.[0]) setNameError(fieldErrors.firstName[0]);
+      if (fieldErrors.email?.[0]) setEmailError(fieldErrors.email[0]);
       return;
     }
 
     setIsLoading(true);
+    applySharedDeviceFlag();
+
     try {
+      const trimmedName = validation.data.firstName.trim();
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("moneymap_pending_first_name", trimmedName);
+      }
+
       const supabase = createClient();
       const origin = window.location.origin;
       const { error } = await supabase.auth.signInWithOtp({
         email: validation.data.email,
         options: {
           emailRedirectTo: `${origin}/auth/confirm`,
+          data: {
+            first_name: trimmedName,
+            display_name: trimmedName,
+          },
         },
       });
 
@@ -121,16 +155,124 @@ export default function WelcomePage() {
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="space-y-3">
-          {/* Continue with Google */}
+        {/* Action Buttons: Email (primary, filled), Google (outlined), Try without an account (small text link) */}
+        <div className="space-y-3.5">
+          {/* Email Flow */}
+          {!showEmailForm ? (
+            <button
+              type="button"
+              data-testid="welcome-email-toggle"
+              onClick={() => setShowEmailForm(true)}
+              disabled={isGoogleLoading || isLoading}
+              className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-600/20 transition hover:bg-emerald-700 active:scale-[0.98] disabled:opacity-50 dark:bg-emerald-500 dark:text-neutral-950 dark:hover:bg-emerald-400 cursor-pointer"
+            >
+              <Mail className="h-4 w-4" />
+              <span>Continue with email</span>
+            </button>
+          ) : (
+            <form onSubmit={handleSendLink} noValidate className="space-y-3 text-left">
+              <div className="flex items-center justify-between pb-1">
+                <button
+                  type="button"
+                  onClick={() => setShowEmailForm(false)}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  <ArrowLeft className="size-3.5" /> Back
+                </button>
+                <span className="text-xs font-medium text-muted-foreground">Sign in with email</span>
+              </div>
+
+              {/* First Name Field */}
+              <div className="space-y-1">
+                <label htmlFor="welcome-first-name" className="text-xs font-medium text-muted-foreground">
+                  Your first name
+                </label>
+                <input
+                  id="welcome-first-name"
+                  type="text"
+                  data-testid="welcome-first-name-input"
+                  value={firstName}
+                  onChange={(e) => {
+                    setFirstName(e.target.value);
+                    if (nameError) setNameError(null);
+                  }}
+                  placeholder="Your first name"
+                  maxLength={60}
+                  autoFocus
+                  className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground shadow-xs transition placeholder:text-muted-foreground focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+                {nameError && (
+                  <p
+                    data-testid="welcome-name-error"
+                    className="text-xs font-medium text-destructive px-1"
+                  >
+                    {nameError}
+                  </p>
+                )}
+              </div>
+
+              {/* Email Field */}
+              <div className="space-y-1">
+                <label htmlFor="welcome-email" className="text-xs font-medium text-muted-foreground">
+                  Email
+                </label>
+                <input
+                  id="welcome-email"
+                  type="email"
+                  data-testid="welcome-email-input"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (emailError) setEmailError(null);
+                  }}
+                  placeholder="name@example.com"
+                  className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground shadow-xs transition placeholder:text-muted-foreground focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+                {emailError && (
+                  <p
+                    data-testid="welcome-email-error"
+                    className="text-xs font-medium text-destructive px-1"
+                  >
+                    {emailError}
+                  </p>
+                )}
+              </div>
+
+              {/* Someone else's device Checkbox */}
+              <label className="flex items-center gap-2 pt-1 text-xs text-muted-foreground cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  data-testid="welcome-shared-device-checkbox"
+                  checked={isSharedDevice}
+                  onChange={(e) => setIsSharedDevice(e.target.checked)}
+                  className="size-4 rounded border-border accent-emerald-600 cursor-pointer"
+                />
+                <span>This is someone else&apos;s device</span>
+              </label>
+
+              <button
+                type="submit"
+                data-testid="welcome-email-submit"
+                disabled={isLoading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-600/20 transition hover:bg-emerald-700 active:scale-[0.98] disabled:opacity-50 dark:bg-emerald-500 dark:text-neutral-950 dark:hover:bg-emerald-400 cursor-pointer"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <span>Send me a link</span>
+                )}
+              </button>
+            </form>
+          )}
+
+          {/* Continue with Google (outlined) */}
           <div className="space-y-1.5">
             <button
               type="button"
               data-testid="welcome-google"
               onClick={handleContinueWithGoogle}
               disabled={isGoogleLoading || isLoading}
-              className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold text-foreground shadow-xs transition hover:bg-accent/60 active:scale-[0.98] disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold text-foreground shadow-xs transition hover:bg-accent/60 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
             >
               {isGoogleLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -149,78 +291,30 @@ export default function WelcomePage() {
             )}
           </div>
 
-          {/* Email Flow */}
-          {!showEmailForm ? (
-            <button
-              type="button"
-              data-testid="welcome-email-toggle"
-              onClick={() => setShowEmailForm(true)}
-              disabled={isGoogleLoading || isLoading}
-              className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold text-foreground shadow-xs transition hover:bg-accent/60 active:scale-[0.98] disabled:opacity-50"
-            >
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              <span>Continue with email</span>
-            </button>
-          ) : (
-            <form onSubmit={handleSendLink} noValidate className="space-y-3 text-left">
-              <div className="space-y-1.5">
-                <input
-                  type="email"
-                  data-testid="welcome-email-input"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (emailError) setEmailError(null);
-                  }}
-                  placeholder="name@example.com"
-                  autoFocus
-                  className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground shadow-xs transition placeholder:text-muted-foreground focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                />
-                {emailError && (
-                  <p
-                    data-testid="welcome-email-error"
-                    className="text-xs font-medium text-destructive px-1"
-                  >
-                    {emailError}
-                  </p>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                data-testid="welcome-email-submit"
-                disabled={isLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-600/20 transition hover:bg-emerald-700 active:scale-[0.98] disabled:opacity-50 dark:bg-emerald-500 dark:text-neutral-950 dark:hover:bg-emerald-400"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <span>Send me a link</span>
-                )}
-              </button>
-            </form>
+          {!showEmailForm && (
+            <label className="flex items-center justify-center gap-2 pt-1 text-xs text-muted-foreground cursor-pointer select-none">
+              <input
+                type="checkbox"
+                data-testid="welcome-shared-device-checkbox-main"
+                checked={isSharedDevice}
+                onChange={(e) => setIsSharedDevice(e.target.checked)}
+                className="size-4 rounded border-border accent-emerald-600 cursor-pointer"
+              />
+              <span>This is someone else&apos;s device</span>
+            </label>
           )}
 
-          <div className="relative py-1">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-border/60" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground font-medium">
-                or
-              </span>
-            </div>
+          <div className="pt-2">
+            {/* Try without an account: small text link */}
+            <button
+              type="button"
+              data-testid="welcome-try-guest"
+              onClick={handleTryWithoutAccount}
+              className="text-xs font-medium text-muted-foreground underline-offset-4 hover:underline hover:text-foreground transition cursor-pointer"
+            >
+              Try without an account
+            </button>
           </div>
-
-          {/* Try without an account */}
-          <button
-            type="button"
-            data-testid="welcome-try-guest"
-            onClick={handleTryWithoutAccount}
-            className="w-full rounded-xl px-4 py-3 text-sm font-semibold text-muted-foreground transition hover:bg-accent/40 hover:text-foreground active:scale-[0.98]"
-          >
-            Try without an account
-          </button>
         </div>
       </div>
     </main>

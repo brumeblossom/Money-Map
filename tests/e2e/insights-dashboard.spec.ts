@@ -241,7 +241,8 @@ test.describe("Insights Dashboard (Prompt 12)", () => {
 
     // Lent tab
     await page.goto("/records?tab=lent");
-    await expect(page.getByRole("heading", { level: 1, name: "Money I lent" })).toBeVisible();
+    await expect(page.getByTestId("records-tab-lent")).toBeVisible();
+    await expect(page.getByText("OWED TO YOU")).toBeVisible();
     await expect(page.locator("body")).toContainText(dashOwed);
 
     // 5. Navigate back to /insights and verify other blocks

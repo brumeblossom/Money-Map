@@ -117,7 +117,7 @@ test.describe("Offline App Shell & PWA (Prompt 11)", () => {
     await saveButton.click();
 
     // Verify toast "Saved" appears and outbox records change
-    await expect(page.getByText("Saved")).toBeVisible();
+    await expect(page.getByText("Saved", { exact: true })).toBeVisible();
 
     // 5. Navigate to Records offline
     await page.goto("/records");

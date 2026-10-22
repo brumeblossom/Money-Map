@@ -166,12 +166,23 @@ export const categoryFormSchema = z.object({
 
 export type CategoryFormData = z.infer<typeof categoryFormSchema>;
 
-// Auth schemas (PRD section 10, E1 US-1.1, US-1.2)
+// Auth schemas (PRD section 10, E1 US-1.1, US-1.2, Prompt 15b)
 export const emailAuthSchema = z.object({
   email: z.string().trim().email("Enter a valid email"),
 });
 
 export type EmailAuthData = z.infer<typeof emailAuthSchema>;
+
+export const emailSignUpSchema = z.object({
+  firstName: z
+    .string()
+    .trim()
+    .min(1, "Enter your first name")
+    .max(60, "Name must be 60 characters or less"),
+  email: z.string().trim().email("Enter a valid email"),
+});
+
+export type EmailSignUpData = z.infer<typeof emailSignUpSchema>;
 
 // -------------------------------------------------------------
 // Sync API Schemas (PRD section 7, section 8)

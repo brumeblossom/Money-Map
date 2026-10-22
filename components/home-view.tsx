@@ -17,9 +17,11 @@ import { GuestBanner } from "@/components/guest-banner";
 import { RecurringBanners } from "@/components/recurring-banners";
 import { useEntries, useLoans, useLoanPayments } from "@/lib/repo/hooks";
 import { seedDefaultCategories } from "@/lib/repo/seed";
-import { claimGuestData } from "@/lib/repo";
-import type { RecurringRuleRow } from "@/lib/db/dexie";
+import { claimGuestData, updateProfile, createProfile } from "@/lib/repo";
+import { db, type RecurringRuleRow } from "@/lib/db/dexie";
 import { createClient } from "@/lib/supabase/client";
+import { signOut } from "@/lib/sync";
+import { extractFirstName } from "@/lib/auth/user-name";
 import { toast } from "sonner";
 import { getMonthPeriod, periodTotals, owedToMe } from "@/lib/calc";
 import { formatMoney, formatMonthYear } from "@/lib/format";
@@ -52,6 +54,14 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
 
   const currentAction = activeAction;
 
+  const [isSharedDevice, setIsSharedDevice] = React.useState(false);
+  const [guestEntriesCount, setGuestEntriesCount] = React.useState<number | null>(null);
+  const [currentAuthUserId, setCurrentAuthUserId] = React.useState<string | null>(null);
+  const [showNamePrompt, setShowNamePrompt] = React.useState(false);
+  const [namePromptValue, setNamePromptValue] = React.useState("");
+  const [namePromptError, setNamePromptError] = React.useState<string | null>(null);
+  const [isSavingName, setIsSavingName] = React.useState(false);
+
   // Run seed once on mount (idempotent)
   React.useEffect(() => {
     seedDefaultCategories().catch((err) => {
@@ -59,19 +69,44 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
     });
   }, []);
 
-  // Claim guest data if signed in
+  // Check shared device session, name, and guest entries on mount
   React.useEffect(() => {
-    async function syncGuestSession() {
+    async function initSession() {
       try {
+        // 1. Shared device check: if previously marked on this device and sessionStorage flag is gone, sign out
+        if (typeof window !== "undefined") {
+          const wasShared = localStorage.getItem("moneymap_was_shared_device") === "true";
+          const isSharedNow = sessionStorage.getItem("moneymap_shared_device") === "true";
+          if (wasShared && !isSharedNow) {
+            localStorage.removeItem("moneymap_was_shared_device");
+            await signOut(db, router);
+            return;
+          }
+          if (isSharedNow) {
+            setIsSharedDevice(true);
+          }
+        }
+
+        // 2. Auth user check
         const supabase = createClient();
         let userId: string | null = null;
+        let authUser: { id: string; user_metadata?: Record<string, unknown> } | null = null;
+
         const { data: sessionData } = await supabase.auth.getSession();
-        userId = sessionData?.session?.user?.id ?? null;
+        if (sessionData?.session?.user) {
+          userId = sessionData.session.user.id;
+          authUser = sessionData.session.user;
+        }
 
         if (!userId && typeof document !== "undefined") {
           const match = document.cookie.match(/moneymap_mock_user=([^;]+)/);
-          if (match) userId = match[1];
+          if (match) {
+            userId = match[1];
+            authUser = { id: userId };
+          }
         }
+
+        setCurrentAuthUserId(userId);
 
         if (userId) {
           if (typeof document !== "undefined") {
@@ -79,18 +114,98 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
               "moneymap_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
           }
 
-          const claimed = await claimGuestData(userId);
-          if (claimed > 0) {
-            toast(`Your ${claimed} entries are now saved to your account`);
+          // Check display_name: if empty, extract name from user_metadata or pending first name
+          const existingProfile = await db.profiles.get(userId);
+          const currentName = existingProfile?.display_name?.trim();
+          if (!currentName) {
+            const fallbackPending = typeof window !== "undefined" ? sessionStorage.getItem("moneymap_pending_first_name") : null;
+            const extracted = extractFirstName(authUser?.user_metadata, fallbackPending);
+            if (extracted) {
+              if (existingProfile) {
+                await updateProfile(userId, { display_name: extracted });
+              } else {
+                await createProfile({ user_id: userId, display_name: extracted, currency: "NGN" });
+              }
+              if (typeof window !== "undefined") {
+                sessionStorage.removeItem("moneymap_pending_first_name");
+              }
+            } else {
+              setShowNamePrompt(true);
+            }
+          }
+
+          // Guest entries check: do NOT merge silently!
+          const unassignedEntries = await db.entries.filter((e) => !e.user_id || e.user_id === "").count();
+          if (unassignedEntries > 0) {
+            const dismissed = typeof window !== "undefined" && sessionStorage.getItem("moneymap_guest_prompt_dismissed") === "true";
+            if (!dismissed) {
+              setGuestEntriesCount(unassignedEntries);
+            }
           }
         }
       } catch (e) {
-        console.error("Failed to sync guest session", e);
+        console.error("Failed to init session on Home", e);
       }
     }
 
-    syncGuestSession();
-  }, []);
+    initSession();
+  }, [router]);
+
+  const handleClaimGuestEntries = async () => {
+    if (!currentAuthUserId) return;
+    try {
+      const claimed = await claimGuestData(currentAuthUserId);
+      setGuestEntriesCount(null);
+      if (claimed > 0) {
+        toast(`Your ${claimed} entries are now saved to your account`);
+      }
+    } catch (e) {
+      console.error("Failed to claim guest entries", e);
+    }
+  };
+
+  const handleDismissGuestEntries = () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("moneymap_guest_prompt_dismissed", "true");
+    }
+    setGuestEntriesCount(null);
+  };
+
+  const handleSaveNamePrompt = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNamePromptError(null);
+    const trimmed = namePromptValue.trim();
+    if (!trimmed || trimmed.length > 60) {
+      setNamePromptError("Please enter a name up to 60 characters");
+      return;
+    }
+    if (!currentAuthUserId) return;
+
+    setIsSavingName(true);
+    try {
+      const existing = await db.profiles.get(currentAuthUserId);
+      if (existing) {
+        await updateProfile(currentAuthUserId, { display_name: trimmed });
+      } else {
+        await createProfile({ user_id: currentAuthUserId, display_name: trimmed, currency: "NGN" });
+      }
+      setShowNamePrompt(false);
+      toast("Name saved");
+    } catch (err) {
+      console.error("Failed to save name", err);
+      setNamePromptError("Failed to save name");
+    } finally {
+      setIsSavingName(false);
+    }
+  };
+
+  const handleSharedDeviceSignOut = async () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("moneymap_shared_device");
+      localStorage.removeItem("moneymap_was_shared_device");
+    }
+    await signOut(db, router);
+  };
 
   const today = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
   const currentMonthStr = React.useMemo(() => today.slice(0, 7), [today]);
@@ -153,6 +268,100 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
   return (
     <div className="flex flex-col gap-6 py-2">
       <GuestBanner />
+
+      {/* Someone else's device banner (Prompt 15b Item 6) */}
+      {isSharedDevice && (
+        <div
+          data-testid="shared-device-banner"
+          className="flex items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200"
+        >
+          <span>You&apos;re on someone else&apos;s device. Sign out when you&apos;re done.</span>
+          <button
+            type="button"
+            onClick={handleSharedDeviceSignOut}
+            data-testid="shared-device-signout-btn"
+            className="rounded-lg bg-amber-600 px-3 py-1 font-semibold text-white shadow-xs hover:bg-amber-700 cursor-pointer shrink-0"
+          >
+            Sign out
+          </button>
+        </div>
+      )}
+
+      {/* Guest entries protection prompt (Prompt 15b Item 6) */}
+      {guestEntriesCount !== null && guestEntriesCount > 0 && (
+        <div
+          data-testid="claim-guest-card"
+          className="rounded-2xl border border-primary/20 bg-primary/5 p-4 shadow-xs space-y-3"
+        >
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-foreground">
+              This device has {guestEntriesCount} {guestEntriesCount === 1 ? "entry" : "entries"} saved without an account.
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Add them to your account?
+            </p>
+          </div>
+          <div className="flex items-center gap-2.5 pt-1">
+            <button
+              type="button"
+              onClick={handleClaimGuestEntries}
+              data-testid="claim-guest-add-btn"
+              className="rounded-xl bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-xs hover:opacity-90 cursor-pointer"
+            >
+              Add them
+            </button>
+            <button
+              type="button"
+              onClick={handleDismissGuestEntries}
+              data-testid="claim-guest-keep-separate-btn"
+              className="rounded-xl border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              Not mine, keep separate
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* One-time name prompt card: "What should we call you?" (Prompt 15b Item 3) */}
+      {showNamePrompt && (
+        <form
+          onSubmit={handleSaveNamePrompt}
+          data-testid="home-name-prompt-card"
+          className="rounded-2xl border border-border bg-card p-4 shadow-xs space-y-3"
+        >
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-foreground">What should we call you?</h3>
+            <p className="text-xs text-muted-foreground">
+              Add your first name to personalize your account.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              data-testid="home-name-prompt-input"
+              value={namePromptValue}
+              onChange={(e) => {
+                setNamePromptValue(e.target.value);
+                if (namePromptError) setNamePromptError(null);
+              }}
+              placeholder="Your first name"
+              maxLength={60}
+              className="flex-1 rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={isSavingName}
+              data-testid="home-name-prompt-save"
+              className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-xs hover:opacity-90 disabled:opacity-50 cursor-pointer shrink-0"
+            >
+              {isSavingName ? "Saving..." : "Save"}
+            </button>
+          </div>
+          {namePromptError && (
+            <p className="text-xs text-destructive">{namePromptError}</p>
+          )}
+        </form>
+      )}
 
       {/* Recurring reminders banner cards (US-5.1 Prompt 14) */}
       <RecurringBanners
@@ -301,9 +510,9 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
           amountMinor={lentOwed}
           currency={currency}
           icon={HandCoins}
-          href="/records?tab=lent"
+          href="/new/lent"
           recordsHref="/records?tab=lent"
-          onClick={() => router.push("/records?tab=lent")}
+          onClick={() => handleActionClick("lent")}
           badge="Owed"
         />
       </div>

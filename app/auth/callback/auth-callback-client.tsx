@@ -3,9 +3,7 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { claimGuestData } from "@/lib/repo";
 
 export function AuthCallbackClient() {
   const router = useRouter();
@@ -68,13 +66,6 @@ export function AuthCallbackClient() {
 
           if (code === "mock-code") {
             document.cookie = `moneymap_mock_user=${authUser.id}; path=/; max-age=2592000; SameSite=Lax`;
-          }
-
-          // Claim any guest data created locally in IndexedDB
-          const claimedCount = await claimGuestData(authUser.id);
-
-          if (claimedCount > 0) {
-            toast(`Your ${claimedCount} entries are now saved to your account`);
           }
 
           router.replace("/");

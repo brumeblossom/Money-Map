@@ -68,7 +68,7 @@ test.describe("Money I Lent Flow (Prompt 7)", () => {
     await saveButton.click();
 
     // Toast appears
-    await expect(page.getByText("Saved").first()).toBeVisible();
+    await expect(page.getByText("Saved", { exact: true }).last()).toBeVisible();
     await expect(page.getByRole("heading", { name: "Money I lent" })).toBeHidden();
 
     // 3. Verify Home Screen:
@@ -80,7 +80,8 @@ test.describe("Money I Lent Flow (Prompt 7)", () => {
 
     // 4. Navigate to /lent
     await page.goto("/lent");
-    await expect(page.getByRole("heading", { name: "Money I lent" }).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Records" }).first()).toBeVisible();
+    await expect(page.getByText("OWED TO YOU")).toBeVisible();
 
     // Row for "Ada" is present
     const adaRow = page.locator('[data-testid="loan-row"]', { hasText: "Ada" });
@@ -122,7 +123,7 @@ test.describe("Money I Lent Flow (Prompt 7)", () => {
     await paymentSaveButton.click();
 
     // Toast "Saved"
-    await expect(page.getByText("Saved").first()).toBeVisible();
+    await expect(page.getByText("Saved", { exact: true }).last()).toBeVisible();
 
     // Verify updated summary: Received so far = ₦27,500.00, Balance left = ₦27,500.00
     await expect(page.locator("text=₦27,500.00").first()).toBeVisible();
@@ -152,7 +153,7 @@ test.describe("Money I Lent Flow (Prompt 7)", () => {
     // Save second repayment
     const paymentSaveButton2 = page.getByRole("button", { name: "Save", exact: true });
     await paymentSaveButton2.click();
-    await expect(page.getByText("Saved").first()).toBeVisible();
+    await expect(page.getByText("Saved", { exact: true }).last()).toBeVisible();
 
     // Verify status is now Paid off!
     await expect(page.locator("text=₦0.00").first()).toBeVisible();
@@ -162,7 +163,8 @@ test.describe("Money I Lent Flow (Prompt 7)", () => {
 
     // 7. Return to /lent: Ada has moved to the "Paid off" section
     await page.goto("/lent");
-    await expect(page.getByRole("heading", { name: "Money I lent" }).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Records" }).first()).toBeVisible();
+    await expect(page.getByText("OWED TO YOU")).toBeVisible();
 
     // Active loans should not contain Ada
     const paidOffSectionButton = page.getByRole("button", { name: /Paid off/i });
@@ -202,7 +204,7 @@ test.describe("Money I Lent Flow (Prompt 7)", () => {
     await expect(saveButton).toBeEnabled();
     await saveButton.click();
 
-    await expect(page.getByText("Saved").first()).toBeVisible();
+    await expect(page.getByText("Saved", { exact: true }).last()).toBeVisible();
 
     // Go to /lent
     await page.goto("/lent");
@@ -225,7 +227,7 @@ test.describe("Money I Lent Flow (Prompt 7)", () => {
     await page.getByPlaceholder("Who did you lend to?").fill("Chidi");
     await page.getByPlaceholder("0.00").first().fill("15000");
     await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page.getByText("Saved").first()).toBeVisible();
+    await expect(page.getByText("Saved", { exact: true }).last()).toBeVisible();
 
     // Go to /lent
     await page.goto("/lent");
@@ -240,7 +242,7 @@ test.describe("Money I Lent Flow (Prompt 7)", () => {
     const borrowerInput = page.locator("#edit-borrower");
     await borrowerInput.fill("Chidi Obi");
     await page.getByRole("button", { name: "Save changes" }).click();
-    await expect(page.getByText("Saved").first()).toBeVisible();
+    await expect(page.getByText("Saved", { exact: true }).last()).toBeVisible();
 
     // Verify row updated to "Chidi Obi"
     await expect(page.locator('[data-testid="loan-row"]', { hasText: "Chidi Obi" })).toBeVisible();
@@ -255,7 +257,7 @@ test.describe("Money I Lent Flow (Prompt 7)", () => {
     await page.getByPlaceholder("0.00").first().fill("5000");
     await page.getByPlaceholder(/First instalment/i).fill("Test note");
     await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page.getByText("Saved").first()).toBeVisible();
+    await expect(page.getByText("Saved", { exact: true }).last()).toBeVisible();
 
     await expect(page.getByText("+₦5,000.00")).toBeVisible();
     await expect(page.getByText("Test note")).toBeVisible();
@@ -266,7 +268,7 @@ test.describe("Money I Lent Flow (Prompt 7)", () => {
     await expect(page.getByRole("heading", { name: "Edit money received" })).toBeVisible();
     await page.getByPlaceholder(/First instalment/i).fill("Updated note");
     await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page.getByText("Saved").first()).toBeVisible();
+    await expect(page.getByText("Saved", { exact: true }).last()).toBeVisible();
     await expect(page.getByText("Updated note")).toBeVisible();
 
     // Delete payment
@@ -285,8 +287,8 @@ test.describe("Money I Lent Flow (Prompt 7)", () => {
     const deleteLoanButton = page.getByRole("button", { name: "Delete", exact: true });
     await deleteLoanButton.click();
 
-    // Should redirect to /lent
-    await page.waitForURL("/lent");
+    // Should redirect to /records?tab=lent
+    await page.waitForURL(/\/records\?tab=lent/);
     await expect(page.getByText("Loan deleted")).toBeVisible();
     await expect(page.locator('[data-testid="loan-row"]', { hasText: "Chidi Obi" })).not.toBeVisible();
 

@@ -15,7 +15,7 @@ const PRD_ROUTES = [
   { path: "/records", title: "Records" },
   { path: "/records/sample-id", title: "Entry detail" },
   { path: "/records/sample-id/edit", title: "Edit entry" },
-  { path: "/lent", title: "Money I lent" },
+  { path: "/lent", title: "Records" },
   { path: "/lent/sample-id", title: "Loan detail" },
   { path: "/insights", title: "Dashboard" },
   { path: "/insights/habits", title: "Habits" },

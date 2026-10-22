@@ -88,11 +88,11 @@ describe("Local Data Layer (Dexie Repository & Outbox)", () => {
     // Soft delete
     await softDeleteEntry(entry.id, testDb);
 
-    // Outbox should now have 2 items
+    // Outbox merges repeated changes per record, keeping only the latest (1 item)
     const outboxItems = await testDb.outbox.toArray();
-    expect(outboxItems).toHaveLength(2);
-    expect(outboxItems[1].table).toBe("entries");
-    expect(outboxItems[1].row_id).toBe(entry.id);
+    expect(outboxItems).toHaveLength(1);
+    expect(outboxItems[0].table).toBe("entries");
+    expect(outboxItems[0].row_id).toBe(entry.id);
 
     // Row in DB has deleted_at set
     const rawRow = await testDb.entries.get(entry.id);
@@ -107,9 +107,9 @@ describe("Local Data Layer (Dexie Repository & Outbox)", () => {
     const activeList = await listEntries(undefined, testDb);
     expect(activeList.find((e) => e.id === entry.id)).toBeUndefined();
 
-    // Restore entry
+    // Restore entry (outbox keeps latest change per record -> 1 item)
     await restoreEntry(entry.id, testDb);
-    expect(await testDb.outbox.count()).toBe(3);
+    expect(await testDb.outbox.count()).toBe(1);
     const restoredEntry = await getEntry(entry.id, testDb);
     expect(restoredEntry).toBeDefined();
     expect(restoredEntry?.deleted_at).toBeNull();
@@ -145,24 +145,24 @@ describe("Local Data Layer (Dexie Repository & Outbox)", () => {
     // Outbox has 2 items: loan and payment
     expect(await testDb.outbox.count()).toBe(2);
 
-    // Soft delete loan
+    // Soft delete loan: outbox keeps latest change per record (2 items total: loan + payment)
     await softDeleteLoan(loan.id, testDb);
     expect(await getLoan(loan.id, testDb)).toBeUndefined();
-    expect(await testDb.outbox.count()).toBe(3);
+    expect(await testDb.outbox.count()).toBe(2);
 
-    // Soft delete payment
+    // Soft delete payment: outbox keeps latest change per record (2 items total)
     await softDeleteLoanPayment(payment.id, testDb);
-    expect(await testDb.outbox.count()).toBe(4);
+    expect(await testDb.outbox.count()).toBe(2);
 
-    // Restore payment
+    // Restore payment: outbox keeps latest change per record (2 items total)
     await restoreLoanPayment(payment.id, testDb);
-    expect(await testDb.outbox.count()).toBe(5);
+    expect(await testDb.outbox.count()).toBe(2);
     const restoredPayment = await testDb.loan_payments.get(payment.id);
     expect(restoredPayment?.deleted_at).toBeNull();
 
-    // Restore loan
+    // Restore loan: outbox keeps latest change per record (2 items total)
     await restoreLoan(loan.id, testDb);
-    expect(await testDb.outbox.count()).toBe(6);
+    expect(await testDb.outbox.count()).toBe(2);
     const restoredLoan = await getLoan(loan.id, testDb);
     expect(restoredLoan).toBeDefined();
     expect(restoredLoan?.deleted_at).toBeNull();
@@ -245,7 +245,8 @@ describe("Local Data Layer (Dexie Repository & Outbox)", () => {
 
     expect(updated.amount_minor).toBe(120000);
     expect(updated.description).toBe("Bonus");
-    expect(await testDb.outbox.count()).toBe(2);
+    // Outbox deduplicates by record: 1 item for entry
+    expect(await testDb.outbox.count()).toBe(1);
   });
 
   it("handles category and recurring rule create and softDelete with outbox tracking", async () => {
@@ -273,8 +274,8 @@ describe("Local Data Layer (Dexie Repository & Outbox)", () => {
     await softDeleteCategory(cat.id, testDb);
     await softDeleteRecurringRule(rule.id, testDb);
 
-    // 4 outbox items total (2 creates, 2 softDeletes)
-    expect(await testDb.outbox.count()).toBe(4);
+    // 2 outbox items total (1 for category, 1 for rule) after deduplication
+    expect(await testDb.outbox.count()).toBe(2);
   });
 
   it("creates and retrieves user profile", async () => {

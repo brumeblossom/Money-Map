@@ -858,6 +858,61 @@
   - **TypeScript strict**: 0 errors (`bun run typecheck`).
   - **Lint**: 0 errors (`bun run lint`).
 
+### Prompt 15b: Records header, names, shared device, theme, guest badge
+
+- **1. Records: One Add Button per Tab**:
+  - Removed add button from search/filter row in `components/records-view.tsx`.
+  - Added single add button in summary row with exactly one plus icon and clean text (no `+` prefix): "Add income", "Add expense", "Add giving", "Lend money".
+  - Retained mobile floating round `+` button (FAB) for quick access on phone viewports.
+- **2. Records: Summary Header Like Home Cards**:
+  - Under tabs and filters, created summary row styled like Home cards: small uppercase label ("TOTAL INCOME", "TOTAL EXPENSES", "TOTAL GIVING", "OWED TO YOU"), title font figure, and subtitle underneath ("N entries · Period" or "N active loans").
+  - On desktop (>=640px/1024px), Add button is vertically aligned on the right of the summary row; on mobile, drops below the figure.
+  - Removed old "N entries · total" text and redundant "Money I lent" heading from Lent tab.
+- **3. Names at Sign-Up**:
+  - "Continue with email" form has two validated fields: "Your first name" and "Email" (schema validates 1 to 60 characters, trimmed).
+  - Passes `first_name` in `signInWithOtp({ options: { data: { first_name } } })`.
+  - On sign-in, if `profiles.display_name` is empty, saves the name without overwriting existing names.
+  - Google OAuth: extracts first name from `user_metadata.given_name`, falling back to first word of `full_name` or `name`.
+  - For existing signed-in users with no name, displays a one-time "What should we call you?" card on Home with Save button.
+- **4. Settings > Account**:
+  - Displays editable "Name" field and read-only disabled "Email" field with note "Your sign-in email can't be changed".
+  - Name autosaves 600 ms after typing stops and on blur with green "Saved" checkmark tick; writes to Dexie and syncs.
+  - Guests see prompt: "Sign in to add your name and back up your data".
+- **5. Welcome Screen Order**:
+  - Reordered actions: "Continue with email" (primary, filled), "Continue with Google" (outlined), and "Try without an account" (small text link).
+- **6. Shared Device Rule & Guest Data Protection**:
+  - Added "This is someone else's device" checkbox on sign-in screens.
+  - If checked, sets `sessionStorage` session flag and `localStorage` account indicator. If browser tab closes and reopens without `sessionStorage`, app automatically signs out and clears Dexie.
+  - When active on a shared device, displays persistent warning banner on Home: "You're on someone else's device. Sign out when you're done." with a Sign out button.
+  - Guest data protection: on sign-in, if guest entries exist on the device, never merges them silently. Displays confirmation dialog: "This device has N entries saved without an account. Add them to your account?" with "Add them" and "Not mine, keep separate". "Not mine" leaves them separate without syncing.
+  - Settings: added "Sign out of all devices" (`supabase.auth.signOut({ scope: 'global' })`) with confirmation dialog.
+- **7. Home 'Money I lent' Card**:
+  - Tapping "Money I lent" card opens loan form (`/new/lent`), matching the other three cards, while continuing to display total owed.
+- **8. Light and Dark Mode**:
+  - Added Appearance switcher in Settings: Light, Dark, System (default System) using `next-themes` with `.dark` CSS tokens.
+  - Theme applies instantly without flash on reload; persisted in `localStorage`.
+  - Verified readable contrast (WCAG AA), consistent income green / expense red, light-mode PDF styling.
+  - Renamed Insights cards "Given" -> "Giving" and "Owed to me" -> "Money I lent".
+- **9. Guest 'Changes Waiting' Badge & Outbox Deduplication**:
+  - For guests, header badge displays "Saved on this device" with "Sign in to back up" link when online, and "Offline" only when disconnected (never shows "N changes waiting").
+  - Outbox deduplication: `executeWrite` merges repeated edits to the same row in `(table, row_id)`, keeping only the latest outbox record.
+
+### Verification
+- **Unit tests**: All 190 tests pass (`bun run test`). Added `tests/unit/auth-names.test.ts` testing Google first names, full name fallback, email signup trimming, and length validation.
+- **TypeScript strict**: Passed with 0 errors (`bun run typecheck`).
+- **ESLint**: Passed with 0 errors (`bun run lint`).
+- **Production Build**: Passed with 0 errors (`bun run build`).
+- **Playwright E2E**: 16/16 tests pass (`tests/e2e/prompt15b.spec.ts`) across phone (390x844) and desktop (1280x800).
+- **Screenshots saved**:
+  - `tests/e2e/screenshots/home-light.png`
+  - `tests/e2e/screenshots/home-dark.png`
+  - `tests/e2e/screenshots/records-light.png`
+  - `tests/e2e/screenshots/records-dark.png`
+  - `tests/e2e/screenshots/form-light.png`
+  - `tests/e2e/screenshots/form-dark.png`
+  - `tests/e2e/screenshots/insights-light.png`
+  - `tests/e2e/screenshots/insights-dark.png`
+
 ## Environment variables for Vercel
 
 The following environment variables need to be set in Vercel project settings:

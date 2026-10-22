@@ -488,3 +488,52 @@ export async function signOut(
     window.location.href = "/welcome";
   }
 }
+
+/**
+ * Sign out of all devices (Prompt 15b Item 6: supabase.auth.signOut({ scope: 'global' }))
+ */
+export async function signOutAllDevices(
+  database: MoneyMapDatabase = db,
+  router?: { push: (url: string) => void },
+): Promise<void> {
+  try {
+    await push(database);
+  } catch (e) {
+    console.error("Push error before global sign out:", e);
+  }
+
+  try {
+    const supabase = createBrowserSupabaseClient();
+    await supabase.auth.signOut({ scope: "global" });
+  } catch (e) {
+    console.error("Supabase global signOut error:", e);
+  }
+
+  if (typeof document !== "undefined") {
+    document.cookie =
+      "moneymap_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+    document.cookie =
+      "moneymap_mock_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+  }
+
+  await Promise.all([
+    database.entries.clear(),
+    database.categories.clear(),
+    database.loans.clear(),
+    database.loan_payments.clear(),
+    database.recurring_rules.clear(),
+    database.profiles.clear(),
+    database.outbox.clear(),
+    database.meta.clear(),
+  ]);
+
+  setCurrentUserId(null);
+
+  if (router) {
+    router.push("/welcome");
+  } else if (typeof window !== "undefined") {
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.href = "/welcome";
+  }
+}
+

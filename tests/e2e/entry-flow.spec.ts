@@ -68,7 +68,7 @@ test.describe("Entry Flow", () => {
     await page.waitForURL("/");
 
     // Toast "Saved" appears with "Undo"
-    const toastElement = page.getByText("Saved").first();
+    const toastElement = page.getByText("Saved", { exact: true });
     await expect(toastElement).toBeVisible();
     const undoButton = page.getByRole("button", { name: "Undo" });
     await expect(undoButton).toBeVisible();
@@ -121,7 +121,7 @@ test.describe("Entry Flow", () => {
     await page.waitForURL("/");
 
     // Verify toast
-    await expect(page.getByText("Saved").first()).toBeVisible();
+    await expect(page.getByText("Saved", { exact: true })).toBeVisible();
     await expect(page.getByTestId("action-card-expense").first()).toContainText("₦1,200.00");
 
     // Re-open Expenses
@@ -200,7 +200,7 @@ test.describe("Entry Flow", () => {
 
       // Save and verify toast
       await saveButton.click();
-      await expect(page.getByText("Saved")).toBeVisible();
+      await expect(page.getByText("Saved", { exact: true })).toBeVisible();
     });
   }
 
@@ -226,7 +226,7 @@ test.describe("Entry Flow", () => {
     await saveButton.click();
 
     // Toast appears
-    await expect(page.getByText("Saved")).toBeVisible();
+    await expect(page.getByText("Saved", { exact: true })).toBeVisible();
     const undoButton = page.getByRole("button", { name: "Undo" });
     await expect(undoButton).toBeVisible();
 

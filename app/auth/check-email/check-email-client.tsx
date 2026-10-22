@@ -36,10 +36,12 @@ export function CheckEmailClient() {
     try {
       const supabase = createClient();
       const origin = window.location.origin;
+      const pendingName = typeof window !== "undefined" ? sessionStorage.getItem("moneymap_pending_first_name") : null;
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: `${origin}/auth/confirm`,
+          data: pendingName ? { first_name: pendingName, display_name: pendingName } : undefined,
         },
       });
 

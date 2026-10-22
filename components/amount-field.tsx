@@ -20,7 +20,8 @@ export interface AmountFieldProps {
 }
 
 export function getCurrencySymbol(currency: string): string {
-  switch (currency.toUpperCase()) {
+  const norm = (currency || "NGN").toUpperCase();
+  switch (norm) {
     case "NGN":
       return "₦";
     case "USD":
@@ -29,8 +30,31 @@ export function getCurrencySymbol(currency: string): string {
       return "£";
     case "EUR":
       return "€";
-    default:
-      return currency;
+    case "CAD":
+      return "CA$";
+    case "AUD":
+      return "A$";
+    case "JPY":
+      return "¥";
+    case "GHS":
+      return "GH₵";
+    case "KES":
+      return "KSh";
+    case "ZAR":
+      return "R";
+    case "INR":
+      return "₹";
+    default: {
+      try {
+        const parts = new Intl.NumberFormat("en", {
+          style: "currency",
+          currency: norm,
+        }).formatToParts(0);
+        const symbolPart = parts.find((p) => p.type === "currency");
+        if (symbolPart) return symbolPart.value;
+      } catch {}
+      return norm;
+    }
   }
 }
 

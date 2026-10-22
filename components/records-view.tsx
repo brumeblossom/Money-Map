@@ -167,9 +167,8 @@ export function RecordsView() {
   }, []);
 
   const categories = useLiveQuery(async () => {
-    return await db.categories
-      .filter((c) => c.deleted_at === null && !c.is_hidden)
-      .toArray();
+    const list = await db.categories.toArray();
+    return list.filter((c) => !c.deleted_at);
   }, []);
 
   const profile = useLiveQuery(async () => {
@@ -248,20 +247,21 @@ export function RecordsView() {
   // Filter categories matching current tab scope
   const relevantCategories = React.useMemo(() => {
     if (!categories) return [];
+    const visible = categories.filter((c) => !c.is_hidden || c.id === selectedCategoryId);
     if (activeTab === "income") {
-      return categories.filter((c) => c.scope === "income");
+      return visible.filter((c) => c.scope === "income");
     }
     if (activeTab === "expenses") {
-      return categories.filter((c) => c.scope === "expense");
+      return visible.filter((c) => c.scope === "expense");
     }
     if (activeTab === "giving") {
-      return categories.filter((c) => c.scope === "giving");
+      return visible.filter((c) => c.scope === "giving");
     }
     if (activeTab === "lent") {
-      return categories.filter((c) => c.scope === "lent");
+      return visible.filter((c) => c.scope === "lent");
     }
-    return categories;
-  }, [categories, activeTab]);
+    return visible;
+  }, [categories, activeTab, selectedCategoryId]);
 
   // Filter and sort entries based on active tab and filters
   const filteredEntries = React.useMemo(() => {

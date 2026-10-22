@@ -962,17 +962,54 @@
   - Integrated `RecordExportBar` on `/records/[id]` and `/lent/[id]` with side-by-side "Download PDF" and "Share link" buttons.
   - Respects single-record PDF naming and share link creation with quick options sheet.
 
+### Prompt 18: Settings and account management
+- **1. Profile Section**:
+  - Display name input field with auto-save on blur / debounced typing and "Saved" status indicator.
+  - Updates local Dexie `profiles` table and enqueues sync outbox record.
+- **2. Currency Section**:
+  - Searchable dialog / popover of ISO currencies (`lib/format/currencies.ts`), defaulted to NGN (`₦`).
+  - Selecting a new currency (e.g. USD `$`, EUR `€`, GBP `£`, GHS `GH₵`) immediately updates user profile currency in Dexie and sync outbox.
+  - Changing currency updates currency formatting throughout the entire application without touching stored `amount_minor` values.
+- **3. Categories Management (`components/categories-settings.tsx`)**:
+  - Action tabs for Income, Expenses, and Giving.
+  - Add new custom category with validation.
+  - Inline rename for custom categories.
+  - Reordering support: HTML5 drag-and-drop handles on desktop (viewport >= 640px) and dedicated Up/Down buttons on mobile (< 640px), updating `sort_order` integers.
+  - Hide / Unhide toggles: hidden categories are removed from transaction pickers and filters while preserving historical transaction names.
+  - Default categories guard: default seeded categories cannot be deleted, only hidden.
+  - Custom categories guard: custom categories can only be deleted if they are not referenced by any local entry; if used in existing records, a warning prompts the user to hide it instead.
+- **4. Section Links & Quick Management**:
+  - Repeating entries drawer / link (Prompt 14).
+  - Reminders configuration (Prompt 15).
+  - Share links manager (Prompt 17) listing active links with revoke options.
+  - Appearance theme selector: Light, Dark, System.
+  - Install app button (PWA `beforeinstallprompt`).
+- **5. Account Management & Deletion**:
+  - Displays authenticated user email or "Guest".
+  - Sign in button for guests (`/welcome`), and Sign out button with confirmation alert dialog ("Sign out of this device?").
+  - Account deletion:
+    - Requires typing "DELETE" in confirmation modal.
+    - `POST /api/account/delete` endpoint with Supabase service role key:
+      - Validates user authorization.
+      - Cascades deletion across all user data in `entries`, `loans`, `loan_repayments`, `categories`, `profiles`, `share_links`, `recurring_rules`, `push_subscriptions`.
+      - Removes user account from Supabase `auth.users`.
+    - Local cleanup: clears all Dexie stores (`entries`, `loans`, `loan_repayments`, `categories`, `profiles`, `outbox`, `meta`), clears `localStorage` and `sessionStorage`, signs out client locally, and redirects to `/welcome`.
+- **6. App Version & Feedback**:
+  - Displays current app version (`v1.0.0`).
+  - "Send feedback" mailto link (`mailto:feedback@moneymap.app?subject=Money%20Map%20Feedback`).
+
 ### Verification
 - **Unit tests**: 190 tests pass (`bun run test`).
 - **TypeScript strict**: Passed with 0 errors (`bun run typecheck`).
 - **ESLint**: Passed with 0 errors (`bun run lint`).
 - **Production Build**: Passed with 0 errors (`bun run build`).
-- **Playwright E2E**: 10/10 tests pass (`tests/e2e/prompt16.spec.ts`) across phone (390x844) and desktop (1280x800):
-  - Period PDF download with matching file name, extracted text validation (totals, user display name, DD-MM-YYYY dates, running page numbers).
-  - Offline & guest mode PDF generation.
-  - Share link creation, public `/s/[token]` signed-out view, instant revoking, and verified stripping of counterparty/descriptions in HTML.
-  - Single record and loan export on detail pages.
-  - Cross-user isolation: user 2 cannot list or delete user 1's share links.
+- **Playwright E2E**: 12/12 tests pass (`tests/e2e/prompt18.spec.ts`) on phone (390x844) and desktop (1280x800):
+  - Profile display name editing and auto-save.
+  - Currency change to USD shows `$` everywhere without altering stored minor amounts.
+  - Hidden category disappears from creation pickers and filter options while existing historical entries still render category name.
+  - Category creation, inline rename, desktop drag handle / mobile up/down reordering, delete protection on default and in-use categories.
+  - Account deletion: typing DELETE, calling `/api/account/delete`, verifying server-side cascade, wiping local Dexie data, and redirecting to `/welcome`.
+  - App version and mailto feedback link display.
 
 ## Environment variables for Vercel
 
@@ -989,6 +1026,6 @@ The following environment variables need to be set in Vercel project settings:
 
 ## Next prompt
 
-Prompt 18: settings
+Prompt 19: hardening
 
 

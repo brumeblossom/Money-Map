@@ -12,6 +12,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { EntryForm } from "@/components/entry-form";
+import { useProfile } from "@/lib/repo/hooks";
 
 export interface EntryModalProps {
   action: string;
@@ -51,6 +52,9 @@ export function EntryModal({
   initialValues,
   recurringRuleIdToAdvance,
 }: EntryModalProps) {
+  const profile = useProfile();
+  const effectiveCurrency = profile?.currency || currency || "NGN";
+
   const isDesktop = React.useSyncExternalStore(
     subscribeToMediaQuery,
     getDesktopSnapshot,
@@ -75,7 +79,7 @@ export function EntryModal({
             initialValues={initialValues}
             recurringRuleIdToAdvance={recurringRuleIdToAdvance}
             onClose={handleClose}
-            currency={currency}
+            currency={effectiveCurrency}
           />
         </DialogContent>
       </Dialog>
@@ -92,7 +96,7 @@ export function EntryModal({
           initialValues={initialValues}
           recurringRuleIdToAdvance={recurringRuleIdToAdvance}
           onClose={handleClose}
-          currency={currency}
+          currency={effectiveCurrency}
         />
       </DrawerContent>
     </Drawer>

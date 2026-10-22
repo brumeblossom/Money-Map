@@ -59,6 +59,7 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
     const profiles = await db.profiles.toArray();
     return profiles[0] ?? null;
   });
+  const effectiveCurrency = profile?.currency || currency || "NGN";
 
   const [isRecordModalOpen, setIsRecordModalOpen] = React.useState(false);
   const [editingPayment, setEditingPayment] = React.useState<LoanPaymentRow | null>(null);
@@ -216,19 +217,19 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
           <div className="rounded-xl border border-border/40 bg-background/50 p-4">
             <span className="text-xs font-medium text-muted-foreground">Total to get back</span>
             <div className="mt-1 text-2xl font-bold tracking-tight text-foreground">
-              {formatMoney(total, currency)}
+              {formatMoney(total, effectiveCurrency)}
             </div>
           </div>
           <div className="rounded-xl border border-border/40 bg-background/50 p-4">
             <span className="text-xs font-medium text-muted-foreground">Received so far</span>
             <div className="mt-1 text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
-              {formatMoney(received, currency)}
+              {formatMoney(received, effectiveCurrency)}
             </div>
           </div>
           <div className="rounded-xl border border-border/40 bg-background/50 p-4">
             <span className="text-xs font-medium text-muted-foreground">Balance left</span>
             <div className="mt-1 text-2xl font-bold tracking-tight text-foreground">
-              {formatMoney(balance, currency)}
+              {formatMoney(balance, effectiveCurrency)}
             </div>
           </div>
         </div>
@@ -273,13 +274,13 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
           <div>
             <span className="text-xs text-muted-foreground">Instalment amount</span>
             <p className="mt-0.5 font-medium text-foreground">
-              {formatMoney(expectedInstalmentMinor, currency)}
+              {formatMoney(expectedInstalmentMinor, effectiveCurrency)}
             </p>
           </div>
           <div>
             <span className="text-xs text-muted-foreground">Principal</span>
             <p className="mt-0.5 font-medium text-foreground">
-              {formatMoney(loan.principal_minor, currency)}
+              {formatMoney(loan.principal_minor, effectiveCurrency)}
             </p>
           </div>
           <div>
@@ -288,8 +289,8 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
               {loan.interest_type === "none" || loan.interest_value === 0
                 ? "None (0%)"
                 : loan.interest_type === "percent"
-                  ? `${loan.interest_value / 100}% (${formatMoney(interestVal, currency)})`
-                  : `${formatMoney(loan.interest_value, currency)} flat`}
+                  ? `${loan.interest_value / 100}% (${formatMoney(interestVal, effectiveCurrency)})`
+                  : `${formatMoney(loan.interest_value, effectiveCurrency)} flat`}
             </p>
           </div>
           <div>
@@ -315,7 +316,7 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
           buildSingleLoanReport({
             loan,
             payments,
-            currency,
+            currency: effectiveCurrency,
             userName: profile?.display_name || "",
             hideDetails,
             today,
@@ -388,7 +389,7 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
 
                 <div className="text-right">
                   <div className="text-sm font-bold text-foreground">
-                    {formatMoney(expectedInstalmentMinor, currency)}
+                    {formatMoney(expectedInstalmentMinor, effectiveCurrency)}
                   </div>
                   <span
                     className={cn(
@@ -442,7 +443,7 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
               >
                 <div className="space-y-0.5">
                   <div className="text-base font-bold text-emerald-600 dark:text-emerald-400">
-                    +{formatMoney(p.amount_minor, currency)}
+                    +{formatMoney(p.amount_minor, effectiveCurrency)}
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span>{formatDate(p.paid_on)}</span>
@@ -495,7 +496,7 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
         }}
         loanId={loan.id}
         balanceLeftMinor={balance}
-        currency={currency}
+        currency={effectiveCurrency}
         paymentToEdit={editingPayment}
       />
 
@@ -504,7 +505,7 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
         open={isEditLoanModalOpen}
         onClose={() => setIsEditLoanModalOpen(false)}
         loan={loan}
-        currency={currency}
+        currency={effectiveCurrency}
       />
     </div>
   );

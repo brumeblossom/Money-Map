@@ -15,7 +15,7 @@ import { ActionCard } from "@/components/action-card";
 import { EntryModal } from "@/components/entry-modal";
 import { GuestBanner } from "@/components/guest-banner";
 import { RecurringBanners } from "@/components/recurring-banners";
-import { useEntries, useLoans, useLoanPayments } from "@/lib/repo/hooks";
+import { useEntries, useLoans, useLoanPayments, useProfile } from "@/lib/repo/hooks";
 import { seedDefaultCategories } from "@/lib/repo/seed";
 import { claimGuestData, updateProfile, createProfile } from "@/lib/repo";
 import { db, type RecurringRuleRow } from "@/lib/db/dexie";
@@ -51,6 +51,9 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const monthParam = searchParams?.get("month");
+
+  const profile = useProfile();
+  const effectiveCurrency = profile?.currency || currency || "NGN";
 
   const currentAction = activeAction;
 
@@ -366,7 +369,7 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
       {/* Recurring reminders banner cards (US-5.1 Prompt 14) */}
       <RecurringBanners
         today={today}
-        currency={currency}
+        currency={effectiveCurrency}
         onEditRule={(rule) => setEditingRecurringRule(rule)}
       />
 
@@ -429,10 +432,10 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
               data-testid="month-strip-income"
               className="mt-0.5 block text-sm font-bold tracking-tight text-emerald-600 dark:text-emerald-400 sm:text-base tabular-nums"
             >
-              {formatMoney(totals.moneyIn, currency)}
+              {formatMoney(totals.moneyIn, effectiveCurrency)}
             </span>
             <span data-testid="month-strip-money-in" className="sr-only">
-              {formatMoney(totals.moneyIn, currency)}
+              {formatMoney(totals.moneyIn, effectiveCurrency)}
             </span>
           </Link>
 
@@ -448,10 +451,10 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
               data-testid="month-strip-expenses"
               className="mt-0.5 block text-sm font-bold tracking-tight text-rose-600 dark:text-rose-400 sm:text-base tabular-nums"
             >
-              {formatMoney(totals.moneyOut, currency)}
+              {formatMoney(totals.moneyOut, effectiveCurrency)}
             </span>
             <span data-testid="month-strip-money-out" className="sr-only">
-              {formatMoney(totals.moneyOut, currency)}
+              {formatMoney(totals.moneyOut, effectiveCurrency)}
             </span>
           </Link>
 
@@ -463,7 +466,7 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
               data-testid="month-strip-left-over"
               className="mt-0.5 block text-sm font-bold tracking-tight text-foreground sm:text-base tabular-nums"
             >
-              {formatMoney(totals.leftOver, currency)}
+              {formatMoney(totals.leftOver, effectiveCurrency)}
             </span>
           </div>
         </div>
@@ -475,7 +478,7 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
           data-testid="action-card-income"
           label="Income"
           amountMinor={totals.moneyIn}
-          currency={currency}
+          currency={effectiveCurrency}
           icon={ArrowDownLeft}
           href="/new/income"
           recordsHref="/records?tab=income"
@@ -486,7 +489,7 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
           data-testid="action-card-expense"
           label="Expenses"
           amountMinor={totals.expenses}
-          currency={currency}
+          currency={effectiveCurrency}
           icon={ArrowUpRight}
           href="/new/expense"
           recordsHref="/records?tab=expenses"
@@ -497,7 +500,7 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
           data-testid="action-card-giving"
           label="Giving"
           amountMinor={totals.giving}
-          currency={currency}
+          currency={effectiveCurrency}
           icon={Heart}
           href="/new/giving"
           recordsHref="/records?tab=giving"
@@ -508,7 +511,7 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
           data-testid="action-card-lent"
           label="Money I lent"
           amountMinor={lentOwed}
-          currency={currency}
+          currency={effectiveCurrency}
           icon={HandCoins}
           href="/new/lent"
           recordsHref="/records?tab=lent"
@@ -523,7 +526,7 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
           action={currentAction}
           open={isModalOpen}
           onOpenChange={handleModalClose}
-          currency={currency}
+          currency={effectiveCurrency}
         />
       )}
 
@@ -535,7 +538,7 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
           onOpenChange={(open) => {
             if (!open) setEditingRecurringRule(null);
           }}
-          currency={currency}
+          currency={effectiveCurrency}
           initialValues={{
             amount_minor: editingRecurringRule.amount_minor,
             category_id: editingRecurringRule.category_id,

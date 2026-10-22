@@ -325,3 +325,8 @@ export const createShareLinkSchema = z.object({
 
 export type CreateShareLinkPayload = z.infer<typeof createShareLinkSchema>;
 
+export const deleteAccountSchema = z.object({
+  confirm: z.literal("DELETE"),
+});
+
+export type DeleteAccountPayload = z.infer<typeof deleteAccountSchema>;

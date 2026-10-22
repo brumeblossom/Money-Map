@@ -29,6 +29,7 @@ export interface DateFieldProps {
   required?: boolean;
   className?: string;
   error?: string;
+  "data-testid"?: string;
 }
 
 export function DateField({
@@ -42,6 +43,7 @@ export function DateField({
   required = false,
   className,
   error,
+  "data-testid": dataTestId,
 }: DateFieldProps) {
   const generatedId = React.useId();
   const inputId = id || generatedId;
@@ -135,6 +137,7 @@ export function DateField({
       <div className="relative flex items-center">
         <Input
           id={inputId}
+          data-testid={dataTestId}
           name={name}
           type="text"
           inputMode="numeric"

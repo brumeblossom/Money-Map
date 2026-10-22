@@ -10,6 +10,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { InstallPwaCard } from "@/components/install-pwa-card";
 import { RecurringRulesList } from "@/components/recurring-rules-list";
+import { ShareLinksList } from "@/components/share-links-list";
 import { useProfile } from "@/lib/repo/hooks";
 import { updateProfile, createProfile } from "@/lib/repo";
 import { getCurrentUserId } from "@/lib/repo/user";
@@ -247,6 +248,44 @@ export default function SettingsPage() {
             onChange={handleToggleEmailReminders}
             className="size-5 rounded border-border accent-primary cursor-pointer"
           />
+        </div>
+      </div>
+
+      {/* Export Section (Prompt 16 / US-8.1) */}
+      <div className="rounded-xl border border-border bg-card p-5 shadow-xs flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-semibold text-foreground">Export & share</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Download your records as a PDF or create a public shareable link.
+          </p>
+        </div>
+        <Link
+          href="/export"
+          data-testid="settings-export-link"
+          className="rounded-xl border border-border bg-background px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted/50 transition-colors shrink-0"
+        >
+          Export
+        </Link>
+      </div>
+
+      {/* Share Links Section (Prompt 16 / US-8.2) */}
+      <div className="rounded-xl border border-border bg-card p-5 shadow-xs">
+        <div className="flex items-center justify-between pb-3 border-b border-border">
+          <div>
+            <h3 className="text-base font-semibold text-foreground">Share links</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Manage your active public links.
+            </p>
+          </div>
+          <Link
+            href="/export"
+            className="text-xs font-semibold text-primary hover:underline"
+          >
+            Create link
+          </Link>
+        </div>
+        <div className="mt-3">
+          <ShareLinksList />
         </div>
       </div>
 

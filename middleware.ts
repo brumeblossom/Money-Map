@@ -55,6 +55,7 @@ export async function middleware(request: NextRequest) {
     path.startsWith("/auth/") ||
     path.startsWith("/icons/") ||
     path.startsWith("/images/") ||
+    path.startsWith("/s/") ||
     path.includes("manifest") ||
     path === "/sw.js" ||
     path === "/favicon.ico" ||

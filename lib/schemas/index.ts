@@ -309,3 +309,19 @@ export const syncPullQuerySchema = z.object({
   since: z.string().optional(),
 });
 
+export const createShareLinkSchema = z.object({
+  period_start: dateStringSchema,
+  period_end: dateStringSchema,
+  kinds: z.array(z.string()).min(1, "At least one action kind is required"),
+  hide_details: z.boolean().default(true),
+  expires_in_days: z.union([z.literal(7), z.literal(30), z.null()]).default(30),
+  single_record: z
+    .object({
+      table: z.enum(["entries", "loans"]),
+      id: z.string().uuid(),
+    })
+    .optional(),
+});
+
+export type CreateShareLinkPayload = z.infer<typeof createShareLinkSchema>;
+

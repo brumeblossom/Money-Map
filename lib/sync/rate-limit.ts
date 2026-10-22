@@ -42,9 +42,37 @@ export function checkSyncRateLimit(
   return true;
 }
 
+// Keyed by userId for share links (PRD section 7: 10 a minute on /api/share-links)
+const shareLinkRateLimits = new Map<string, RateLimitRecord>();
+
+export function checkShareLinksRateLimit(
+  userId: string,
+  maxRequests = 10,
+  windowMs = 60_000,
+): boolean {
+  const now = Date.now();
+  const windowStart = now - windowMs;
+
+  let record = shareLinkRateLimits.get(userId);
+  if (!record) {
+    record = { timestamps: [] };
+    shareLinkRateLimits.set(userId, record);
+  }
+
+  record.timestamps = record.timestamps.filter((t) => t > windowStart);
+
+  if (record.timestamps.length >= maxRequests) {
+    return false;
+  }
+
+  record.timestamps.push(now);
+  return true;
+}
+
 /**
  * Clears all rate limit state (useful in test suites)
  */
 export function resetSyncRateLimits(): void {
   userRateLimits.clear();
+  shareLinkRateLimits.clear();
 }

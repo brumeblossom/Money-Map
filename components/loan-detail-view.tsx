@@ -17,6 +17,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { RecordPaymentModal } from "@/components/record-payment-modal";
 import { EditLoanModal } from "@/components/edit-loan-modal";
+import { RecordExportBar } from "@/components/record-export-bar";
+import { buildSingleLoanReport } from "@/lib/report/builder";
 import {
   db,
   getLoan,
@@ -53,6 +55,10 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
   const loan = useLiveQuery(() => getLoan(id, db), [id]);
   const payments = useLoanPayments(id) ?? [];
   const categories = useCategories("lent") ?? [];
+  const profile = useLiveQuery(async () => {
+    const profiles = await db.profiles.toArray();
+    return profiles[0] ?? null;
+  });
 
   const [isRecordModalOpen, setIsRecordModalOpen] = React.useState(false);
   const [editingPayment, setEditingPayment] = React.useState<LoanPaymentRow | null>(null);
@@ -298,6 +304,24 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
           )}
         </div>
       </div>
+
+      {/* Export & Share buttons (Prompt 16 / US-8.1, US-8.2) */}
+      <RecordExportBar
+        type="loans"
+        id={loan.id}
+        date={loan.due_on}
+        kind="lent"
+        getSnapshot={(hideDetails) =>
+          buildSingleLoanReport({
+            loan,
+            payments,
+            currency,
+            userName: profile?.display_name || "",
+            hideDetails,
+            today,
+          })
+        }
+      />
 
       {/* Record Money Received Action Button */}
       <div className="flex items-center justify-between">

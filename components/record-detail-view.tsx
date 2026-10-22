@@ -22,6 +22,8 @@ import { db } from "@/lib/db/dexie";
 import { softDeleteEntry, restoreEntry } from "@/lib/repo";
 import { formatDate, formatMoney } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { RecordExportBar } from "@/components/record-export-bar";
+import { buildSingleEntryReport } from "@/lib/report/builder";
 
 export interface RecordDetailViewProps {
   id: string;
@@ -253,6 +255,24 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
           </div>
         </dl>
       </div>
+
+      {/* Export & Share buttons (Prompt 16 / US-8.1, US-8.2) */}
+      <RecordExportBar
+        type="entries"
+        id={entry.id}
+        date={entry.occurred_on}
+        kind={entry.kind}
+        getSnapshot={(hideDetails) =>
+          buildSingleEntryReport({
+            entry,
+            categoryName: category?.name || "Uncategorised",
+            currency,
+            userName: profile?.display_name || "",
+            hideDetails,
+            repeats: entry.recurring_rule_id ? "Monthly" : "No",
+          })
+        }
+      />
 
       {/* Delete Confirmation Modal / Alert */}
       {showDeleteConfirm && (

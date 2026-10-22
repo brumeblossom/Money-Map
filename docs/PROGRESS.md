@@ -913,6 +913,67 @@
   - `tests/e2e/screenshots/insights-light.png`
   - `tests/e2e/screenshots/insights-dark.png`
 
+### Prompt 16: PDF export and share links (US-8.1, US-8.2)
+
+- **1. Export Screen (`/export`)**:
+  - Accessible from Records ("Export" button) and Settings ("Export and share" link).
+  - Period picker presets: "This month" (default), "Last 3 months", "Last 6 months", "Last 12 months", and "Custom" with DD-MM-YYYY DateField inputs.
+  - Action checkboxes: Income, Expenses, Giving, Money I lent (all checked by default).
+  - Switch "Hide descriptions and names": default off for PDF download, default on when creating share links.
+  - Side-by-side action buttons: "Download PDF" and "Create share link".
+- **2. Unified Report Builder (`lib/report`)**:
+  - `lib/report/builder.ts`: shared engine for computing report snapshots for both client-side PDF rendering and server-side Postgres share links.
+  - Snapshot structure:
+    - Title "Money Map", user display name (`profiles.display_name`), period range formatted as `DD-MM-YYYY to DD-MM-YYYY`.
+    - Totals: Income, Expenses, Giving, Left over, Money I lent balance. Never uses prohibited labels ("Money in/out", "Given", "Owed to me").
+    - Category breakdown: visual distribution and itemized category amounts.
+    - Transaction entries table: Date (DD-MM-YYYY), Action, Category, Description (or "Hidden"), Amount.
+    - Loans table: Borrower (or "Hidden"), Amount lent, Received, Balance, Expected back by (DD-MM-YYYY).
+  - Single-record export variants:
+    - Single entry (`/records/[id]`): Action, Amount (large), Category, Date (DD-MM-YYYY), Counterparty (or "Hidden"), Description (or "Hidden"), Repeats status.
+    - Single loan (`/lent/[id]`): Borrower (or "Hidden"), Amount lent, Interest, Total to get back, Received so far, Balance left, Expected back by, Status, and table of repayments with dates.
+- **3. PDF Export (`@react-pdf/renderer`)**:
+  - Dynamically loaded on demand without slowing down initial page loads.
+  - Running page numbers ("Page X of Y") in header/footer across multi-page documents.
+  - Always rendered in a clean, high-contrast light theme suitable for printing.
+  - Deterministic file naming: `MoneyMap_<DD-MM-YYYY>_to_<DD-MM-YYYY>.pdf` for period reports; `MoneyMap_<Action>_<DD-MM-YYYY>.pdf` or `MoneyMap_Loan_<Borrower>_<DD-MM-YYYY>.pdf` for single records.
+  - Fully functional offline and for guest users directly from local Dexie database.
+- **4. Public Share Links (`/s/[token]` & API)**:
+  - Requires sign-in and internet connection; shows user-friendly modals if guest or offline.
+  - Runs sync `push()` before link creation so server has the latest client data.
+  - Server route `POST /api/share-links`:
+    - Enforces rate limit of 10 requests per minute per user (`lib/sync/rate-limit.ts`).
+    - Constructs snapshot server-side from Postgres using the shared report builder.
+    - Strips descriptions and counterparty names when `hide_details` is enabled before storing snapshot.
+    - Generates 22-character URL-safe random token (`crypto.randomBytes(16).toString("base64url")`).
+    - Expiry options: 7 days, 30 days (default), or never (`expires_at = null`).
+    - Returns full share URL built with `NEXT_PUBLIC_APP_URL`.
+  - Server route `GET /api/share-links`: lists user's active links.
+  - Server route `DELETE /api/share-links/[id]`: revokes the link (`revoked_at = now()`).
+  - Public route `/s/[token]`:
+    - Server-rendered, public, read-only layout matching PDF and dashboard aesthetic.
+    - Responsive, light and dark mode friendly, with "Made with Money Map" footer.
+    - `robots: { index: false, follow: false }` metadata.
+    - If link is missing, expired (`expires_at < now()`), or revoked, renders "This link is no longer available".
+    - After creation, provides "Copy link" and native "Share" (`navigator.share`) buttons.
+- **5. Settings > Share Links**:
+  - Embedded in `/settings`: lists all created share links with report period, creation date, expiry date (DD-MM-YYYY or "Never"), "Copy", and "Turn off" (revoke) buttons.
+- **6. Single Record Detail Export**:
+  - Integrated `RecordExportBar` on `/records/[id]` and `/lent/[id]` with side-by-side "Download PDF" and "Share link" buttons.
+  - Respects single-record PDF naming and share link creation with quick options sheet.
+
+### Verification
+- **Unit tests**: 190 tests pass (`bun run test`).
+- **TypeScript strict**: Passed with 0 errors (`bun run typecheck`).
+- **ESLint**: Passed with 0 errors (`bun run lint`).
+- **Production Build**: Passed with 0 errors (`bun run build`).
+- **Playwright E2E**: 10/10 tests pass (`tests/e2e/prompt16.spec.ts`) across phone (390x844) and desktop (1280x800):
+  - Period PDF download with matching file name, extracted text validation (totals, user display name, DD-MM-YYYY dates, running page numbers).
+  - Offline & guest mode PDF generation.
+  - Share link creation, public `/s/[token]` signed-out view, instant revoking, and verified stripping of counterparty/descriptions in HTML.
+  - Single record and loan export on detail pages.
+  - Cross-user isolation: user 2 cannot list or delete user 1's share links.
+
 ## Environment variables for Vercel
 
 The following environment variables need to be set in Vercel project settings:
@@ -920,6 +981,7 @@ The following environment variables need to be set in Vercel project settings:
 2. `SUPABASE_SERVICE_ROLE_KEY`: Required service role key for cron route to query Supabase across users with RLS bypass.
 3. `RESEND_API_KEY`: (Optional) Resend API key for sending daily email reminder digests. If left unset, cron returns `{ sent: 0, skipped: "email not configured" }`.
 4. `EMAIL_FROM`: (Optional) Sender email address for Resend reminders (e.g. `"Money Map <reminders@yourdomain.com>"` or `"onboarding@resend.dev"`).
+5. `NEXT_PUBLIC_APP_URL`: Base application URL for generating public share links (e.g. `"https://moneymap.app"`).
 
 ## Known issues
 
@@ -927,6 +989,6 @@ The following environment variables need to be set in Vercel project settings:
 
 ## Next prompt
 
-Prompt 16: PDF
+Prompt 18: settings
 
 

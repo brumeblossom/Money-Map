@@ -14,6 +14,7 @@ import {
   ArrowDownLeft,
   Heart,
   Plus,
+  FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { db, type EntryRow, type CategoryRow } from "@/lib/db/dexie";
@@ -655,6 +656,17 @@ export function RecordsView() {
                 </select>
               </div>
             )}
+
+            {/* Export Link (Prompt 16 / US-8.1) */}
+            <Link
+              href="/export"
+              data-testid="records-export-link"
+              title="Export records as PDF or share link"
+              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-input bg-card px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted/50 transition-colors shrink-0"
+            >
+              <FileDown className="size-3.5" />
+              <span>Export</span>
+            </Link>
           </div>
         </div>
 

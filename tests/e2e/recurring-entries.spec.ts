@@ -245,7 +245,7 @@ test.describe("Repeating Entries (US-5.1 Prompt 14)", () => {
     await page.goto("/settings/repeating");
     await page.waitForSelector('[data-testid="rule-resume-btn"]');
     await page.locator('[data-testid="rule-resume-btn"]').click();
-    await expect(page.locator('[data-testid="rule-status-badge"]')).toHaveText("Active");
+    await expect(page.locator('[data-testid="rule-status-badge"]')).toHaveCount(0);
 
     // Go to Home: now overdue banner appears!
     await page.goto("/");

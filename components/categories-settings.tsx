@@ -264,23 +264,22 @@ export function CategoriesSettings({ initialScope = "income", limit }: Categorie
 
   return (
     <div id="categories" className="rounded-xl border border-border bg-card p-5 shadow-xs">
-      <div className="flex items-center justify-between gap-2 mb-4">
-        <div>
+      <div className="mb-4 space-y-1">
+        <div className="flex items-center justify-between gap-2">
           <h3 className="text-base font-semibold text-foreground">Categories</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Add, rename, reorder, or hide categories for each action. Hidden categories remain on old entries.
-          </p>
+          {limit && (
+            <Link
+              href={`/settings/categories?group=${activeScope}`}
+              data-testid="categories-see-all-link"
+              className="text-xs font-semibold text-primary hover:underline shrink-0"
+            >
+              See all
+            </Link>
+          )}
         </div>
-        {limit && (
-          <Link
-            href={`/settings/categories?group=${activeScope}`}
-            data-testid="categories-see-all-link"
-            className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline shrink-0"
-          >
-            <span>See all</span>
-            <span aria-hidden="true">→</span>
-          </Link>
-        )}
+        <p className="text-xs text-muted-foreground">
+          Add, rename, reorder, or hide categories for each action. Hidden categories remain on old entries.
+        </p>
       </div>
 
       {/* Action Tabs: Income | Expenses | Giving */}

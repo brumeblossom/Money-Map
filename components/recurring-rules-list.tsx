@@ -141,70 +141,54 @@ export function RecurringRulesList({ currency = "NGN", limit }: RecurringRulesLi
         const formattedNextDate = formatDate(rule.next_due_on);
         const frequencyLabel =
           rule.frequency.charAt(0).toUpperCase() + rule.frequency.slice(1);
+        const kindLabel =
+          rule.kind.charAt(0).toUpperCase() + rule.kind.slice(1);
         const isLoading = loadingRuleId === rule.id;
 
         return (
           <div
             key={rule.id}
             data-testid={`recurring-rule-row-${rule.id}`}
-            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-border/70 bg-card p-4 transition-colors hover:border-border"
+            className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card p-4 transition-colors hover:border-border"
           >
-            <div className="flex items-start gap-3 min-w-0">
-              <div
-                className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${
-                  rule.is_paused
-                    ? "bg-muted text-muted-foreground"
-                    : rule.kind === "income"
-                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                    : "bg-primary/15 text-primary"
-                }`}
-              >
-                <Repeat className="size-4.5" />
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="text-sm font-semibold text-foreground truncate">
-                    {displayName}
-                  </h4>
+            {/* Left text column: takes remaining width, truncates long names */}
+            <div className="flex-1 min-w-0 pr-1">
+              {/* Line 1: name (semibold) followed by a small muted type label (Expense, Income or Giving) + Paused pill if paused */}
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-sm font-semibold text-foreground truncate">
+                  {displayName}
+                </span>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {kindLabel}
+                </span>
+                {rule.is_paused && (
                   <span
                     data-testid="rule-status-badge"
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                      rule.is_paused
-                        ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
-                        : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
-                    }`}
+                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-700 dark:text-amber-400 shrink-0"
                   >
-                    {rule.is_paused ? "Paused" : "Active"}
+                    Paused
                   </span>
-                  <span className="text-[11px] text-muted-foreground uppercase font-medium">
-                    {rule.kind}
-                  </span>
-                </div>
-
-                <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                  <span className="font-semibold text-foreground tabular-nums">
-                    {formattedAmount}
-                  </span>
-                  <span>•</span>
-                  <span>{frequencyLabel}</span>
-                  <span>•</span>
-                  <span>Next: {formattedNextDate}</span>
-                </div>
+                )}
               </div>
+
+              {/* Line 2: amount · Weekly/Monthly · Next 29-10-2026 (muted, smaller) */}
+              <p className="mt-0.5 text-xs text-muted-foreground truncate">
+                {formattedAmount} · {frequencyLabel} · Next {formattedNextDate}
+              </p>
             </div>
 
-            {/* Action buttons: Edit, Pause/Resume and Delete */}
-            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+            {/* Right: three equal square icon buttons in one row, 8px apart, vertically centred */}
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
                 data-testid="rule-edit-btn"
                 disabled={isLoading}
                 onClick={() => handleOpenEdit(rule)}
-                aria-label={`Edit ${displayName}`}
-                className="inline-flex size-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50 cursor-pointer"
+                title="Edit"
+                aria-label="Edit"
+                className="flex size-10 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50 cursor-pointer"
               >
-                <Pencil className="size-3.5" />
+                <Pencil className="size-4" />
               </button>
 
               <button
@@ -212,22 +196,18 @@ export function RecurringRulesList({ currency = "NGN", limit }: RecurringRulesLi
                 data-testid={rule.is_paused ? "rule-resume-btn" : "rule-pause-btn"}
                 disabled={isLoading}
                 onClick={() => handleTogglePause(rule)}
-                className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-medium transition-colors border ${
+                title={rule.is_paused ? "Resume" : "Pause"}
+                aria-label={rule.is_paused ? "Resume" : "Pause"}
+                className={`flex size-10 items-center justify-center rounded-lg border transition-colors disabled:opacity-50 cursor-pointer ${
                   rule.is_paused
                     ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-400"
-                    : "border-border bg-background text-foreground hover:bg-muted"
-                } disabled:opacity-50 cursor-pointer`}
+                    : "border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
               >
                 {rule.is_paused ? (
-                  <>
-                    <Play className="size-3.5" />
-                    <span>Resume</span>
-                  </>
+                  <Play className="size-4" />
                 ) : (
-                  <>
-                    <Pause className="size-3.5" />
-                    <span>Pause</span>
-                  </>
+                  <Pause className="size-4" />
                 )}
               </button>
 
@@ -236,10 +216,11 @@ export function RecurringRulesList({ currency = "NGN", limit }: RecurringRulesLi
                 data-testid="rule-delete-btn"
                 disabled={isLoading}
                 onClick={() => setRuleToDelete(rule)}
-                aria-label={`Delete ${displayName}`}
-                className="inline-flex size-8 items-center justify-center rounded-lg border border-destructive/20 text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50 cursor-pointer"
+                title="Delete"
+                aria-label="Delete"
+                className="flex size-10 items-center justify-center rounded-lg border border-destructive/20 text-destructive hover:bg-destructive/10 hover:border-destructive/30 transition-colors disabled:opacity-50 cursor-pointer"
               >
-                <Trash2 className="size-3.5" />
+                <Trash2 className="size-4" />
               </button>
             </div>
           </div>

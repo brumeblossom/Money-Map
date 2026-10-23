@@ -17,6 +17,7 @@ import { CurrencyPickerSettings } from "@/components/currency-picker-settings";
 import { CategoriesSettings } from "@/components/categories-settings";
 import { RecurringRulesList } from "@/components/recurring-rules-list";
 import { InstallPwaCard } from "@/components/install-pwa-card";
+import { displayNameSchema } from "@/lib/schemas";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -75,8 +76,9 @@ export default function SettingsPage() {
   const handleSaveNameModal = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = editNameInput.trim();
-    if (!trimmed || trimmed.length > 60) {
-      toast.error("Name must be between 1 and 60 characters");
+    const parsed = displayNameSchema.safeParse(trimmed);
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message || "Name must be between 1 and 30 characters");
       return;
     }
     const userId = getCurrentUserId() || profile?.user_id;
@@ -85,9 +87,9 @@ export default function SettingsPage() {
     try {
       setIsSavingName(true);
       if (profile) {
-        await updateProfile(userId, { display_name: trimmed });
+        await updateProfile(userId, { display_name: parsed.data });
       } else {
-        await createProfile({ user_id: userId, display_name: trimmed, currency: "NGN" });
+        await createProfile({ user_id: userId, display_name: parsed.data, currency: "NGN" });
       }
       setShowEditNameModal(false);
       toast.success("Name updated");
@@ -250,21 +252,20 @@ export default function SettingsPage() {
 
           {/* Repeating entries Card (max 5 with See all link) */}
           <div id="repeating-entries" className="rounded-xl border border-border bg-card p-5 shadow-xs">
-            <div className="flex items-center justify-between gap-2 mb-4">
-              <div>
+            <div className="mb-4 space-y-1">
+              <div className="flex items-center justify-between gap-2">
                 <h3 className="text-base font-semibold text-foreground">Repeating entries</h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Manage reminders for weekly and monthly recurring entries.
-                </p>
+                <Link
+                  href="/settings/repeating"
+                  data-testid="settings-repeating-entries-link"
+                  className="text-xs font-semibold text-primary hover:underline shrink-0"
+                >
+                  See all
+                </Link>
               </div>
-              <Link
-                href="/settings/repeating"
-                data-testid="settings-repeating-entries-link"
-                className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline shrink-0"
-              >
-                <span>See all</span>
-                <span aria-hidden="true">→</span>
-              </Link>
+              <p className="text-xs text-muted-foreground">
+                Manage reminders for weekly and monthly recurring entries.
+              </p>
             </div>
 
             <RecurringRulesList limit={5} />
@@ -569,12 +570,17 @@ export default function SettingsPage() {
             </h3>
             <form onSubmit={handleSaveNameModal} className="space-y-4">
               <div className="space-y-1.5">
-                <label
-                  htmlFor="modal-name-input"
-                  className="text-xs font-semibold text-foreground"
-                >
-                  Name
-                </label>
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="modal-name-input"
+                    className="text-xs font-semibold text-foreground"
+                  >
+                    Name
+                  </label>
+                  <span className="text-[11px] tabular-nums text-muted-foreground">
+                    {editNameInput.length}/30
+                  </span>
+                </div>
                 <input
                   id="modal-name-input"
                   type="text"
@@ -582,7 +588,7 @@ export default function SettingsPage() {
                   value={editNameInput}
                   onChange={(e) => setEditNameInput(e.target.value)}
                   placeholder="Your name"
-                  maxLength={60}
+                  maxLength={30}
                   autoFocus
                   className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 />

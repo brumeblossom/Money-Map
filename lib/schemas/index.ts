@@ -282,6 +282,12 @@ export const syncRecurringRuleRowSchema = z.object({
   server_updated_at: z.string().optional(),
 });
 
+export const displayNameSchema = z
+  .string()
+  .trim()
+  .min(1, "Name must be at least 1 character")
+  .max(30, "Name cannot exceed 30 characters");
+
 export const syncProfileRowSchema = z.object({
   user_id: z.string().optional(),
   display_name: z.string().max(60).nullable().optional(),

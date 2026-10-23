@@ -291,7 +291,7 @@ describe("Prompt 16c: Verification of Export Choices, Delete Confirmations, and 
   });
 
   describe("3. Name in welcome note updates without reload", () => {
-    it("Home welcome note updates first name reactively when profile changes in Dexie", async () => {
+    it("Home welcome note updates full display name reactively when profile changes in Dexie", async () => {
       // Create initial profile
       await createProfile({
         user_id: "user-123",
@@ -301,9 +301,9 @@ describe("Prompt 16c: Verification of Export Choices, Delete Confirmations, and 
 
       render(<HomeView />);
 
-      // Initial check
+      // Initial check shows full display name
       await waitFor(() => {
-        expect(screen.getByText("Welcome back, Amara")).toBeInTheDocument();
+        expect(screen.getByText("Welcome back, Amara Okonkwo")).toBeInTheDocument();
       });
 
       // Update name in Dexie (simulating Save in Settings modal)
@@ -311,9 +311,9 @@ describe("Prompt 16c: Verification of Export Choices, Delete Confirmations, and 
         display_name: "Chidi Nnamdi",
       });
 
-      // Welcome back should reactively update to Chidi without reload
+      // Welcome back should reactively update to full name without reload
       await waitFor(() => {
-        expect(screen.getByText("Welcome back, Chidi")).toBeInTheDocument();
+        expect(screen.getByText("Welcome back, Chidi Nnamdi")).toBeInTheDocument();
       });
     });
   });

@@ -162,8 +162,8 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
     e.preventDefault();
     setNamePromptError(null);
     const trimmed = namePromptValue.trim();
-    if (!trimmed || trimmed.length > 60) {
-      setNamePromptError("Please enter a name up to 60 characters");
+    if (!trimmed || trimmed.length > 30) {
+      setNamePromptError("Please enter a name up to 30 characters");
       return;
     }
     if (!currentAuthUserId) return;
@@ -305,8 +305,8 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
                 setNamePromptValue(e.target.value);
                 if (namePromptError) setNamePromptError(null);
               }}
-              placeholder="Your first name"
-              maxLength={60}
+              placeholder="Your name"
+              maxLength={30}
               className="flex-1 rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
             />
             <button
@@ -333,9 +333,9 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
 
       {/* Header section */}
       <div className="space-y-1">
-        <p className="text-xs font-medium text-muted-foreground sm:text-sm">
+        <p className="truncate text-xs font-medium text-muted-foreground sm:text-sm">
           {profile?.display_name?.trim()
-            ? `Welcome back, ${profile.display_name.trim().split(/\s+/)[0]}`
+            ? `Welcome back, ${profile.display_name.trim()}`
             : !currentAuthUserId
               ? "Welcome, guest"
               : "Welcome back"}

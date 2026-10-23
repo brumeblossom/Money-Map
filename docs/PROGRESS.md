@@ -1090,6 +1090,25 @@
   - Replaced autosaving input in Settings > Profile with text display and pencil icon button.
   - Tapping opens "Edit name" modal pre-filled with current name (1-60 characters), Cancel, and Save (persists to Dexie & syncs).
 
+### Prompt 16d: Welcome full name, settings headers, and repeating rows polish
+- **9. Name (both phone & desktop)**:
+  - Home welcome line displays FULL display name exactly as saved in Settings ("Welcome back, Blossom the Billionaire"), rather than only the first word.
+  - Same text in sidebar user profile area, updating immediately after editing via shared live query `useProfile()`.
+  - Name limit: 1 to 30 characters, trimmed. Edit name modal shows live counter (e.g. `18/30`), stops typing at 30 (`maxLength={30}`), and Save is disabled when empty. Validated in Zod with `displayNameSchema`.
+  - Existing names longer than 30 characters are kept but shown with an ellipsis where space is short (`truncate`).
+  - On phones, if the welcome line is too long for one line, truncates with an ellipsis (`truncate`) and never wraps onto the heading.
+- **10. Settings Card Headers (Categories and Repeating entries, both)**:
+  - Header row: card title on the left and a plain text link "See all" at the right end of the same line as the title, vertically centered (`flex items-center justify-between`). No arrow or icon.
+  - Card description text is on its own line below the header row, using full card width without being squeezed by "See all" on both desktop and phones.
+- **11. Repeating Entry Rows (Settings card and See all page, both)**:
+  - Removed: "Active" pill (shows "Paused" pill ONLY when paused), round icon on the left of each row (aligning text to left 16px padding), and the word "Pause" on the pause button.
+  - Row layout:
+    - Left column: Line 1 = name (`font-semibold`) followed by a small muted type label (Expense, Income, or Giving) and Paused pill if paused. Line 2 = formatted amount · Weekly/Monthly · Next 29-10-2026 (`text-xs text-muted-foreground`).
+    - Right column: three equal square icon buttons in one row, 8px apart (`gap-2`), vertically centered: Edit (pencil), Pause/Resume (pause icon, play icon when paused), Delete (trash, red).
+    - Tooltips and aria-labels on each button (`Edit`, `Pause`/`Resume`, `Delete`). Delete confirms via confirmation dialog.
+    - Consistent 16px padding inside each row (`p-4`) and between rows.
+    - Phones (360px - 430px): text column takes remaining width and truncates long names with ellipsis; three icon buttons stay on right without wrapping below text; tap targets at least 40px (`size-10`).
+
 ## Environment variables for Vercel
 
 The following environment variables can now be safely removed from Vercel project settings:

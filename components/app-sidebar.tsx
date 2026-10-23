@@ -10,6 +10,7 @@ import {
   Settings,
   Wallet,
 } from "lucide-react";
+import { useProfile } from "@/lib/repo/hooks";
 import { cn } from "cn";
 
 export interface NavItem {
@@ -27,7 +28,8 @@ export const MAIN_NAV_ITEMS: NavItem[] = [
 
 export function AppSidebar({ className }: { className?: string }) {
   const pathname = usePathname();
-  const [user, setUser] = React.useState<{ name: string; email: string } | null>(null);
+  const profile = useProfile();
+  const [authUser, setAuthUser] = React.useState<{ email: string; fallbackName?: string } | null>(null);
 
   React.useEffect(() => {
     let subscription: { unsubscribe: () => void } | null = null;
@@ -37,11 +39,9 @@ export function AppSidebar({ className }: { className?: string }) {
         if (typeof document !== "undefined") {
           const match = document.cookie.match(/moneymap_mock_user=([^;]+)/);
           if (match) {
-            const { db } = await import("@/lib/db/dexie");
-            const profile = (await db.profiles.toArray())[0];
-            setUser({
-              name: profile?.display_name || "User",
+            setAuthUser({
               email: "test@example.com",
+              fallbackName: "User",
             });
             return;
           }
@@ -51,31 +51,27 @@ export function AppSidebar({ className }: { className?: string }) {
         const supabase = createClient();
         const { data: sessionData } = await supabase.auth.getSession();
         if (sessionData?.session?.user) {
-          const { db } = await import("@/lib/db/dexie");
-          const profile = (await db.profiles.toArray())[0];
-          setUser({
-            name: profile?.display_name || sessionData.session.user.user_metadata?.full_name || "User",
+          setAuthUser({
             email: sessionData.session.user.email || "",
+            fallbackName: sessionData.session.user.user_metadata?.full_name || "User",
           });
         } else {
-          setUser(null);
+          setAuthUser(null);
         }
 
-        const { data: authSub } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const { data: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
           if (session?.user) {
-            const { db } = await import("@/lib/db/dexie");
-            const profile = (await db.profiles.toArray())[0];
-            setUser({
-              name: profile?.display_name || session.user.user_metadata?.full_name || "User",
+            setAuthUser({
               email: session.user.email || "",
+              fallbackName: session.user.user_metadata?.full_name || "User",
             });
           } else {
-            setUser(null);
+            setAuthUser(null);
           }
         });
         subscription = authSub.subscription;
       } catch {
-        setUser(null);
+        setAuthUser(null);
       }
     }
 
@@ -85,6 +81,14 @@ export function AppSidebar({ className }: { className?: string }) {
       subscription?.unsubscribe();
     };
   }, []);
+
+  const user = React.useMemo(() => {
+    if (!authUser) return null;
+    return {
+      name: profile?.display_name?.trim() || authUser.fallbackName || "User",
+      email: authUser.email,
+    };
+  }, [authUser, profile?.display_name]);
 
   return (
     <aside

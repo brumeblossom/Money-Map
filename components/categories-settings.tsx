@@ -148,7 +148,11 @@ export function CategoriesSettings({ initialScope = "income", limit }: Categorie
     }
   };
 
-  // Delete category
+  // Delete confirm modal state
+  const [categoryToDelete, setCategoryToDelete] = React.useState<CategoryRow | null>(null);
+  const [isDeletingCategory, setIsDeletingCategory] = React.useState(false);
+
+  // Trigger category delete check
   const handleDeleteCategory = async (cat: CategoryRow) => {
     if (cat.is_default) {
       toast.error("Default categories can be hidden, not deleted");
@@ -171,12 +175,21 @@ export function CategoriesSettings({ initialScope = "income", limit }: Categorie
       return;
     }
 
+    setCategoryToDelete(cat);
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
     try {
-      await softDeleteCategory(cat.id);
-      toast.success(`Category "${cat.name}" deleted`);
+      setIsDeletingCategory(true);
+      await softDeleteCategory(categoryToDelete.id);
+      toast.success(`Category "${categoryToDelete.name}" deleted`);
+      setCategoryToDelete(null);
     } catch (err) {
       console.error("Failed to delete category", err);
       toast.error("Failed to delete category");
+    } finally {
+      setIsDeletingCategory(false);
     }
   };
 
@@ -251,13 +264,23 @@ export function CategoriesSettings({ initialScope = "income", limit }: Categorie
 
   return (
     <div id="categories" className="rounded-xl border border-border bg-card p-5 shadow-xs">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+      <div className="flex items-center justify-between gap-2 mb-4">
         <div>
           <h3 className="text-base font-semibold text-foreground">Categories</h3>
           <p className="mt-0.5 text-xs text-muted-foreground">
             Add, rename, reorder, or hide categories for each action. Hidden categories remain on old entries.
           </p>
         </div>
+        {limit && (
+          <Link
+            href={`/settings/categories?group=${activeScope}`}
+            data-testid="categories-see-all-link"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline shrink-0"
+          >
+            <span>See all</span>
+            <span aria-hidden="true">→</span>
+          </Link>
+        )}
       </div>
 
       {/* Action Tabs: Income | Expenses | Giving */}
@@ -483,15 +506,40 @@ export function CategoriesSettings({ initialScope = "income", limit }: Categorie
         )}
       </div>
 
-      {limit && (
-        <div className="pt-2 flex justify-end">
-          <Link
-            href={`/settings/categories?group=${activeScope}`}
-            data-testid="categories-see-all-link"
-            className="text-xs font-semibold text-primary hover:underline"
-          >
-            See all {ACTION_TABS.find((t) => t.scope === activeScope)?.label.toLowerCase()} categories →
-          </Link>
+      {/* Category Delete Confirmation Modal */}
+      {categoryToDelete && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
+        >
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-xl space-y-4">
+            <h3 className="text-lg font-semibold text-foreground">
+              Delete category?
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Category &quot;{categoryToDelete.name}&quot; will be permanently deleted.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeletingCategory}
+                onClick={() => setCategoryToDelete(null)}
+                className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingCategory}
+                data-testid="confirm-delete-category-btn"
+                onClick={confirmDeleteCategory}
+                className="rounded-xl bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground hover:bg-destructive/90 transition-colors cursor-pointer"
+              >
+                {isDeletingCategory ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

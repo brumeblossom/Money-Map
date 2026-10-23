@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowLeft, Repeat } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { RecurringRulesList } from "@/components/recurring-rules-list";
 
 export default function RepeatingEntriesPage() {
@@ -19,9 +19,8 @@ export default function RepeatingEntriesPage() {
           <ArrowLeft className="size-4" />
         </Link>
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <Repeat className="size-5 text-primary" />
-            <span>Repeating entries</span>
+          <h2 className="text-xl font-bold tracking-tight text-foreground">
+            Repeating entries
           </h2>
           <p className="text-xs text-muted-foreground">
             Manage your weekly and monthly reminders.

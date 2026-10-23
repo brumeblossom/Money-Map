@@ -24,4 +24,6 @@ The full spec is `docs/PRD.md`.
 
 10. Every amount input shows thousands commas while typing.
 
+11. Every delete asks for confirmation first.
+
 Read docs/PROGRESS.md before starting any task and update it when finishing.

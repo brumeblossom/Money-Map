@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { toast } from "sonner";
 import { Pause, Play, Trash2, Repeat, Pencil, X } from "lucide-react";
 import { useRecurringRules, useCategories } from "@/lib/repo/hooks";
@@ -88,16 +87,22 @@ export function RecurringRulesList({ currency = "NGN", limit }: RecurringRulesLi
     }
   };
 
-  const handleDelete = async (rule: RecurringRuleRow) => {
+  // Delete confirm modal state
+  const [ruleToDelete, setRuleToDelete] = React.useState<RecurringRuleRow | null>(null);
+  const [isDeletingRule, setIsDeletingRule] = React.useState(false);
+
+  const confirmDelete = async () => {
+    if (!ruleToDelete) return;
     try {
-      setLoadingRuleId(rule.id);
-      await softDeleteRecurringRule(rule.id);
+      setIsDeletingRule(true);
+      await softDeleteRecurringRule(ruleToDelete.id);
+      setRuleToDelete(null);
       toast("Deleted");
     } catch (err) {
       console.error("Failed to delete rule", err);
       toast("Failed to delete. Please try again.");
     } finally {
-      setLoadingRuleId(null);
+      setIsDeletingRule(false);
     }
   };
 
@@ -230,7 +235,7 @@ export function RecurringRulesList({ currency = "NGN", limit }: RecurringRulesLi
                 type="button"
                 data-testid="rule-delete-btn"
                 disabled={isLoading}
-                onClick={() => handleDelete(rule)}
+                onClick={() => setRuleToDelete(rule)}
                 aria-label={`Delete ${displayName}`}
                 className="inline-flex size-8 items-center justify-center rounded-lg border border-destructive/20 text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50 cursor-pointer"
               >
@@ -241,17 +246,7 @@ export function RecurringRulesList({ currency = "NGN", limit }: RecurringRulesLi
         );
       })}
 
-      {limit && (
-        <div className="pt-2 flex justify-end">
-          <Link
-            href="/settings/repeating"
-            data-testid="settings-repeating-entries-link"
-            className="text-xs font-semibold text-primary hover:underline"
-          >
-            See all repeating entries →
-          </Link>
-        </div>
-      )}
+
 
       {/* Edit Rule Modal */}
       {editingRule && (
@@ -331,6 +326,43 @@ export function RecurringRulesList({ currency = "NGN", limit }: RecurringRulesLi
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Rule Confirmation Modal */}
+      {ruleToDelete && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
+        >
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-xl space-y-4">
+            <h3 className="text-lg font-semibold text-foreground">
+              Delete repeating entry?
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              This repeating reminder will be removed. Past records already created will not be affected.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeletingRule}
+                onClick={() => setRuleToDelete(null)}
+                className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingRule}
+                data-testid="confirm-delete-rule-btn"
+                onClick={confirmDelete}
+                className="rounded-xl bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground hover:bg-destructive/90 transition-colors cursor-pointer"
+              >
+                {isDeletingRule ? "Deleting..." : "Delete"}
+              </button>
+            </div>
           </div>
         </div>
       )}

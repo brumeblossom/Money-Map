@@ -66,6 +66,9 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
   const [editingPayment, setEditingPayment] = React.useState<LoanPaymentRow | null>(null);
   const [isEditLoanModalOpen, setIsEditLoanModalOpen] = React.useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = React.useState(false);
+  const [showDeleteLoanConfirm, setShowDeleteLoanConfirm] = React.useState(false);
+  const [paymentToDelete, setPaymentToDelete] = React.useState<LoanPaymentRow | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   const today = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
 
@@ -134,36 +137,52 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
 
   const sortedPayments = [...payments].sort((a, b) => b.paid_on.localeCompare(a.paid_on));
 
-  const handleDeleteLoan = async () => {
-    if (!confirm(`Are you sure you want to delete the loan to "${loan.counterparty}"?`)) {
-      return;
-    }
+  const confirmDeleteLoan = async () => {
+    setIsDeleting(true);
+    try {
+      await softDeleteLoan(loan.id);
+      setShowDeleteLoanConfirm(false);
+      router.push("/records?tab=lent");
 
-    await softDeleteLoan(loan.id);
-    router.push("/records?tab=lent");
-
-    toast("Loan deleted", {
-      duration: 5000,
-      action: {
-        label: "Undo",
-        onClick: async () => {
-          await restoreLoan(loan.id);
+      toast("Loan deleted", {
+        duration: 5000,
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            await restoreLoan(loan.id);
+          },
         },
-      },
-    });
+      });
+    } catch (err) {
+      console.error("Failed to delete loan:", err);
+      toast("Failed to delete loan");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
-  const handleDeletePayment = async (paymentId: string) => {
-    await softDeleteLoanPayment(paymentId);
-    toast("Payment deleted", {
-      duration: 5000,
-      action: {
-        label: "Undo",
-        onClick: async () => {
-          await restoreLoanPayment(paymentId);
+  const confirmDeletePayment = async () => {
+    if (!paymentToDelete) return;
+    setIsDeleting(true);
+    try {
+      const pid = paymentToDelete.id;
+      await softDeleteLoanPayment(pid);
+      setPaymentToDelete(null);
+      toast("Payment deleted", {
+        duration: 5000,
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            await restoreLoanPayment(pid);
+          },
         },
-      },
-    });
+      });
+    } catch (err) {
+      console.error("Failed to delete payment:", err);
+      toast("Failed to delete payment");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -238,7 +257,7 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
               type="button"
               variant="outline"
               size="sm"
-              onClick={handleDeleteLoan}
+              onClick={() => setShowDeleteLoanConfirm(true)}
               className="rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive"
             >
               <Trash2 className="mr-1.5 size-3.5" /> Delete
@@ -507,7 +526,7 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    onClick={() => handleDeletePayment(p.id)}
+                    onClick={() => setPaymentToDelete(p)}
                     aria-label="Delete payment"
                     className="rounded-full text-muted-foreground hover:text-destructive"
                   >
@@ -540,6 +559,70 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
         loan={loan}
         currency={effectiveCurrency}
       />
+
+      {/* Delete Loan Confirmation Dialog */}
+      {showDeleteLoanConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-background p-6 shadow-xl animate-in fade-in zoom-in-95">
+            <h3 className="text-lg font-bold tracking-tight text-foreground">
+              Delete loan?
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              This loan and all its repayments will be removed. You can undo this within 5 seconds.
+            </p>
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteLoanConfirm(false)}
+                disabled={isDeleting}
+                className="rounded-xl"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDeleteLoan}
+                disabled={isDeleting}
+                className="rounded-xl"
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Payment Confirmation Dialog */}
+      {paymentToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-background p-6 shadow-xl animate-in fade-in zoom-in-95">
+            <h3 className="text-lg font-bold tracking-tight text-foreground">
+              Delete payment?
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              This payment will be removed and the loan balance will update. You can undo this within 5 seconds.
+            </p>
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setPaymentToDelete(null)}
+                disabled={isDeleting}
+                className="rounded-xl"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDeletePayment}
+                disabled={isDeleting}
+                className="rounded-xl"
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

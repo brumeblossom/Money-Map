@@ -30,7 +30,6 @@ import {
   Calendar,
   FileDown,
 } from "lucide-react";
-import { toast } from "sonner";
 import { db, type CategoryRow } from "@/lib/db/dexie";
 import { useEntries, useCategories, useLoans, useLoanPayments } from "@/lib/repo/hooks";
 import {
@@ -40,11 +39,10 @@ import {
   diffInDays,
 } from "@/lib/calc";
 import { formatMoney, formatDate } from "@/lib/format";
-import { buildPeriodReport } from "@/lib/report/builder";
-import { downloadReportPdf } from "@/lib/report/pdf-export";
 import { Button } from "@/components/ui/button";
 import { DateField } from "@/components/date-field";
 import { EntryModal } from "@/components/entry-modal";
+import { ExportModal } from "@/components/export-modal";
 import { cn } from "@/lib/utils";
 
 const PERIOD_PRESETS: Array<{ id: PeriodPreset; label: string }> = [
@@ -147,33 +145,10 @@ export function InsightsView() {
   });
 
   const currency = profile?.currency || "NGN";
-  const [isExportingPdf, setIsExportingPdf] = React.useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = React.useState(false);
 
-  const handleExportPdf = async () => {
-    try {
-      setIsExportingPdf(true);
-      toast.info("Generating PDF...");
-      const snapshot = buildPeriodReport({
-        periodStart: activePeriod.start,
-        periodEnd: activePeriod.end,
-        kinds: ["income", "expense", "giving", "lent"],
-        hideDetails: false,
-        currency,
-        userName: profile?.display_name || null,
-        entries: entries || [],
-        categories: categories || [],
-        loans: loans || [],
-        loanPayments: loanPayments || [],
-        today,
-      });
-      await downloadReportPdf(snapshot);
-      toast.success("PDF downloaded");
-    } catch (err) {
-      console.error("Export PDF error:", err);
-      toast.error("Failed to export PDF");
-    } finally {
-      setIsExportingPdf(false);
-    }
+  const handleExportPdf = () => {
+    setIsExportModalOpen(true);
   };
 
   // Category map for rapid lookup
@@ -266,12 +241,11 @@ export function InsightsView() {
             type="button"
             variant="outline"
             onClick={handleExportPdf}
-            disabled={isExportingPdf}
             data-testid="insights-export-pdf-button"
             className="hidden sm:inline-flex items-center gap-2 rounded-xl font-semibold shrink-0 cursor-pointer"
           >
             <FileDown className="size-4" />
-            <span>{isExportingPdf ? "Generating..." : "Export PDF"}</span>
+            <span>Export PDF</span>
           </Button>
         </div>
 
@@ -311,7 +285,6 @@ export function InsightsView() {
               variant="outline"
               size="icon"
               onClick={handleExportPdf}
-              disabled={isExportingPdf}
               aria-label="Export PDF"
               data-testid="insights-export-pdf-mobile-button"
               className="sm:hidden size-10 rounded-xl shrink-0 cursor-pointer"
@@ -1038,6 +1011,23 @@ export function InsightsView() {
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
         action={addModalAction}
+        currency={currency}
+      />
+
+      {/* Export PDF Modal pre-selected with insights period */}
+      <ExportModal
+        open={isExportModalOpen}
+        onOpenChange={setIsExportModalOpen}
+        initialPreset={
+          selectedPreset === "thisMonth"
+            ? "this_month"
+            : selectedPreset === "last3Months"
+              ? "last_3_months"
+              : selectedPreset === "custom"
+                ? "custom"
+                : "this_month"
+        }
+        initialCustomRange={selectedPreset === "custom" ? customRange : undefined}
         currency={currency}
       />
     </div>

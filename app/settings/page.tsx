@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, Check, Globe, Trash2, Mail } from "lucide-react";
+import { LogOut, Globe, Trash2, Mail, Pencil } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -36,17 +36,6 @@ export default function SettingsPage() {
   const [userEmail, setUserEmail] = React.useState<string | null>(null);
   const [isGuest, setIsGuest] = React.useState<boolean>(true);
 
-  // Display Name edit & autosave state
-  const [nameValue, setNameValue] = React.useState<string>("");
-  const [prevProfileDisplayName, setPrevProfileDisplayName] = React.useState<string | null | undefined>(undefined);
-  const [isSavedTickVisible, setIsSavedTickVisible] = React.useState(false);
-  const debounceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  if (profile?.display_name !== undefined && profile.display_name !== prevProfileDisplayName) {
-    setPrevProfileDisplayName(profile.display_name);
-    setNameValue(profile.display_name ?? "");
-  }
-
   // Check auth session for email & guest status
   React.useEffect(() => {
     async function checkAuth() {
@@ -73,44 +62,41 @@ export default function SettingsPage() {
     checkAuth();
   }, []);
 
-  const saveName = React.useCallback(
-    async (newName: string) => {
-      const trimmed = newName.trim();
-      if (!trimmed || trimmed.length > 60) return;
-      const userId = getCurrentUserId() || profile?.user_id;
-      if (!userId || isGuest) return;
+  // Edit name modal state
+  const [showEditNameModal, setShowEditNameModal] = React.useState(false);
+  const [editNameInput, setEditNameInput] = React.useState("");
+  const [isSavingName, setIsSavingName] = React.useState(false);
 
-      try {
-        if (profile) {
-          await updateProfile(userId, { display_name: trimmed });
-        } else {
-          await createProfile({ user_id: userId, display_name: trimmed, currency: "NGN" });
-        }
-        setIsSavedTickVisible(true);
-        setTimeout(() => setIsSavedTickVisible(false), 2500);
-      } catch (err) {
-        console.error("Failed to auto-save name in settings", err);
-      }
-    },
-    [profile, isGuest],
-  );
-
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setNameValue(val);
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    debounceTimerRef.current = setTimeout(() => {
-      saveName(val);
-    }, 600);
+  const handleOpenEditName = () => {
+    setEditNameInput(profile?.display_name?.trim() || "");
+    setShowEditNameModal(true);
   };
 
-  const handleNameBlur = () => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
+  const handleSaveNameModal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = editNameInput.trim();
+    if (!trimmed || trimmed.length > 60) {
+      toast.error("Name must be between 1 and 60 characters");
+      return;
     }
-    saveName(nameValue);
+    const userId = getCurrentUserId() || profile?.user_id;
+    if (!userId || isGuest) return;
+
+    try {
+      setIsSavingName(true);
+      if (profile) {
+        await updateProfile(userId, { display_name: trimmed });
+      } else {
+        await createProfile({ user_id: userId, display_name: trimmed, currency: "NGN" });
+      }
+      setShowEditNameModal(false);
+      toast.success("Name updated");
+    } catch (err) {
+      console.error("Failed to save name", err);
+      toast.error("Failed to update name");
+    } finally {
+      setIsSavingName(false);
+    }
   };
 
   const handleSignOut = async () => {
@@ -182,7 +168,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="space-y-6 pb-16">
+    <div className="space-y-8 pb-16">
       <div>
         <h2 className="text-xl font-bold tracking-tight text-foreground">Settings</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -191,41 +177,37 @@ export default function SettingsPage() {
       </div>
 
       {/* 1. PROFILE Section */}
-      <div className="space-y-2">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+      <div className="space-y-2.5">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1 block">
           Profile
         </span>
         <div id="profile" className="rounded-xl border border-border bg-card p-5 shadow-xs space-y-4">
-          {/* Display Name (editable, autosaves) */}
+          {/* Display Name (text with edit icon button) */}
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label
-                htmlFor="settings-name-input"
-                className="text-xs font-semibold text-foreground"
+            <label className="text-xs font-semibold text-foreground">
+              Display name
+            </label>
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-input bg-background px-4 py-2.5">
+              <span
+                data-testid="settings-name-display"
+                className="text-sm font-medium text-foreground truncate"
               >
-                Display name
-              </label>
-              {isSavedTickVisible && (
-                <span
-                  data-testid="name-saved-indicator"
-                  className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 animate-in fade-in"
+                {isGuest
+                  ? "Guest"
+                  : profile?.display_name?.trim() || "No name set"}
+              </span>
+              {!isGuest && (
+                <button
+                  type="button"
+                  onClick={handleOpenEditName}
+                  data-testid="settings-edit-name-btn"
+                  aria-label="Edit name"
+                  className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer shrink-0"
                 >
-                  <Check className="size-3.5" /> Saved
-                </span>
+                  <Pencil className="size-4" />
+                </button>
               )}
             </div>
-            <input
-              id="settings-name-input"
-              type="text"
-              data-testid="settings-name-input"
-              value={nameValue}
-              onChange={handleNameChange}
-              onBlur={handleNameBlur}
-              disabled={isGuest}
-              placeholder={isGuest ? "Sign in to set your name" : "Your name"}
-              maxLength={60}
-              className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
-            />
             {isGuest && (
               <p className="text-[11px] text-muted-foreground">
                 Sign in to add your name and back up your data.
@@ -258,8 +240,8 @@ export default function SettingsPage() {
       </div>
 
       {/* 2. YOUR DATA Section */}
-      <div className="space-y-2">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+      <div className="space-y-2.5 pt-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1 block">
           Your Data
         </span>
         <div className="space-y-4">
@@ -268,11 +250,21 @@ export default function SettingsPage() {
 
           {/* Repeating entries Card (max 5 with See all link) */}
           <div id="repeating-entries" className="rounded-xl border border-border bg-card p-5 shadow-xs">
-            <div className="mb-4">
-              <h3 className="text-base font-semibold text-foreground">Repeating entries</h3>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Manage reminders for weekly and monthly recurring entries.
-              </p>
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">Repeating entries</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Manage reminders for weekly and monthly recurring entries.
+                </p>
+              </div>
+              <Link
+                href="/settings/repeating"
+                data-testid="settings-repeating-entries-link"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline shrink-0"
+              >
+                <span>See all</span>
+                <span aria-hidden="true">→</span>
+              </Link>
             </div>
 
             <RecurringRulesList limit={5} />
@@ -281,8 +273,8 @@ export default function SettingsPage() {
       </div>
 
       {/* 3. APPEARANCE Section */}
-      <div className="space-y-2">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+      <div className="space-y-2.5 pt-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1 block">
           Appearance
         </span>
         <div id="appearance" className="rounded-xl border border-border bg-card p-5 shadow-xs space-y-5">
@@ -341,8 +333,8 @@ export default function SettingsPage() {
       </div>
 
       {/* 4. ACCOUNT Section */}
-      <div className="space-y-2">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+      <div className="space-y-2.5 pt-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1 block">
           Account
         </span>
         <div id="account" className="rounded-xl border border-border bg-card p-5 shadow-xs">
@@ -357,7 +349,7 @@ export default function SettingsPage() {
               <Link
                 href="/welcome?intent=signin"
                 data-testid="settings-guest-signin-link"
-                className="inline-flex w-full h-11 items-center justify-start rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-xs hover:opacity-90 transition cursor-pointer"
+                className="inline-flex w-full sm:w-[240px] h-11 items-center justify-start rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-xs hover:opacity-90 transition cursor-pointer"
               >
                 Sign in to add your name and back up your data
               </Link>
@@ -377,7 +369,7 @@ export default function SettingsPage() {
                   type="button"
                   onClick={() => setShowConfirm(true)}
                   data-testid="settings-signout-btn"
-                  className="flex w-full h-11 items-center justify-start gap-2.5 rounded-xl border border-border bg-card px-4 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors cursor-pointer text-left"
+                  className="flex w-full sm:w-[240px] h-11 items-center justify-start gap-2.5 rounded-xl border border-border bg-card px-4 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors cursor-pointer text-left"
                 >
                   <LogOut className="size-4 shrink-0" />
                   <span>Sign out</span>
@@ -388,7 +380,7 @@ export default function SettingsPage() {
                   type="button"
                   onClick={() => setShowSignOutAllConfirm(true)}
                   data-testid="settings-signout-all-btn"
-                  className="flex w-full h-11 items-center justify-start gap-2.5 rounded-xl border border-border bg-card px-4 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-left"
+                  className="flex w-full sm:w-[240px] h-11 items-center justify-start gap-2.5 rounded-xl border border-border bg-card px-4 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-left"
                 >
                   <Globe className="size-4 shrink-0" />
                   <span>Sign out of all devices</span>
@@ -404,7 +396,7 @@ export default function SettingsPage() {
                       setShowDeleteAccountModal(true);
                     }}
                     data-testid="settings-delete-account-btn"
-                    className="flex w-full h-11 items-center justify-start gap-2.5 rounded-xl border border-destructive/30 bg-destructive/10 px-4 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20 cursor-pointer text-left"
+                    className="flex w-full sm:w-[240px] h-11 items-center justify-start gap-2.5 rounded-xl border border-destructive/30 bg-destructive/10 px-4 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20 cursor-pointer text-left"
                   >
                     <Trash2 className="size-4 shrink-0" />
                     <span>Delete account</span>
@@ -417,7 +409,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Footer row: Money Map v1 on left, Send feedback on right */}
-      <div className="flex items-center justify-between px-1 text-xs text-muted-foreground pt-2">
+      <div className="flex items-center justify-between px-1 text-xs text-muted-foreground pt-4">
         <span data-testid="app-version">Money Map v1</span>
         <a
           href="mailto:workwithbrume@gmail.com?subject=Money%20Map%20feedback"
@@ -560,6 +552,61 @@ export default function SettingsPage() {
                 {isDeletingAccount ? "Deleting account..." : "Delete my account"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Name Modal */}
+      {showEditNameModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
+        >
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-xl space-y-4">
+            <h3 className="text-lg font-semibold text-foreground">
+              Edit name
+            </h3>
+            <form onSubmit={handleSaveNameModal} className="space-y-4">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="modal-name-input"
+                  className="text-xs font-semibold text-foreground"
+                >
+                  Name
+                </label>
+                <input
+                  id="modal-name-input"
+                  type="text"
+                  data-testid="modal-name-input"
+                  value={editNameInput}
+                  onChange={(e) => setEditNameInput(e.target.value)}
+                  placeholder="Your name"
+                  maxLength={60}
+                  autoFocus
+                  className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  disabled={isSavingName}
+                  onClick={() => setShowEditNameModal(false)}
+                  className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingName || !editNameInput.trim()}
+                  data-testid="modal-save-name-btn"
+                  className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {isSavingName ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

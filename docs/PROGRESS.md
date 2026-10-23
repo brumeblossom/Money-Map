@@ -1052,8 +1052,43 @@
     4) `ACCOUNT`: Sign out, Sign out of all devices, and red Delete account below a divider with 32px spacing. All account buttons are full-width, left-aligned, and same height.
     - Footer row: "Money Map v1" on left, "Send feedback" mailto link (`mailto:workwithbrume@gmail.com?subject=Money%20Map%20feedback`) on right.
   - Removed email reminders completely: deleted daily reminder toggle, cron route `/api/cron/reminders`, cron config in `vercel.json`, and Resend env vars.
-- **H. Date Rules**:
-  - Enforced no future dates across date pickers and edit forms (disabled in calendar and validated via Zod with message "Date can't be in the future"), with exception of "Expected back by" on loans (must be on or after Date lent). Updated `docs/PRD.md` Section 4.
+### Prompt 16c: Restored export choices, delete confirmations, and settings polish
+- **1. Restored Export Choices (both phone & desktop)**:
+  - Reverted from 16b's "export current tab with filters" back to Prompt 16's modal with choices.
+  - Tapping Export opens responsive modal (centered dialog on desktop, bottom sheet on phones):
+    - **Period**: This month (default), Last 3 months, Last 6 months, Last 12 months, Custom (from/to DD-MM-YYYY masked pickers, no future dates).
+    - **Records to include**: All, Income, Expenses, Giving, Lent (checkboxes; All toggles all; all checked by default; at least one must be checked to download).
+    - **Buttons**: Cancel and Download PDF.
+  - Used identically from Records filter row and Insights (pre-selecting currently viewed period).
+  - Single-record and loan detail "Download PDF" remain unchanged.
+- **2. Delete Confirmation Audit (Rule 11: Every delete asks for confirmation first)**:
+  - No delete occurs on a single tap across the entire application:
+    1. *Entry delete (Records table row button)*: Opens modal dialog "Delete entry?", consequence line, Cancel and red Delete.
+    2. *Entry swipe-to-delete (Records phone list)*: Opens modal dialog "Delete entry?", consequence line, Cancel and red Delete.
+    3. *Entry detail delete (/records/[id])*: Opens modal dialog "Delete entry?", consequence line, Cancel and red Delete.
+    4. *Loan card delete (/records?tab=lent & /lent)*: Replaced native window.confirm with modal dialog "Delete loan?", consequence line, Cancel and red Delete.
+    5. *Loan detail delete (/lent/[id])*: Replaced native window.confirm with modal dialog "Delete loan?", consequence line, Cancel and red Delete.
+    6. *Loan payment delete (/lent/[id] payment list)*: Replaced instant deletion with modal dialog "Delete payment?", consequence line, Cancel and red Delete.
+    7. *Custom category delete (Settings > Categories)*: Replaced instant deletion with modal dialog "Delete category?", consequence line, Cancel and red Delete (default categories remain protected).
+    8. *Repeating entry delete (Settings > Repeating entries)*: Replaced instant deletion with modal dialog "Delete repeating entry?", consequence line, Cancel and red Delete.
+    9. *Account delete (Settings > Account)*: Confirmation modal requiring user to type "DELETE" before permanently removing account and all records.
+  - Undo toasts remain active after confirmed deletes.
+- **3. Settings "See all" (both phone & desktop)**:
+  - In Categories and Repeating entries cards, moved "See all" to top right of the card on the same line as card title as `See all →`.
+  - Removed old bottom See all links.
+- **4. "See all" Pages Header Polish**:
+  - Removed decorative icons next to title on `/settings/categories`, `/settings/repeating`, and the export modal header (title text only with back arrow).
+- **5. Settings Section Spacing**:
+  - Formatted uppercase section labels (`PROFILE`, `YOUR DATA`, `APPEARANCE`, `ACCOUNT`) with ~32px space above from previous card and 8-12px space below to their own card.
+- **6. Account Buttons Width**:
+  - Desktop: "Sign out", "Sign out of all devices", and "Delete account" are medium width (`sm:w-[240px]`), left-aligned.
+  - Phones: full width.
+- **7. Name in Welcome Note (both phone & desktop)**:
+  - Home welcome line ("Welcome back, <first name>") reads display name from Dexie live query via `useProfile()`, extracting first word.
+  - Changes in Settings update Home, sidebar, and Settings immediately without reload.
+- **8. Edit Name Modal (both phone & desktop)**:
+  - Replaced autosaving input in Settings > Profile with text display and pencil icon button.
+  - Tapping opens "Edit name" modal pre-filled with current name (1-60 characters), Cancel, and Save (persists to Dexie & syncs).
 
 ## Environment variables for Vercel
 

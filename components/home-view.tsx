@@ -334,10 +334,10 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
       {/* Header section */}
       <div className="space-y-1">
         <p className="text-xs font-medium text-muted-foreground sm:text-sm">
-          {!currentAuthUserId
-            ? "Welcome, guest"
-            : profile?.display_name?.trim()
-              ? `Welcome back, ${profile.display_name.trim().split(/\s+/)[0]}`
+          {profile?.display_name?.trim()
+            ? `Welcome back, ${profile.display_name.trim().split(/\s+/)[0]}`
+            : !currentAuthUserId
+              ? "Welcome, guest"
               : "Welcome back"}
         </p>
         <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">

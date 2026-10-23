@@ -251,9 +251,27 @@ export function ExportView() {
 
       {/* 2. Action Checkboxes */}
       <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-xs space-y-3">
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Include actions
-        </label>
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Records to include
+          </label>
+          <label className="flex items-center gap-1.5 text-xs font-medium text-foreground cursor-pointer">
+            <input
+              type="checkbox"
+              data-testid="export-kind-all"
+              checked={includeIncome && includeExpenses && includeGiving && includeLent}
+              onChange={(e) => {
+                const val = e.target.checked;
+                setIncludeIncome(val);
+                setIncludeExpenses(val);
+                setIncludeGiving(val);
+                setIncludeLent(val);
+              }}
+              className="size-4 rounded border-border text-primary accent-primary"
+            />
+            <span>All</span>
+          </label>
+        </div>
         <div className="grid grid-cols-2 gap-2">
           <label className="flex items-center gap-2 rounded-xl border border-border/50 bg-background p-2.5 text-xs font-medium cursor-pointer hover:bg-muted/30">
             <input
@@ -293,7 +311,7 @@ export function ExportView() {
               onChange={(e) => setIncludeLent(e.target.checked)}
               className="size-4 rounded border-border text-primary accent-primary"
             />
-            <span>Money I lent</span>
+            <span>Lent</span>
           </label>
         </div>
       </div>

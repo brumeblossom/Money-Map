@@ -31,13 +31,12 @@ import {
   owedToMe,
 } from "@/lib/calc";
 import { formatDate, formatMoney, formatMonthYear } from "@/lib/format";
-import { buildPeriodReport } from "@/lib/report/builder";
-import { downloadReportPdf } from "@/lib/report/pdf-export";
 import { DateField } from "@/components/date-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LentListView } from "@/components/lent-list-view";
 import { EntryModal } from "@/components/entry-modal";
+import { ExportModal } from "@/components/export-modal";
 
 export type RecordsTab = "income" | "expenses" | "giving" | "lent";
 
@@ -224,7 +223,7 @@ export function RecordsView() {
   const rawPayments = useLoanPayments();
   const loans = React.useMemo(() => rawLoans ?? [], [rawLoans]);
   const loanPayments = React.useMemo(() => rawPayments ?? [], [rawPayments]);
-  const [isExportingPdf, setIsExportingPdf] = React.useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = React.useState(false);
 
   // Category map for rapid lookup
   const categoryMap = React.useMemo(() => {
@@ -317,75 +316,8 @@ export function RecordsView() {
     });
   };
 
-  const handleExportPdf = async () => {
-    try {
-      setIsExportingPdf(true);
-      toast.info("Generating PDF...");
-      const kind =
-        activeTab === "income"
-          ? ["income"]
-          : activeTab === "expenses"
-            ? ["expense"]
-            : activeTab === "giving"
-              ? ["giving"]
-              : ["lent"];
-
-      const range =
-        activeTab === "lent"
-          ? { start: "2000-01-01", end: "2099-12-31" }
-          : periodPreset === "custom"
-            ? customRange
-            : getPeriodPreset(periodPreset, today);
-
-      const matchingEntries = (entries || []).filter((e) => {
-        if (!kind.includes(e.kind)) return false;
-        if (selectedCategoryId !== "all" && e.category_id !== selectedCategoryId) return false;
-        if (e.occurred_on < range.start || e.occurred_on > range.end) return false;
-        if (searchQuery.trim()) {
-          const q = searchQuery.trim().toLowerCase();
-          const desc = (e.description || "").toLowerCase();
-          const cp = (e.counterparty || "").toLowerCase();
-          const catName = (categoryMap.get(e.category_id)?.name || "").toLowerCase();
-          if (!desc.includes(q) && !cp.includes(q) && !catName.includes(q)) return false;
-        }
-        return true;
-      });
-
-      const matchingLoans = (loans || []).filter((l) => {
-        if (activeTab !== "lent") return false;
-        if (selectedCategoryId !== "all" && l.category_id !== selectedCategoryId) return false;
-        if (searchQuery.trim()) {
-          const q = searchQuery.trim().toLowerCase();
-          const cp = (l.counterparty || "").toLowerCase();
-          const desc = (l.description || "").toLowerCase();
-          const catName = (categoryMap.get(l.category_id)?.name || "").toLowerCase();
-          if (!cp.includes(q) && !desc.includes(q) && !catName.includes(q)) return false;
-        }
-        return true;
-      });
-
-      const snapshot = buildPeriodReport({
-        periodStart: range.start,
-        periodEnd: range.end,
-        kinds: kind,
-        hideDetails: false,
-        currency,
-        userName: profile?.display_name || null,
-        entries: matchingEntries,
-        categories: categories || [],
-        loans: matchingLoans,
-        loanPayments: loanPayments || [],
-        today,
-      });
-
-      await downloadReportPdf(snapshot);
-      toast.success("PDF downloaded");
-    } catch (err) {
-      console.error("Export PDF error:", err);
-      toast.error("Failed to export PDF");
-    } finally {
-      setIsExportingPdf(false);
-    }
+  const handleExportPdf = () => {
+    setIsExportModalOpen(true);
   };
 
   // Add Entry/Loan Modal state
@@ -811,12 +743,11 @@ export function RecordsView() {
             type="button"
             variant="outline"
             onClick={handleExportPdf}
-            disabled={isExportingPdf}
             data-testid="records-export-button"
             className="h-10 items-center justify-center gap-2 rounded-xl border border-input bg-card px-4 text-sm font-semibold text-foreground hover:bg-muted/50 transition-colors shrink-0 shadow-xs cursor-pointer ml-auto"
           >
             <FileDown className="size-4" />
-            <span>{isExportingPdf ? "Exporting..." : "Export PDF"}</span>
+            <span>Export PDF</span>
           </Button>
         </div>
 
@@ -891,7 +822,6 @@ export function RecordsView() {
               variant="outline"
               size="icon"
               onClick={handleExportPdf}
-              disabled={isExportingPdf}
               aria-label="Export PDF"
               data-testid="records-export-mobile-button"
               className="size-10 rounded-xl shrink-0"
@@ -1137,6 +1067,13 @@ export function RecordsView() {
         action={addModalAction}
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
+        currency={currency}
+      />
+
+      {/* Export PDF Modal */}
+      <ExportModal
+        open={isExportModalOpen}
+        onOpenChange={setIsExportModalOpen}
         currency={currency}
       />
     </div>

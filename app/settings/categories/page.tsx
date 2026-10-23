@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, Tag } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { CategoriesSettings } from "@/components/categories-settings";
 import type { CategoryScope } from "@/lib/db/dexie";
 
@@ -31,9 +31,8 @@ function CategoriesPageContent() {
           <ArrowLeft className="size-4" />
         </Link>
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <Tag className="size-5 text-primary" />
-            <span>Categories</span>
+          <h2 className="text-xl font-bold tracking-tight text-foreground">
+            Categories
           </h2>
           <p className="text-xs text-muted-foreground">
             Manage, reorder, and customize categories for all transactions.

@@ -107,24 +107,38 @@ export function LentListView({
     return filteredLoans.filter((item) => item.status === "Paid off");
   }, [filteredLoans]);
 
-  const handleDeleteLoan = async (loan: LoanRow, e: React.MouseEvent) => {
+  // Delete confirmation state
+  const [loanToDelete, setLoanToDelete] = React.useState<LoanRow | null>(null);
+  const [isDeletingLoan, setIsDeletingLoan] = React.useState(false);
+
+  const handleDeleteLoan = (loan: LoanRow, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setLoanToDelete(loan);
+  };
 
-    if (!confirm(`Delete loan to "${loan.counterparty}"?`)) {
-      return;
-    }
-
-    await softDeleteLoan(loan.id);
-    toast("Loan deleted", {
-      duration: 5000,
-      action: {
-        label: "Undo",
-        onClick: async () => {
-          await restoreLoan(loan.id);
+  const confirmDeleteLoan = async () => {
+    if (!loanToDelete) return;
+    const loanId = loanToDelete.id;
+    try {
+      setIsDeletingLoan(true);
+      await softDeleteLoan(loanId);
+      setLoanToDelete(null);
+      toast("Loan deleted", {
+        duration: 5000,
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            await restoreLoan(loanId);
+          },
         },
-      },
-    });
+      });
+    } catch (err) {
+      console.error("Failed to delete loan", err);
+      toast("Failed to delete loan");
+    } finally {
+      setIsDeletingLoan(false);
+    }
   };
 
   const handleEditLoan = (loan: LoanRow, e: React.MouseEvent) => {
@@ -322,6 +336,38 @@ export function LentListView({
           loan={loanToEdit}
           currency={currency}
         />
+      )}
+
+      {/* Delete Loan Confirmation Dialog */}
+      {loanToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-background p-6 shadow-xl animate-in fade-in zoom-in-95">
+            <h3 className="text-lg font-bold tracking-tight text-foreground">
+              Delete loan?
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              This loan and all its repayments will be removed. You can undo this within 5 seconds.
+            </p>
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setLoanToDelete(null)}
+                disabled={isDeletingLoan}
+                className="rounded-xl"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDeleteLoan}
+                disabled={isDeletingLoan}
+                className="rounded-xl"
+              >
+                {isDeletingLoan ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

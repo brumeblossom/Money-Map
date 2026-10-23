@@ -22,16 +22,23 @@ import {
   listCategories,
 } from "@/lib/repo";
 import { toast } from "sonner";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 const ACTION_TABS: { scope: CategoryScope; label: string }[] = [
   { scope: "income", label: "Income" },
   { scope: "expense", label: "Expenses" },
   { scope: "giving", label: "Giving" },
+  { scope: "lent", label: "Lending" },
 ];
 
-export function CategoriesSettings() {
-  const [activeScope, setActiveScope] = React.useState<CategoryScope>("income");
+export interface CategoriesSettingsProps {
+  initialScope?: CategoryScope;
+  limit?: number;
+}
+
+export function CategoriesSettings({ initialScope = "income", limit }: CategoriesSettingsProps = {}) {
+  const [activeScope, setActiveScope] = React.useState<CategoryScope>(initialScope);
   const [newCategoryName, setNewCategoryName] = React.useState("");
   const [isAdding, setIsAdding] = React.useState(false);
 
@@ -43,10 +50,15 @@ export function CategoriesSettings() {
   const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null);
 
   // Query all non-deleted categories for activeScope (including hidden ones)
-  const categories = useLiveQuery(
+  const categoriesQuery = useLiveQuery(
     () => listCategories(activeScope, true, false, db),
     [activeScope],
-  ) ?? [];
+  );
+  const categories = React.useMemo(() => categoriesQuery ?? [], [categoriesQuery]);
+
+  const displayedCategories = React.useMemo(() => {
+    return limit ? categories.slice(0, limit) : categories;
+  }, [categories, limit]);
 
   // Add category
   const handleAddCategory = async (e: React.FormEvent) => {
@@ -298,12 +310,12 @@ export function CategoriesSettings() {
         data-testid="categories-list"
         className="divide-y divide-border/60 rounded-xl border border-border bg-background/50 overflow-hidden"
       >
-        {categories.length === 0 ? (
+        {displayedCategories.length === 0 ? (
           <div className="p-4 text-center text-xs text-muted-foreground">
             No categories found for this action.
           </div>
         ) : (
-          categories.map((cat, index) => {
+          displayedCategories.map((cat, index) => {
             const isEditing = editingCategoryId === cat.id;
 
             return (
@@ -470,6 +482,18 @@ export function CategoriesSettings() {
           })
         )}
       </div>
+
+      {limit && (
+        <div className="pt-2 flex justify-end">
+          <Link
+            href={`/settings/categories?group=${activeScope}`}
+            data-testid="categories-see-all-link"
+            className="text-xs font-semibold text-primary hover:underline"
+          >
+            See all {ACTION_TABS.find((t) => t.scope === activeScope)?.label.toLowerCase()} categories →
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

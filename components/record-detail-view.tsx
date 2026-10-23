@@ -16,14 +16,15 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   Heart,
+  FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { db } from "@/lib/db/dexie";
 import { softDeleteEntry, restoreEntry } from "@/lib/repo";
 import { formatDate, formatMoney } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import { RecordExportBar } from "@/components/record-export-bar";
 import { buildSingleEntryReport } from "@/lib/report/builder";
+import { downloadReportPdf } from "@/lib/report/pdf-export";
 
 export interface RecordDetailViewProps {
   id: string;
@@ -33,6 +34,7 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
   const router = useRouter();
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = React.useState(false);
 
   const entry = useLiveQuery(async () => {
     return await db.entries.get(id);
@@ -49,6 +51,29 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
   });
 
   const currency = profile?.currency || "NGN";
+
+  const handleDownloadPdf = async () => {
+    if (!entry) return;
+    try {
+      setIsDownloadingPdf(true);
+      toast.info("Generating PDF...");
+      const snapshot = buildSingleEntryReport({
+        entry,
+        categoryName: category?.name || "Uncategorised",
+        currency,
+        userName: profile?.display_name || "",
+        hideDetails: false,
+        repeats: entry.recurring_rule_id ? "Monthly" : "No",
+      });
+      await downloadReportPdf(snapshot);
+      toast.success("PDF downloaded");
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      toast.error("Failed to generate PDF");
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
 
   if (entry === undefined) {
     return (
@@ -130,6 +155,19 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
           <span>Records</span>
         </button>
         <div className="flex items-center gap-2">
+          {/* Desktop: medium button on the right of the header */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadPdf}
+            disabled={isDownloadingPdf}
+            data-testid="detail-export-pdf-button"
+            className="hidden sm:inline-flex gap-1.5 rounded-xl font-semibold cursor-pointer"
+          >
+            <FileDown className="size-3.5" />
+            <span>{isDownloadingPdf ? "Generating..." : "Download PDF"}</span>
+          </Button>
+
           <Link href={`/records/${entry.id}/edit`}>
             <Button
               variant="outline"
@@ -256,23 +294,19 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
         </dl>
       </div>
 
-      {/* Export & Share buttons (Prompt 16 / US-8.1, US-8.2) */}
-      <RecordExportBar
-        type="entries"
-        id={entry.id}
-        date={entry.occurred_on}
-        kind={entry.kind}
-        getSnapshot={(hideDetails) =>
-          buildSingleEntryReport({
-            entry,
-            categoryName: category?.name || "Uncategorised",
-            currency,
-            userName: profile?.display_name || "",
-            hideDetails,
-            repeats: entry.recurring_rule_id ? "Monthly" : "No",
-          })
-        }
-      />
+      {/* Phone: full-width button at the bottom of the details */}
+      <div className="sm:hidden pt-2">
+        <Button
+          variant="outline"
+          onClick={handleDownloadPdf}
+          disabled={isDownloadingPdf}
+          data-testid="detail-export-pdf-mobile-button"
+          className="w-full h-11 gap-2 rounded-xl font-semibold cursor-pointer"
+        >
+          <FileDown className="size-4" />
+          <span>{isDownloadingPdf ? "Generating PDF..." : "Download PDF"}</span>
+        </Button>
+      </div>
 
       {/* Delete Confirmation Modal / Alert */}
       {showDeleteConfirm && (

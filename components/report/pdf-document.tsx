@@ -5,9 +5,29 @@ import {
   Text,
   View,
   StyleSheet,
+  Font,
 } from "@react-pdf/renderer";
 import type { ReportSnapshot } from "@/lib/report/types";
 import { formatMoney } from "@/lib/format";
+
+let fontsRegistered = false;
+export function registerFonts() {
+  if (fontsRegistered) return;
+  fontsRegistered = true;
+  try {
+    Font.register({
+      family: "NotoSans",
+      fonts: [
+        { src: "/fonts/NotoSans-Regular.ttf", fontWeight: "normal" },
+        { src: "/fonts/NotoSans-Bold.ttf", fontWeight: "bold" },
+      ],
+    });
+  } catch (err) {
+    console.error("Font registration error:", err);
+  }
+}
+
+registerFonts();
 
 const styles = StyleSheet.create({
   page: {
@@ -15,7 +35,7 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
     paddingHorizontal: 36,
     fontSize: 9,
-    fontFamily: "Helvetica",
+    fontFamily: "NotoSans",
     color: "#0f172a",
     backgroundColor: "#ffffff",
   },
@@ -33,7 +53,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "NotoSans",
+    fontWeight: "bold",
     color: "#0f172a",
     letterSpacing: -0.5,
   },
@@ -41,12 +62,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#475569",
     marginTop: 4,
-  },
-  userName: {
-    fontSize: 11,
-    fontFamily: "Helvetica-Bold",
-    color: "#1e293b",
-    textAlign: "right",
   },
   totalsGrid: {
     flexDirection: "row",
@@ -64,14 +79,16 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 7.5,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "NotoSans",
+    fontWeight: "bold",
     color: "#64748b",
     textTransform: "uppercase",
     marginBottom: 4,
   },
   totalValue: {
     fontSize: 12,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "NotoSans",
+    fontWeight: "bold",
     color: "#0f172a",
   },
   totalValueIncome: {
@@ -82,7 +99,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 12,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "NotoSans",
+    fontWeight: "bold",
     color: "#0f172a",
     marginBottom: 8,
     marginTop: 12,
@@ -110,7 +128,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   th: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "NotoSans",
+    fontWeight: "bold",
     fontSize: 8,
     color: "#475569",
     textTransform: "uppercase",
@@ -145,7 +164,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   categoryName: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "NotoSans",
+    fontWeight: "bold",
     fontSize: 8,
     color: "#334155",
   },
@@ -165,7 +185,8 @@ const styles = StyleSheet.create({
   },
   singleAmount: {
     fontSize: 26,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "NotoSans",
+    fontWeight: "bold",
     color: "#0f172a",
     marginVertical: 4,
   },
@@ -185,7 +206,8 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     color: "#64748b",
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "NotoSans",
+    fontWeight: "bold",
     fontSize: 9,
   },
   detailValue: {
@@ -223,9 +245,6 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
                 <Text style={styles.title}>Money Map</Text>
                 <Text style={styles.subtitle}>{snapshot.displayDate}</Text>
               </View>
-              {snapshot.userName ? (
-                <Text style={styles.userName}>{snapshot.userName}</Text>
-              ) : null}
             </View>
           </View>
 
@@ -293,9 +312,6 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
                 <Text style={styles.title}>Money Map</Text>
                 <Text style={styles.subtitle}>Loan to {snapshot.borrower}</Text>
               </View>
-              {snapshot.userName ? (
-                <Text style={styles.userName}>{snapshot.userName}</Text>
-              ) : null}
             </View>
           </View>
 
@@ -308,13 +324,18 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
             </View>
             <View style={styles.totalCard}>
               <Text style={styles.totalLabel}>RECEIVED SO FAR</Text>
-              <Text style={styles.totalValue}>
+              <Text style={[styles.totalValue, styles.totalValueIncome]}>
                 {formatMoney(snapshot.receivedSoFar, snapshot.currency)}
               </Text>
             </View>
             <View style={styles.totalCard}>
               <Text style={styles.totalLabel}>BALANCE LEFT</Text>
-              <Text style={styles.totalValue}>
+              <Text
+                style={[
+                  styles.totalValue,
+                  snapshot.balanceLeft > 0 ? styles.totalValueExpense : styles.totalValueIncome,
+                ]}
+              >
                 {formatMoney(snapshot.balanceLeft, snapshot.currency)}
               </Text>
             </View>
@@ -330,12 +351,6 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
               <Text style={styles.detailValue}>{snapshot.interest}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Total to get back</Text>
-              <Text style={styles.detailValue}>
-                {formatMoney(snapshot.totalToGetBack, snapshot.currency)}
-              </Text>
-            </View>
-            <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Expected back by</Text>
               <Text style={styles.detailValue}>{snapshot.expectedBackBy}</Text>
             </View>
@@ -346,15 +361,13 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
           </View>
 
           {snapshot.payments.length > 0 && (
-            <View style={{ marginTop: 14 }}>
-              <Text style={styles.sectionTitle}>Money received</Text>
+            <View style={{ marginTop: 16 }}>
+              <Text style={styles.sectionTitle}>Repayments</Text>
               <View style={styles.table}>
                 <View style={[styles.tableRow, styles.tableHeaderRow]}>
                   <Text style={[styles.th, { width: "30%" }]}>Date</Text>
                   <Text style={[styles.th, { width: "40%" }]}>Note</Text>
-                  <Text style={[styles.th, { width: "30%", textAlign: "right" }]}>
-                    Amount
-                  </Text>
+                  <Text style={[styles.th, { width: "30%", textAlign: "right" }]}>Amount</Text>
                 </View>
                 {snapshot.payments.map((p) => (
                   <View key={p.id} style={styles.tableRow}>
@@ -363,7 +376,7 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
                     <Text
                       style={[
                         styles.td,
-                        { width: "30%", textAlign: "right", fontFamily: "Helvetica-Bold" },
+                        { width: "30%", textAlign: "right", fontFamily: "NotoSans", fontWeight: "bold" },
                       ]}
                     >
                       +{formatMoney(p.amount, snapshot.currency)}
@@ -391,16 +404,13 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* Header */}
+        {/* Header - No user name as per Rule 13 */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View>
               <Text style={styles.title}>Money Map</Text>
               <Text style={styles.subtitle}>{snapshot.periodLabel}</Text>
             </View>
-            {snapshot.userName ? (
-              <Text style={styles.userName}>{snapshot.userName}</Text>
-            ) : null}
           </View>
         </View>
 
@@ -480,8 +490,8 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
                       styles.td,
                       styles.colAmount,
                       entry.action === "Income"
-                        ? { color: "#059669", fontFamily: "Helvetica-Bold" }
-                        : { color: "#e11d48", fontFamily: "Helvetica-Bold" },
+                        ? { color: "#059669", fontFamily: "NotoSans", fontWeight: "bold" }
+                        : { color: "#e11d48", fontFamily: "NotoSans", fontWeight: "bold" },
                     ]}
                   >
                     {formatMoney(entry.amount, snapshot.currency)}
@@ -517,7 +527,7 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
                     style={[
                       styles.td,
                       styles.colBalance,
-                      { fontFamily: "Helvetica-Bold" },
+                      { fontFamily: "NotoSans", fontWeight: "bold" },
                     ]}
                   >
                     {formatMoney(loan.balance, snapshot.currency)}

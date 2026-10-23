@@ -17,7 +17,7 @@ import {
   subscribeInstallPrompt,
 } from "@/lib/pwa";
 
-export function InstallPwaCard() {
+export function InstallPwaCard({ embedded = false }: { embedded?: boolean } = {}) {
   const [isInstalling, setIsInstalling] = React.useState(false);
   const [installSuccess, setInstallSuccess] = React.useState(false);
 
@@ -56,7 +56,11 @@ export function InstallPwaCard() {
   return (
     <div
       data-testid="pwa-install-card"
-      className="rounded-xl border border-border bg-card p-5 shadow-xs"
+      className={
+        embedded
+          ? "pt-4 border-t border-border"
+          : "rounded-xl border border-border bg-card p-5 shadow-xs"
+      }
     >
       <div className="flex items-start justify-between gap-4">
         <div>

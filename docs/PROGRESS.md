@@ -1011,14 +1011,61 @@
   - Account deletion: typing DELETE, calling `/api/account/delete`, verifying server-side cascade, wiping local Dexie data, and redirecting to `/welcome`.
   - App version and mailto feedback link display.
 
+### Prompt 16b: Sync Bug Fixes, UI Polish, Share Links & Email Reminders Removal, and Settings Restructure
+
+- **A. Sync Bug Resolution**:
+  - **Root Cause**: When an online user made changes that encountered permanent server rejections (such as category unique constraint conflicts on `(user_id, scope, name)`, foreign key dependency order issues, or schema validation errors), the Supabase upsert failed with 409 or 422 or 500 error. The client sync engine caught this error and re-queued the changes indefinitely while displaying "Offline (12 changes waiting)".
+  - **Fix**:
+    1. On the server (`app/api/sync/push/route.ts`): Implemented per-row fallback handling for categories to detect conflicting existing categories by `(user_id, scope, name)`, remapping references so deduplication soft-deletions never attempt to delete the server's canonical category. If any row is permanently unprocessable, it is marked as `skipped` in `{ applied, skipped }` response.
+    2. On the client (`lib/sync/index.ts`): If the server permanently skips a row or rejects with 422, the item is removed from the local outbox so it does not block the sync queue. User's data remains safely stored locally on device.
+    3. Badge States: Updated `components/app-header.tsx` with exact status states:
+       - "Synced" (green dot)
+       - "Syncing" (animated spinner)
+       - "Offline (N changes waiting)" ONLY when `!navigator.onLine`
+       - "Couldn't sync, retrying" when `navigator.onLine` but server synchronization fails
+       - Guests: "Saved on this device · Sign in to back up"
+- **B. Home and Sidebar**:
+  - Small greeting text above "What are we recording today?": "Welcome back, <first name>" for users with display name, "Welcome back" if no name, "Welcome, guest" for guests.
+  - Sidebar footer (desktop) and mobile account area: displays user name and email without avatar icon; guests: "Guest · Sign in to back up". Connected live auth listener to immediately update upon sign-in without page reload.
+  - Removed "This is someone else's device" checkbox from sign-in.
+- **C. Records**:
+  - Each tab (`Income`, `Expenses`, `Giving`, `Lent`) maintains its own independent filters for search, category, and period in URL per tab (`?tab=...&income_period=...&income_category=...`). Changing filters on one tab no longer impacts any other tab.
+  - Summary row Add button: desktop only (`hidden lg:inline-flex`); phones display only the floating `+` button.
+  - Filter dropdown arrows: inside chevron with 12px right padding matching text's 12px left padding, vertically centered.
+  - Export button layout: desktop has search box, category and period dropdowns, and medium "Export PDF" button on the same row; phone row 1 has full-width search, row 2 has Category | Period | square download icon button with no horizontal scroll at 360px.
+  - Fixed phone tap bug: tapping record opens detail view directly without flashing Edit/Delete action buttons.
+- **D. Share Links Complete Removal**:
+  - Removed share link generation, `/s/[token]` public routes, `/api/share-links` endpoints, Settings > Share links, and `components/record-export-bar.tsx`.
+  - Record and loan detail pages now contain a single "Download PDF" button (desktop: medium button on header right; phone: full-width button at bottom of details).
+- **E. Insights**:
+  - Added "Export PDF" button on Insights: desktop medium button top-right; phone icon button next to period switcher.
+  - Smart tip card fallback: "Tips will appear here after a few weeks of records."
+- **F. PDF**:
+  - Bundled local Noto Sans fonts (`NotoSans-Regular.ttf` and `NotoSans-Bold.ttf`) with `@react-pdf/renderer` `Font.register` for full offline support including the Naira symbol (₦ / U+20A6).
+  - Removed user name from top-right header in all PDF reports.
+  - Verified extracted PDF text contains "₦" and omits user name.
+- **G & I. Settings Layout Restructuring**:
+  - Grouped into 4 cards with uppercase section labels:
+    1) `PROFILE`: Name (editable, autosaves), Email (read only), Currency.
+    2) `YOUR DATA`: "Categories" (shows at most 5 per group with "See all" link to `/settings/categories?group=<group>`) and "Repeating entries" (shows at most 5 soonest due with pause/resume, edit, delete controls and "See all" link to `/settings/repeating`).
+    3) `APPEARANCE`: Theme selector (Light / Dark / System) and Add to Home Screen help (`InstallPwaCard`).
+    4) `ACCOUNT`: Sign out, Sign out of all devices, and red Delete account below a divider with 32px spacing. All account buttons are full-width, left-aligned, and same height.
+    - Footer row: "Money Map v1" on left, "Send feedback" mailto link (`mailto:workwithbrume@gmail.com?subject=Money%20Map%20feedback`) on right.
+  - Removed email reminders completely: deleted daily reminder toggle, cron route `/api/cron/reminders`, cron config in `vercel.json`, and Resend env vars.
+- **H. Date Rules**:
+  - Enforced no future dates across date pickers and edit forms (disabled in calendar and validated via Zod with message "Date can't be in the future"), with exception of "Expected back by" on loans (must be on or after Date lent). Updated `docs/PRD.md` Section 4.
+
 ## Environment variables for Vercel
 
-The following environment variables need to be set in Vercel project settings:
-1. `CRON_SECRET`: Required secret token for authorizing Vercel Cron jobs (`Authorization: Bearer <CRON_SECRET>`).
-2. `SUPABASE_SERVICE_ROLE_KEY`: Required service role key for cron route to query Supabase across users with RLS bypass.
-3. `RESEND_API_KEY`: (Optional) Resend API key for sending daily email reminder digests. If left unset, cron returns `{ sent: 0, skipped: "email not configured" }`.
-4. `EMAIL_FROM`: (Optional) Sender email address for Resend reminders (e.g. `"Money Map <reminders@yourdomain.com>"` or `"onboarding@resend.dev"`).
-5. `NEXT_PUBLIC_APP_URL`: Base application URL for generating public share links (e.g. `"https://moneymap.app"`).
+The following environment variables can now be safely removed from Vercel project settings:
+1. `CRON_SECRET` (Delete: email reminders cron removed)
+2. `RESEND_API_KEY` (Delete: email reminders removed)
+3. `EMAIL_FROM` (Delete: email reminders removed)
+4. `NEXT_PUBLIC_APP_URL` (Delete: public share links removed)
+
+**Keep in Vercel:**
+- `SUPABASE_SERVICE_ROLE_KEY`: **Keep!** Required for `POST /api/account/delete` to delete auth users from `auth.users` and cascade user deletion.
+- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`: **Keep!**
 
 ## Known issues
 
@@ -1026,6 +1073,6 @@ The following environment variables need to be set in Vercel project settings:
 
 ## Next prompt
 
-Prompt 19: hardening
+Prompt 18: settings and account (skip anything already done).
 
 

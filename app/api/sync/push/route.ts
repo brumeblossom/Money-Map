@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   }
 
-  // 3. Request Body Parsing & Validation (PRD section 7: 422 on invalid input)
+  // 3. Request Body Parsing & Validation (PRD section 7: 422 on completely malformed JSON)
   let body: unknown;
   try {
     body = await req.json();
@@ -95,19 +95,20 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // For categories, also fetch user categories by scope/name to merge duplicates
+    // For categories, fetch all user categories to merge duplicates and avoid unique constraint crashes
     let existingUserCategories: {
       id: string;
       scope: string;
       name: string;
       slug: string | null;
       updated_at: string;
+      deleted_at: string | null;
     }[] = [];
 
     if (table === "categories") {
       const { data } = await supabase
         .from("categories")
-        .select("id, scope, name, slug, updated_at")
+        .select("id, scope, name, slug, updated_at, deleted_at")
         .eq("user_id", user.id);
 
       if (data) {
@@ -141,7 +142,9 @@ export async function POST(req: NextRequest) {
           name: string;
           slug?: string | null;
           updated_at: string;
+          deleted_at?: string | null;
         };
+
         const matchingServerCat = existingUserCategories.find(
           (c) =>
             c.id !== catRow.id &&
@@ -154,20 +157,24 @@ export async function POST(req: NextRequest) {
           remappedCategoryIds.set(catRow.id, matchingServerCat.id);
           applied.push(catRow.id);
 
-          const incomingTime = new Date(catRow.updated_at).getTime();
-          const serverTime = new Date(matchingServerCat.updated_at).getTime();
-          if (incomingTime > serverTime) {
-            toUpsert.push({
-              ...catRow,
-              id: matchingServerCat.id,
-              user_id: user.id,
-            });
+          // If the incoming category was soft-deleted as part of deduplication,
+          // do NOT delete the server's canonical category!
+          if (!catRow.deleted_at) {
+            const incomingTime = new Date(catRow.updated_at).getTime();
+            const serverTime = new Date(matchingServerCat.updated_at).getTime();
+            if (incomingTime > serverTime) {
+              toUpsert.push({
+                ...catRow,
+                id: matchingServerCat.id,
+                user_id: user.id,
+              });
+            }
           }
           continue;
         }
       }
 
-      const incomingUpdatedAt = new Date(change.row.updated_at).getTime();
+      const incomingUpdatedAt = new Date(change.row.updated_at as string).getTime();
       const serverRow = existingMap.get(id);
 
       if (serverRow) {
@@ -193,7 +200,7 @@ export async function POST(req: NextRequest) {
       toUpsert.push(rowToUpsert);
     }
 
-    // Upsert into Supabase
+    // Upsert into Supabase with individual fallback if batch fails
     if (toUpsert.length > 0) {
       if (table === "profiles") {
         const { error } = await supabase
@@ -201,8 +208,18 @@ export async function POST(req: NextRequest) {
           .upsert(toUpsert as never[], { onConflict: "user_id" });
 
         if (error) {
-          console.error(`Error upserting profiles:`, error);
-          throw new Error(`Failed to upsert profiles: ${error.message}`);
+          console.error(`Error upserting profiles batch, falling back:`, error);
+          for (const row of toUpsert) {
+            const { error: rowErr } = await supabase
+              .from("profiles")
+              .upsert(row as never, { onConflict: "user_id" });
+            if (rowErr) {
+              console.error(`Permanent sync rejection for profiles row:`, row, rowErr.message);
+              skipped.push(user.id);
+              const appIdx = applied.indexOf(user.id);
+              if (appIdx !== -1) applied.splice(appIdx, 1);
+            }
+          }
         }
       } else {
         const { error } = await supabase
@@ -210,8 +227,41 @@ export async function POST(req: NextRequest) {
           .upsert(toUpsert as never[], { onConflict: "id" });
 
         if (error) {
-          console.error(`Error upserting ${table}:`, error);
-          throw new Error(`Failed to upsert ${table}: ${error.message}`);
+          console.error(`Error upserting ${table} batch, falling back to per-row upsert:`, error.message);
+          for (const row of toUpsert) {
+            const rowId = (row as { id: string }).id;
+            const rowToInsert = row;
+
+            // If category unique constraint conflict on (user_id, scope, name)
+            if (table === "categories") {
+              const cat = row as { id: string; scope: "income" | "expense" | "giving" | "lent"; name: string };
+              const { data: conflictCat } = await supabase
+                .from("categories")
+                .select("id")
+                .eq("user_id", user.id)
+                .eq("scope", cat.scope)
+                .ilike("name", cat.name.trim())
+                .maybeSingle();
+
+              if (conflictCat && conflictCat.id !== cat.id) {
+                remappedCategoryIds.set(cat.id, conflictCat.id);
+                if (!applied.includes(cat.id)) applied.push(cat.id);
+                continue;
+              }
+            }
+
+            const { error: rowErr } = await supabase
+              .from(table)
+              .upsert(rowToInsert as never, { onConflict: "id" });
+
+            if (rowErr) {
+              console.error(`Permanent sync rejection for ${table} row ${rowId}:`, rowErr.message);
+              // Mark skipped so client clears it from outbox without stalling queue
+              if (!skipped.includes(rowId)) skipped.push(rowId);
+              const appIdx = applied.indexOf(rowId);
+              if (appIdx !== -1) applied.splice(appIdx, 1);
+            }
+          }
         }
       }
     }
@@ -219,3 +269,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ applied, skipped }, { status: 200 });
 }
+

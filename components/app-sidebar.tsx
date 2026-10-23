@@ -8,7 +8,6 @@ import {
   FileText,
   Home,
   Settings,
-  User,
   Wallet,
 } from "lucide-react";
 import { cn } from "cn";
@@ -28,6 +27,64 @@ export const MAIN_NAV_ITEMS: NavItem[] = [
 
 export function AppSidebar({ className }: { className?: string }) {
   const pathname = usePathname();
+  const [user, setUser] = React.useState<{ name: string; email: string } | null>(null);
+
+  React.useEffect(() => {
+    let subscription: { unsubscribe: () => void } | null = null;
+
+    async function checkUser() {
+      try {
+        if (typeof document !== "undefined") {
+          const match = document.cookie.match(/moneymap_mock_user=([^;]+)/);
+          if (match) {
+            const { db } = await import("@/lib/db/dexie");
+            const profile = (await db.profiles.toArray())[0];
+            setUser({
+              name: profile?.display_name || "User",
+              email: "test@example.com",
+            });
+            return;
+          }
+        }
+
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session?.user) {
+          const { db } = await import("@/lib/db/dexie");
+          const profile = (await db.profiles.toArray())[0];
+          setUser({
+            name: profile?.display_name || sessionData.session.user.user_metadata?.full_name || "User",
+            email: sessionData.session.user.email || "",
+          });
+        } else {
+          setUser(null);
+        }
+
+        const { data: authSub } = supabase.auth.onAuthStateChange(async (_event, session) => {
+          if (session?.user) {
+            const { db } = await import("@/lib/db/dexie");
+            const profile = (await db.profiles.toArray())[0];
+            setUser({
+              name: profile?.display_name || session.user.user_metadata?.full_name || "User",
+              email: session.user.email || "",
+            });
+          } else {
+            setUser(null);
+          }
+        });
+        subscription = authSub.subscription;
+      } catch {
+        setUser(null);
+      }
+    }
+
+    checkUser();
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, []);
 
   return (
     <aside
@@ -79,24 +136,30 @@ export function AppSidebar({ className }: { className?: string }) {
         })}
       </nav>
 
-      {/* Bottom User Area */}
+      {/* Bottom User Area: no avatar/user icon; show name and email or Guest · Sign in to back up */}
       <div className="border-t border-border p-3">
         <Link
           href="/settings"
-          className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-accent/60"
+          data-testid="sidebar-settings-link"
+          className="flex items-center justify-between rounded-lg p-2 transition-colors hover:bg-accent/60"
         >
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
-            <User className="size-4" />
+          <div className="flex min-w-0 flex-1 flex-col text-left pr-2">
+            {user ? (
+              <>
+                <span className="truncate text-xs font-semibold text-foreground">
+                  {user.name}
+                </span>
+                <span className="truncate text-[11px] text-muted-foreground">
+                  {user.email}
+                </span>
+              </>
+            ) : (
+              <span className="truncate text-xs font-medium text-muted-foreground hover:text-foreground">
+                Guest · Sign in to back up
+              </span>
+            )}
           </div>
-          <div className="flex min-w-0 flex-1 flex-col text-left">
-            <span className="truncate text-xs font-semibold text-foreground">
-              Guest
-            </span>
-            <span className="truncate text-[11px] text-muted-foreground">
-              Offline mode
-            </span>
-          </div>
-          <Settings className="size-4 text-muted-foreground" />
+          <Settings className="size-4 text-muted-foreground shrink-0" />
         </Link>
       </div>
     </aside>

@@ -29,6 +29,9 @@ export interface DateFieldProps {
   required?: boolean;
   className?: string;
   error?: string;
+  allowFuture?: boolean;
+  minDate?: string;
+  maxDate?: string;
   "data-testid"?: string;
 }
 
@@ -43,6 +46,9 @@ export function DateField({
   required = false,
   className,
   error,
+  allowFuture = false,
+  minDate,
+  maxDate,
   "data-testid": dataTestId,
 }: DateFieldProps) {
   const generatedId = React.useId();
@@ -98,9 +104,26 @@ export function DateField({
     }
   };
 
+  const disabledMatcher = React.useMemo(() => {
+    return (day: Date) => {
+      const year = day.getFullYear();
+      const month = String(day.getMonth() + 1).padStart(2, "0");
+      const d = String(day.getDate()).padStart(2, "0");
+      const dStr = `${year}-${month}-${d}`;
+
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+      if (!allowFuture && dStr > todayStr) return true;
+      if (maxDate && dStr > maxDate) return true;
+      if (minDate && dStr < minDate) return true;
+      return false;
+    };
+  }, [allowFuture, minDate, maxDate]);
+
   // When a day is selected in the popover calendar
   const handleSelectDate = (selectedDay: Date | undefined) => {
-    if (!selectedDay) return;
+    if (!selectedDay || disabledMatcher(selectedDay)) return;
     const year = selectedDay.getFullYear();
     const month = String(selectedDay.getMonth() + 1).padStart(2, "0");
     const day = String(selectedDay.getDate()).padStart(2, "0");
@@ -169,6 +192,7 @@ export function DateField({
               mode="single"
               selected={calendarSelected}
               onSelect={handleSelectDate}
+              disabled={disabledMatcher}
             />
           </PopoverContent>
         </Popover>

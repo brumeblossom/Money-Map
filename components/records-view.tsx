@@ -15,6 +15,7 @@ import {
   Heart,
   Plus,
   FileDown,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { db, type EntryRow, type CategoryRow } from "@/lib/db/dexie";
@@ -30,12 +31,13 @@ import {
   owedToMe,
 } from "@/lib/calc";
 import { formatDate, formatMoney, formatMonthYear } from "@/lib/format";
+import { buildPeriodReport } from "@/lib/report/builder";
+import { downloadReportPdf } from "@/lib/report/pdf-export";
 import { DateField } from "@/components/date-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LentListView } from "@/components/lent-list-view";
 import { EntryModal } from "@/components/entry-modal";
-import { cn } from "@/lib/utils";
 
 export type RecordsTab = "income" | "expenses" | "giving" | "lent";
 
@@ -115,9 +117,6 @@ export function RecordsView() {
   const searchParams = useSearchParams();
 
   const tabParam = searchParams?.get("tab") ?? null;
-  const periodParam = searchParams?.get("period") ?? null;
-  const searchParam = searchParams?.get("search") ?? "";
-  const catParam = searchParams?.get("category") ?? "all";
 
   // Tab state (Income | Expenses | Giving | Lent)
   const [activeTab, setActiveTab] = React.useState<RecordsTab>(() => {
@@ -140,14 +139,58 @@ export function RecordsView() {
     }
   }, [tabParam]);
 
-  // Filters state
-  const [selectedCategoryId, setSelectedCategoryId] = React.useState<string>(catParam);
-  const [periodPreset, setPeriodPreset] = React.useState<PeriodPreset>(() => parsePeriod(periodParam));
-  const [customRange, setCustomRange] = React.useState<{ start: string; end: string }>({
-    start: new Date().toISOString().slice(0, 10),
-    end: new Date().toISOString().slice(0, 10),
+  // Today reference
+  const today = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  // Per-tab filters state (Income, Expenses, Giving, Lent keep their OWN search, category, and period)
+  interface TabFilterState {
+    category: string;
+    period: PeriodPreset;
+    customRange: { start: string; end: string };
+    search: string;
+  }
+
+  const [tabFilters, setTabFilters] = React.useState<Record<RecordsTab, TabFilterState>>(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const initDefault = (): TabFilterState => ({
+      category: "all",
+      period: "thisMonth",
+      customRange: {
+        start: todayStr.slice(0, 8) + "01",
+        end: todayStr,
+      },
+      search: "",
+    });
+
+    const init: Record<RecordsTab, TabFilterState> = {
+      income: initDefault(),
+      expenses: initDefault(),
+      giving: initDefault(),
+      lent: initDefault(),
+    };
+
+    const tabs: RecordsTab[] = ["income", "expenses", "giving", "lent"];
+    for (const t of tabs) {
+      const s = searchParams?.get(`${t}_search`) ?? (tabParam === t ? searchParams?.get("search") : null);
+      if (s) init[t].search = s;
+      const c = searchParams?.get(`${t}_category`) ?? (tabParam === t ? searchParams?.get("category") : null);
+      if (c) init[t].category = c;
+      const p = searchParams?.get(`${t}_period`) ?? (tabParam === t ? searchParams?.get("period") : null);
+      if (p) init[t].period = parsePeriod(p);
+      const start = searchParams?.get(`${t}_start`);
+      const end = searchParams?.get(`${t}_end`);
+      if (start && end) {
+        init[t].customRange = { start, end };
+      }
+    }
+    return init;
   });
-  const [searchQuery, setSearchQuery] = React.useState<string>(searchParam);
+
+  const currentFilters = tabFilters[activeTab];
+  const selectedCategoryId = currentFilters.category;
+  const periodPreset = currentFilters.period;
+  const customRange = currentFilters.customRange;
+  const searchQuery = currentFilters.search;
 
   // Selection state
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
@@ -177,6 +220,11 @@ export function RecordsView() {
   });
 
   const currency = profile?.currency || "NGN";
+  const rawLoans = useLoans();
+  const rawPayments = useLoanPayments();
+  const loans = React.useMemo(() => rawLoans ?? [], [rawLoans]);
+  const loanPayments = React.useMemo(() => rawPayments ?? [], [rawPayments]);
+  const [isExportingPdf, setIsExportingPdf] = React.useState(false);
 
   // Category map for rapid lookup
   const categoryMap = React.useMemo(() => {
@@ -189,17 +237,22 @@ export function RecordsView() {
     return map;
   }, [categories]);
 
-  // Today reference
-  const today = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
-
-  // Update URL helper
+  // Update URL helper (keeps each tab's filters in URL so Back works)
   const updateUrl = React.useCallback(
-    (tab: RecordsTab, period: PeriodPreset, search: string, cat: string, pushHistory = false) => {
+    (tab: RecordsTab, filters: Record<RecordsTab, TabFilterState>, pushHistory = false) => {
       const params = new URLSearchParams();
       params.set("tab", tab);
-      if (period !== "thisMonth") params.set("period", period);
-      if (search.trim()) params.set("search", search.trim());
-      if (cat !== "all") params.set("category", cat);
+      const tabs: RecordsTab[] = ["income", "expenses", "giving", "lent"];
+      for (const t of tabs) {
+        const f = filters[t];
+        if (f.search.trim()) params.set(`${t}_search`, f.search.trim());
+        if (f.category !== "all") params.set(`${t}_category`, f.category);
+        if (f.period !== "thisMonth") params.set(`${t}_period`, f.period);
+        if (f.period === "custom") {
+          params.set(`${t}_start`, f.customRange.start);
+          params.set(`${t}_end`, f.customRange.end);
+        }
+      }
       const url = `/records?${params.toString()}`;
       if (pushHistory) {
         router.push(url);
@@ -217,22 +270,122 @@ export function RecordsView() {
     }
     setSelectedIds(new Set());
     setIsSelectionMode(false);
-    updateUrl(newTab, periodPreset, searchQuery, selectedCategoryId, true);
+    updateUrl(newTab, tabFilters, true);
   };
 
   const handlePeriodChange = (newPeriod: PeriodPreset) => {
-    setPeriodPreset(newPeriod);
-    updateUrl(activeTab, newPeriod, searchQuery, selectedCategoryId, false);
+    setTabFilters((prev) => {
+      const next = {
+        ...prev,
+        [activeTab]: { ...prev[activeTab], period: newPeriod },
+      };
+      updateUrl(activeTab, next, false);
+      return next;
+    });
   };
 
   const handleSearchChange = (query: string) => {
-    setSearchQuery(query);
-    updateUrl(activeTab, periodPreset, query, selectedCategoryId, false);
+    setTabFilters((prev) => {
+      const next = {
+        ...prev,
+        [activeTab]: { ...prev[activeTab], search: query },
+      };
+      updateUrl(activeTab, next, false);
+      return next;
+    });
   };
 
   const handleCategoryChange = (catId: string) => {
-    setSelectedCategoryId(catId);
-    updateUrl(activeTab, periodPreset, searchQuery, catId, false);
+    setTabFilters((prev) => {
+      const next = {
+        ...prev,
+        [activeTab]: { ...prev[activeTab], category: catId },
+      };
+      updateUrl(activeTab, next, false);
+      return next;
+    });
+  };
+
+  const handleCustomRangeChange = (range: { start: string; end: string }) => {
+    setTabFilters((prev) => {
+      const next = {
+        ...prev,
+        [activeTab]: { ...prev[activeTab], customRange: range },
+      };
+      updateUrl(activeTab, next, false);
+      return next;
+    });
+  };
+
+  const handleExportPdf = async () => {
+    try {
+      setIsExportingPdf(true);
+      toast.info("Generating PDF...");
+      const kind =
+        activeTab === "income"
+          ? ["income"]
+          : activeTab === "expenses"
+            ? ["expense"]
+            : activeTab === "giving"
+              ? ["giving"]
+              : ["lent"];
+
+      const range =
+        activeTab === "lent"
+          ? { start: "2000-01-01", end: "2099-12-31" }
+          : periodPreset === "custom"
+            ? customRange
+            : getPeriodPreset(periodPreset, today);
+
+      const matchingEntries = (entries || []).filter((e) => {
+        if (!kind.includes(e.kind)) return false;
+        if (selectedCategoryId !== "all" && e.category_id !== selectedCategoryId) return false;
+        if (e.occurred_on < range.start || e.occurred_on > range.end) return false;
+        if (searchQuery.trim()) {
+          const q = searchQuery.trim().toLowerCase();
+          const desc = (e.description || "").toLowerCase();
+          const cp = (e.counterparty || "").toLowerCase();
+          const catName = (categoryMap.get(e.category_id)?.name || "").toLowerCase();
+          if (!desc.includes(q) && !cp.includes(q) && !catName.includes(q)) return false;
+        }
+        return true;
+      });
+
+      const matchingLoans = (loans || []).filter((l) => {
+        if (activeTab !== "lent") return false;
+        if (selectedCategoryId !== "all" && l.category_id !== selectedCategoryId) return false;
+        if (searchQuery.trim()) {
+          const q = searchQuery.trim().toLowerCase();
+          const cp = (l.counterparty || "").toLowerCase();
+          const desc = (l.description || "").toLowerCase();
+          const catName = (categoryMap.get(l.category_id)?.name || "").toLowerCase();
+          if (!cp.includes(q) && !desc.includes(q) && !catName.includes(q)) return false;
+        }
+        return true;
+      });
+
+      const snapshot = buildPeriodReport({
+        periodStart: range.start,
+        periodEnd: range.end,
+        kinds: kind,
+        hideDetails: false,
+        currency,
+        userName: profile?.display_name || null,
+        entries: matchingEntries,
+        categories: categories || [],
+        loans: matchingLoans,
+        loanPayments: loanPayments || [],
+        today,
+      });
+
+      await downloadReportPdf(snapshot);
+      toast.success("PDF downloaded");
+    } catch (err) {
+      console.error("Export PDF error:", err);
+      toast.error("Failed to export PDF");
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   // Add Entry/Loan Modal state
@@ -331,11 +484,6 @@ export function RecordsView() {
   }, [filteredEntries]);
 
   // Loans metrics for Lent tab
-  const rawLoans = useLoans();
-  const rawPayments = useLoanPayments();
-  const loans = React.useMemo(() => rawLoans ?? [], [rawLoans]);
-  const loanPayments = React.useMemo(() => rawPayments ?? [], [rawPayments]);
-
   const activeLoans = React.useMemo(() => {
     return loans.filter((loan) => {
       if (loan.deleted_at !== null) return false;
@@ -592,12 +740,13 @@ export function RecordsView() {
       </div>
 
       {/* 2. Filter Row Under Tabs */}
-      {/* Desktop: Search box, Category dropdown, Period dropdown (for entries), Add button at right end */}
-      {/* Phones: Category and Period sit side by side under Search box */}
+      {/* Desktop: Search box (shorter), Category (narrower), Period (narrower), medium "Export PDF" button on right of same row */}
+      {/* Phone: Row 1 = search full width; Row 2 = Category | Period | square icon button (aria-label "Export PDF"), equal heights, no scroll at 360px */}
       <div className="space-y-2">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
-          {/* Search box */}
-          <div className="relative flex-1">
+        {/* Desktop Layout */}
+        <div className="hidden lg:flex lg:items-center lg:gap-3">
+          {/* Search box (shorter) */}
+          <div className="relative flex-1 max-w-xs">
             <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="text"
@@ -618,16 +767,93 @@ export function RecordsView() {
             )}
           </div>
 
-          {/* Category and Period dropdowns */}
-          <div className={cn("grid gap-2 lg:flex lg:items-center lg:gap-3", activeTab === "lent" ? "grid-cols-1" : "grid-cols-2")}>
-            {/* Category Dropdown */}
-            <div className={cn("w-full", activeTab === "lent" ? "lg:w-56" : "lg:w-48")}>
+          {/* Category Dropdown (narrower) */}
+          <div className="relative w-44">
+            <select
+              value={selectedCategoryId}
+              onChange={(e) => handleCategoryChange(e.target.value)}
+              aria-label="Filter by category"
+              data-testid="records-category-select"
+              className="h-10 w-full appearance-none cursor-pointer rounded-xl border border-input bg-card pl-3 pr-8 text-xs font-medium text-foreground transition-colors hover:bg-muted/50 focus:border-ring focus:ring-1 focus:ring-ring sm:text-sm truncate"
+            >
+              <option value="all">All categories</option>
+              {relevantCategories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          </div>
+
+          {/* Period Dropdown (narrower) - non-lent tabs */}
+          {activeTab !== "lent" && (
+            <div className="relative w-40">
+              <select
+                value={periodPreset}
+                onChange={(e) => handlePeriodChange(e.target.value as PeriodPreset)}
+                aria-label="Filter by period"
+                data-testid="records-period-select"
+                className="h-10 w-full appearance-none cursor-pointer rounded-xl border border-input bg-card pl-3 pr-8 text-xs font-medium text-foreground transition-colors hover:bg-muted/50 focus:border-ring focus:ring-1 focus:ring-ring sm:text-sm truncate"
+              >
+                <option value="thisMonth">This month</option>
+                <option value="last3Months">Last 3 months</option>
+                <option value="last6Months">Last 6 months</option>
+                <option value="last12Months">Last 12 months</option>
+                <option value="custom">Custom</option>
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            </div>
+          )}
+
+          {/* Medium "Export PDF" button on the right */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleExportPdf}
+            disabled={isExportingPdf}
+            data-testid="records-export-button"
+            className="h-10 items-center justify-center gap-2 rounded-xl border border-input bg-card px-4 text-sm font-semibold text-foreground hover:bg-muted/50 transition-colors shrink-0 shadow-xs cursor-pointer ml-auto"
+          >
+            <FileDown className="size-4" />
+            <span>{isExportingPdf ? "Exporting..." : "Export PDF"}</span>
+          </Button>
+        </div>
+
+        {/* Phone Layout */}
+        <div className="lg:hidden space-y-2">
+          {/* Row 1: Search full width */}
+          <div className="relative w-full">
+            <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder={activeTab === "lent" ? "Search borrower, description..." : "Search description, counterparty..."}
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="h-10 rounded-xl pr-9 pl-10 text-sm w-full"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => handleSearchChange("")}
+                className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                aria-label="Clear search"
+              >
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Row 2: Category | Period | square icon button (Export PDF), all on one line, equal heights, no horizontal scroll at 360px */}
+          <div className="flex items-center gap-2 w-full">
+            {/* Category */}
+            <div className="relative flex-1 min-w-0">
               <select
                 value={selectedCategoryId}
                 onChange={(e) => handleCategoryChange(e.target.value)}
                 aria-label="Filter by category"
-                data-testid="records-category-select"
-                className="h-10 w-full cursor-pointer rounded-xl border border-input bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted/50 focus:border-ring focus:ring-1 focus:ring-ring sm:text-sm"
+                data-testid="records-category-select-mobile"
+                className="h-10 w-full appearance-none cursor-pointer rounded-xl border border-input bg-card pl-3 pr-8 text-xs font-medium text-foreground transition-colors hover:bg-muted/50 focus:border-ring focus:ring-1 focus:ring-ring truncate"
               >
                 <option value="all">All categories</option>
                 {relevantCategories.map((cat) => (
@@ -636,17 +862,18 @@ export function RecordsView() {
                   </option>
                 ))}
               </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             </div>
 
-            {/* Period Dropdown - non-lent tabs */}
+            {/* Period (if not lent) */}
             {activeTab !== "lent" && (
-              <div className="w-full lg:w-44">
+              <div className="relative flex-1 min-w-0">
                 <select
                   value={periodPreset}
                   onChange={(e) => handlePeriodChange(e.target.value as PeriodPreset)}
                   aria-label="Filter by period"
-                  data-testid="records-period-select"
-                  className="h-10 w-full cursor-pointer rounded-xl border border-input bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted/50 focus:border-ring focus:ring-1 focus:ring-ring sm:text-sm"
+                  data-testid="records-period-select-mobile"
+                  className="h-10 w-full appearance-none cursor-pointer rounded-xl border border-input bg-card pl-3 pr-8 text-xs font-medium text-foreground transition-colors hover:bg-muted/50 focus:border-ring focus:ring-1 focus:ring-ring truncate"
                 >
                   <option value="thisMonth">This month</option>
                   <option value="last3Months">Last 3 months</option>
@@ -654,19 +881,23 @@ export function RecordsView() {
                   <option value="last12Months">Last 12 months</option>
                   <option value="custom">Custom</option>
                 </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
               </div>
             )}
 
-            {/* Export Link (Prompt 16 / US-8.1) */}
-            <Link
-              href="/export"
-              data-testid="records-export-link"
-              title="Export records as PDF or share link"
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-input bg-card px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted/50 transition-colors shrink-0"
+            {/* Square icon button with download icon */}
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={handleExportPdf}
+              disabled={isExportingPdf}
+              aria-label="Export PDF"
+              data-testid="records-export-mobile-button"
+              className="size-10 rounded-xl shrink-0"
             >
-              <FileDown className="size-3.5" />
-              <span>Export</span>
-            </Link>
+              <FileDown className="size-4" />
+            </Button>
           </div>
         </div>
 
@@ -676,12 +907,12 @@ export function RecordsView() {
             <DateField
               label="From"
               value={customRange.start}
-              onChange={(s) => setCustomRange((prev) => ({ ...prev, start: s }))}
+              onChange={(s) => handleCustomRangeChange({ ...customRange, start: s })}
             />
             <DateField
               label="To"
               value={customRange.end}
-              onChange={(e) => setCustomRange((prev) => ({ ...prev, end: e }))}
+              onChange={(e) => handleCustomRangeChange({ ...customRange, end: e })}
             />
           </div>
         )}
@@ -714,12 +945,12 @@ export function RecordsView() {
           </p>
         </div>
 
-        {/* Single Add button per tab in the summary row with ONE plus icon, no "+" in text */}
+        {/* Single Add button per tab in the summary row - DESKTOP ONLY */}
         <Button
           type="button"
           onClick={() => handleOpenAdd(activeTab)}
           data-testid="records-summary-add-button"
-          className="inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-xs shrink-0 cursor-pointer w-full sm:w-auto"
+          className="hidden lg:inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-xs shrink-0 cursor-pointer"
         >
           <Plus className="size-4 shrink-0" />
           <span>{TAB_CONFIG[activeTab].desktopLabel}</span>
@@ -986,14 +1217,6 @@ const RecordRowItem = React.memo(function RecordRowItem({
     }
   };
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    if (e.button !== 0) return;
-    startLongPress(e.clientX, e.clientY);
-  };
-
-  const handlePointerUp = () => {
-    clearLongPressTimer();
-  };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     const touch = e.touches[0];
@@ -1013,9 +1236,10 @@ const RecordRowItem = React.memo(function RecordRowItem({
     const dx = touch.clientX - touchStartRef.current.x;
     const dy = touch.clientY - touchStartRef.current.y;
 
-    if (dx < -50 && Math.abs(dy) < 40) {
+    // Movement threshold: only a left swipe with > 50px delta reveals Edit/Delete
+    if (dx < -50 && Math.abs(dy) < 30) {
       onSetSwiped(true);
-    } else if (dx > 40) {
+    } else if (dx > 30) {
       onSetSwiped(false);
     }
   };
@@ -1027,6 +1251,13 @@ const RecordRowItem = React.memo(function RecordRowItem({
       setTimeout(() => {
         didLongPressRef.current = false;
       }, 50);
+      return;
+    }
+
+    if (isSwiped) {
+      // Tap while swiped open closes the swipe without navigating
+      e.preventDefault();
+      onSetSwiped(false);
       return;
     }
 
@@ -1049,39 +1280,38 @@ const RecordRowItem = React.memo(function RecordRowItem({
       data-entry-kind={entry.kind}
       className="relative overflow-hidden rounded-xl bg-card transition-all touch-pan-y"
     >
-      {/* Revealed Swipe Action Buttons (Mobile gesture) */}
-      <div className="absolute inset-y-0 right-0 z-0 flex items-center pr-1 lg:hidden">
-        <button
-          type="button"
-          data-testid="swipe-edit"
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit();
-          }}
-          className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-opacity hover:opacity-90 cursor-pointer"
-          aria-label="Edit entry"
-        >
-          <Edit2 className="size-4" />
-        </button>
-        <button
-          type="button"
-          data-testid="swipe-delete"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          className="ml-1 flex h-12 w-12 items-center justify-center rounded-lg bg-destructive text-destructive-foreground transition-opacity hover:opacity-90 cursor-pointer"
-          aria-label="Delete entry"
-        >
-          <Trash2 className="size-4" />
-        </button>
-      </div>
+      {/* Revealed Swipe Action Buttons (Mobile gesture) - ONLY rendered when isSwiped is true */}
+      {isSwiped && (
+        <div className="absolute inset-y-0 right-0 z-0 flex items-center pr-1 lg:hidden">
+          <button
+            type="button"
+            data-testid="swipe-edit"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-opacity hover:opacity-90 cursor-pointer"
+            aria-label="Edit entry"
+          >
+            <Edit2 className="size-4" />
+          </button>
+          <button
+            type="button"
+            data-testid="swipe-delete"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="ml-1 flex h-12 w-12 items-center justify-center rounded-lg bg-destructive text-destructive-foreground transition-opacity hover:opacity-90 cursor-pointer"
+            aria-label="Delete entry"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        </div>
+      )}
 
       {/* Main Sliding Content */}
       <div
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}

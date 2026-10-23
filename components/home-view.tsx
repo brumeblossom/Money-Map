@@ -20,7 +20,6 @@ import { seedDefaultCategories } from "@/lib/repo/seed";
 import { claimGuestData, updateProfile, createProfile } from "@/lib/repo";
 import { db, type RecurringRuleRow } from "@/lib/db/dexie";
 import { createClient } from "@/lib/supabase/client";
-import { signOut } from "@/lib/sync";
 import { extractFirstName } from "@/lib/auth/user-name";
 import { toast } from "sonner";
 import { getMonthPeriod, periodTotals, owedToMe } from "@/lib/calc";
@@ -57,7 +56,6 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
 
   const currentAction = activeAction;
 
-  const [isSharedDevice, setIsSharedDevice] = React.useState(false);
   const [guestEntriesCount, setGuestEntriesCount] = React.useState<number | null>(null);
   const [currentAuthUserId, setCurrentAuthUserId] = React.useState<string | null>(null);
   const [showNamePrompt, setShowNamePrompt] = React.useState(false);
@@ -72,25 +70,11 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
     });
   }, []);
 
-  // Check shared device session, name, and guest entries on mount
+  // Check name and guest entries on mount
   React.useEffect(() => {
     async function initSession() {
       try {
-        // 1. Shared device check: if previously marked on this device and sessionStorage flag is gone, sign out
-        if (typeof window !== "undefined") {
-          const wasShared = localStorage.getItem("moneymap_was_shared_device") === "true";
-          const isSharedNow = sessionStorage.getItem("moneymap_shared_device") === "true";
-          if (wasShared && !isSharedNow) {
-            localStorage.removeItem("moneymap_was_shared_device");
-            await signOut(db, router);
-            return;
-          }
-          if (isSharedNow) {
-            setIsSharedDevice(true);
-          }
-        }
-
-        // 2. Auth user check
+        // Auth user check
         const supabase = createClient();
         let userId: string | null = null;
         let authUser: { id: string; user_metadata?: Record<string, unknown> } | null = null;
@@ -202,14 +186,6 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
     }
   };
 
-  const handleSharedDeviceSignOut = async () => {
-    if (typeof window !== "undefined") {
-      sessionStorage.removeItem("moneymap_shared_device");
-      localStorage.removeItem("moneymap_was_shared_device");
-    }
-    await signOut(db, router);
-  };
-
   const today = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
   const currentMonthStr = React.useMemo(() => today.slice(0, 7), [today]);
 
@@ -271,24 +247,6 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
   return (
     <div className="flex flex-col gap-6 py-2">
       <GuestBanner />
-
-      {/* Someone else's device banner (Prompt 15b Item 6) */}
-      {isSharedDevice && (
-        <div
-          data-testid="shared-device-banner"
-          className="flex items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200"
-        >
-          <span>You&apos;re on someone else&apos;s device. Sign out when you&apos;re done.</span>
-          <button
-            type="button"
-            onClick={handleSharedDeviceSignOut}
-            data-testid="shared-device-signout-btn"
-            className="rounded-lg bg-amber-600 px-3 py-1 font-semibold text-white shadow-xs hover:bg-amber-700 cursor-pointer shrink-0"
-          >
-            Sign out
-          </button>
-        </div>
-      )}
 
       {/* Guest entries protection prompt (Prompt 15b Item 6) */}
       {guestEntriesCount !== null && guestEntriesCount > 0 && (
@@ -375,6 +333,13 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
 
       {/* Header section */}
       <div className="space-y-1">
+        <p className="text-xs font-medium text-muted-foreground sm:text-sm">
+          {!currentAuthUserId
+            ? "Welcome, guest"
+            : profile?.display_name?.trim()
+              ? `Welcome back, ${profile.display_name.trim().split(/\s+/)[0]}`
+              : "Welcome back"}
+        </p>
         <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
           What are we recording today?
         </h1>

@@ -24,6 +24,16 @@ export const dateStringSchema = z
   .regex(ISO_DATE_REGEX, "Date must be in YYYY-MM-DD format")
   .refine(isValidIsoDate, "Invalid calendar date");
 
+function isNotFutureDate(dateStr: string): boolean {
+  const today = new Date().toISOString().slice(0, 10);
+  return dateStr <= today;
+}
+
+export const pastOrPresentDateSchema = dateStringSchema.refine(
+  isNotFutureDate,
+  "Date can't be in the future",
+);
+
 export const amountMinorSchema = z
   .number()
   .int("Amount must be an integer in minor units")
@@ -40,14 +50,7 @@ export const interestKindSchema = z.enum(["none", "percent", "flat"]);
 export const incomeFormSchema = z.object({
   amount_minor: amountMinorSchema,
   category_id: z.string().uuid("Invalid category ID"),
-  occurred_on: dateStringSchema.refine((dateStr) => {
-    // Future dates allowed up to 1 year
-    const d = new Date(dateStr + "T00:00:00Z");
-    const maxFuture = new Date();
-    maxFuture.setUTCFullYear(maxFuture.getUTCFullYear() + 1);
-    maxFuture.setUTCHours(23, 59, 59, 999);
-    return d.getTime() <= maxFuture.getTime();
-  }, "Future dates cannot be more than 1 year ahead"),
+  occurred_on: pastOrPresentDateSchema,
   counterparty: z
     .string()
     .max(80, "Source cannot exceed 80 characters")
@@ -67,7 +70,7 @@ export type IncomeFormData = z.infer<typeof incomeFormSchema>;
 export const expenseFormSchema = z.object({
   amount_minor: amountMinorSchema,
   category_id: z.string().uuid("Invalid category ID"),
-  occurred_on: dateStringSchema,
+  occurred_on: pastOrPresentDateSchema,
   repeats: formRepeatSchema.optional(),
   description: z
     .string()
@@ -82,7 +85,7 @@ export type ExpenseFormData = z.infer<typeof expenseFormSchema>;
 export const givingFormSchema = z.object({
   amount_minor: amountMinorSchema,
   category_id: z.string().uuid("Invalid category ID"),
-  occurred_on: dateStringSchema,
+  occurred_on: pastOrPresentDateSchema,
   counterparty: z
     .string()
     .max(80, "Recipient cannot exceed 80 characters")
@@ -107,7 +110,7 @@ export const loanFormSchema = z
       .max(80, "Borrower name cannot exceed 80 characters"),
     principal_minor: amountMinorSchema,
     category_id: z.string().uuid("Invalid category ID"),
-    started_on: dateStringSchema,
+    started_on: pastOrPresentDateSchema,
     due_on: dateStringSchema,
     plan: repeatPlanSchema.default("one_payment"),
     instalment_minor: z
@@ -141,7 +144,7 @@ export type LoanFormData = z.infer<typeof loanFormSchema>;
 export const loanPaymentFormSchema = z.object({
   loan_id: z.string().uuid("Invalid loan ID"),
   amount_minor: amountMinorSchema,
-  paid_on: dateStringSchema,
+  paid_on: pastOrPresentDateSchema,
   note: z
     .string()
     .max(200, "Note cannot exceed 200 characters")

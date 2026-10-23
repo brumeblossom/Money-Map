@@ -100,7 +100,7 @@ describe("Zod Form Schemas (PRD Section 4)", () => {
       }
     });
 
-    it("income form rejects dates more than 1 year in the future", () => {
+    it("income form rejects dates in the future", () => {
       const res = incomeFormSchema.safeParse({
         amount_minor: 100000,
         category_id: validCategoryId,
@@ -108,7 +108,7 @@ describe("Zod Form Schemas (PRD Section 4)", () => {
       });
       expect(res.success).toBe(false);
       if (!res.success) {
-        expect(res.error.issues[0].message).toContain("more than 1 year ahead");
+        expect(res.error.issues[0].message).toContain("Date can't be in the future");
       }
     });
   });

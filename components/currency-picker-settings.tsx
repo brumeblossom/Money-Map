@@ -9,7 +9,7 @@ import { getCurrentUserId } from "@/lib/repo/user";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-export function CurrencyPickerSettings() {
+export function CurrencyPickerSettings({ embedded = false }: { embedded?: boolean } = {}) {
   const profile = useProfile();
   const currentCurrency = profile?.currency || "NGN";
 
@@ -68,7 +68,14 @@ export function CurrencyPickerSettings() {
   };
 
   return (
-    <div id="currency" className="rounded-xl border border-border bg-card p-5 shadow-xs">
+    <div
+      id="currency"
+      className={cn(
+        embedded
+          ? "pt-4 border-t border-border"
+          : "rounded-xl border border-border bg-card p-5 shadow-xs"
+      )}
+    >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h3 className="text-base font-semibold text-foreground">Currency</h3>

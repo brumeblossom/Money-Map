@@ -100,6 +100,8 @@ export function AppHeader({
   const [isSignedIn, setIsSignedIn] = React.useState<boolean | null>(null);
 
   React.useEffect(() => {
+    let subscription: { unsubscribe: () => void } | null = null;
+
     async function checkAuth() {
       if (typeof document !== "undefined") {
         if (document.cookie.includes("moneymap_mock_user=")) {
@@ -112,27 +114,43 @@ export function AppHeader({
         const supabase = createClient();
         const { data } = await supabase.auth.getSession();
         setIsSignedIn(Boolean(data.session?.user));
+
+        const { data: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
+          setIsSignedIn(Boolean(session?.user));
+        });
+        subscription = authSub.subscription;
       } catch {
         setIsSignedIn(false);
       }
     }
     checkAuth();
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
-  // Compute display status and label
-  const isOffline = isClient && (!isOnline || engineStatus === "offline");
-  const isSyncing = isClient && !isOffline && engineStatus === "syncing";
+  // Compute display status and label strictly per Section A
+  const isBrowserOffline = isClient && (!isOnline || (typeof navigator !== "undefined" && !navigator.onLine));
   const isGuest = isSignedIn === false;
+  const isSyncing = isClient && !isBrowserOffline && engineStatus === "syncing";
+  const isSyncError = isClient && !isBrowserOffline && (engineStatus === "error" || (outboxCount > 0 && !isSyncing && engineStatus !== "synced"));
 
   let label = "Synced";
   if (isGuest) {
-    if (isOffline) {
-      label = "Offline";
+    if (isBrowserOffline) {
+      if (outboxCount === 1) {
+        label = "Offline (1 change waiting)";
+      } else if (outboxCount > 1) {
+        label = `Offline (${outboxCount} changes waiting)`;
+      } else {
+        label = "Offline";
+      }
     } else {
-      label = "Saved on this device";
+      label = "Saved on this device · Sign in to back up";
     }
   } else {
-    if (isOffline) {
+    if (isBrowserOffline) {
       if (outboxCount === 1) {
         label = "Offline (1 change waiting)";
       } else if (outboxCount > 1) {
@@ -142,6 +160,10 @@ export function AppHeader({
       }
     } else if (isSyncing) {
       label = "Syncing";
+    } else if (isSyncError) {
+      label = "Couldn't sync, retrying";
+    } else {
+      label = "Synced";
     }
   }
 
@@ -158,26 +180,30 @@ export function AppHeader({
         </h1>
       </div>
 
-      {/* Sync Status Badge (PRD Section 8 / Prompt 10 & 15b) */}
+      {/* Sync Status Badge (PRD Section 8 / Section A) */}
       <div
         className={cn(
           "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
-          isOffline
+          isBrowserOffline
             ? "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400"
             : isSyncing
               ? "bg-primary/10 text-primary"
-              : isGuest
-                ? "bg-secondary text-muted-foreground"
-                : "bg-secondary/80 text-muted-foreground",
+              : isSyncError
+                ? "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400"
+                : isGuest
+                  ? "bg-secondary text-muted-foreground"
+                  : "bg-secondary/80 text-muted-foreground",
         )}
         title={`Sync status: ${label}`}
         aria-label={`Sync status: ${label}`}
         data-testid="header-sync-badge"
       >
-        {isOffline ? (
+        {isBrowserOffline ? (
           <CloudOff className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
         ) : isSyncing ? (
           <RefreshCw className="size-3.5 shrink-0 animate-spin text-primary" />
+        ) : isSyncError ? (
+          <RefreshCw className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
         ) : isGuest ? (
           <Cloud className="size-3.5 shrink-0 text-muted-foreground" />
         ) : (
@@ -187,15 +213,8 @@ export function AppHeader({
           </>
         )}
         <span className="truncate">{label}</span>
-        {isGuest && !isOffline && (
-          <a
-            href="/welcome?intent=signin"
-            className="text-primary underline ml-1 hover:opacity-80 shrink-0 font-semibold"
-          >
-            Sign in to back up
-          </a>
-        )}
       </div>
     </header>
   );
 }
+

@@ -218,9 +218,10 @@ test.describe("Prompt 16: PDF export and share links (US-8.1, US-8.2)", () => {
     const pdfText = parsed.text;
     await parser.destroy();
 
-    // Assert title, user name, and DD-MM-YYYY dates
+    // Assert title, no user name (Rule 13), Naira symbol (Rule 12), and DD-MM-YYYY dates
     expect(pdfText).toContain("Money Map");
-    expect(pdfText).toContain("Adaeze Okafor");
+    expect(pdfText).not.toContain("Adaeze Okafor");
+    expect(pdfText).toContain("₦");
     expect(pdfText).toContain("01-10-2026");
     expect(pdfText).toContain("31-10-2026");
 
@@ -246,7 +247,7 @@ test.describe("Prompt 16: PDF export and share links (US-8.1, US-8.2)", () => {
     expect(pdfText).toMatch(/Page \d+ of \d+/i);
   });
 
-  test("2. PDF download works offline and in guest mode", async ({
+  test("2. Guest offline PDF export works without server roundtrip", async ({
     page,
     context,
   }) => {
@@ -254,15 +255,7 @@ test.describe("Prompt 16: PDF export and share links (US-8.1, US-8.2)", () => {
     await seedExportData(page);
 
     await page.goto("/export");
-    await expect(page.getByRole("heading", { name: "Export and Share" })).toBeVisible();
-
-    // Guest mode: clicking create share link shows "Sign in to share a link"
-    await page.getByTestId("export-create-share-link-btn").click();
-    await expect(page.getByText(/Sign in to share a link/i)).toBeVisible();
-
-    // Close the guest modal
-    await page.getByRole("button", { name: "✕" }).click();
-    await expect(page.getByText(/Sign in to share a link/i)).not.toBeVisible();
+    await expect(page.getByRole("heading", { name: "Export PDF" })).toBeVisible();
 
     // Ensure PDF renderer chunk is loaded in browser before cutting network
     await page.waitForFunction(() => typeof (window as unknown as { __preloadPdfRenderer?: () => Promise<void> }).__preloadPdfRenderer === "function");
@@ -283,211 +276,7 @@ test.describe("Prompt 16: PDF export and share links (US-8.1, US-8.2)", () => {
     await context.setOffline(false);
   });
 
-  test("3. Share link creation, public /s/[token] signed-out view, revoke, and hidden details stripped", async ({
-    page,
-    context,
-    browser,
-  }) => {
-    await context.addCookies([
-      {
-        name: "moneymap_mock_user",
-        value: mockUserId,
-        domain: "localhost",
-        path: "/",
-      },
-    ]);
-
-    await seedExportData(page);
-
-    // Mock the POST /api/share-links to return a valid share token with the report snapshot
-    let capturedBody: Record<string, unknown> | null = null;
-    const testToken = "testtoken1234567890abc";
-    let linkRevoked = false;
-
-    await page.route("**/api/share-links", async (route) => {
-      if (route.request().method() === "POST") {
-        capturedBody = route.request().postDataJSON() as Record<string, unknown>;
-        await route.fulfill({
-          status: 201,
-          contentType: "application/json",
-          body: JSON.stringify({
-            id: "share-link-id-123",
-            url: `http://localhost:3000/s/${testToken}`,
-            expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
-          }),
-        });
-      } else if (route.request().method() === "GET") {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify([
-            {
-              id: "share-link-id-123",
-              url: `http://localhost:3000/s/${testToken}`,
-              period_start: "2026-10-01",
-              period_end: "2026-10-31",
-              kinds: ["income", "expense", "giving", "lent"],
-              hide_details: true,
-              expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
-              revoked_at: linkRevoked ? new Date().toISOString() : null,
-              created_at: new Date().toISOString(),
-              snapshot: {
-                type: "period",
-                title: "Money Map",
-                userName: "Adaeze Okafor",
-                currency: "NGN",
-                periodStart: "2026-10-01",
-                periodEnd: "2026-10-31",
-                hideDetails: true,
-                totalIncome: 20000000,
-                totalExpenses: 4500000,
-                totalGiving: 1500000,
-                leftOver: 14000000,
-                lentBalance: 3000000,
-                categories: [
-                  { name: "Salary", kind: "income", amount: 20000000 },
-                  { name: "Food & Groceries", kind: "expense", amount: 4500000 },
-                  { name: "Charity", kind: "giving", amount: 1500000 },
-                ],
-                entries: [
-                  {
-                    id: "entry-sal-1",
-                    date: "01-10-2026",
-                    action: "Income",
-                    category: "Salary",
-                    description: "Hidden",
-                    counterparty: "Hidden",
-                    amount: 20000000,
-                  },
-                  {
-                    id: "entry-food-1",
-                    date: "05-10-2026",
-                    action: "Expenses",
-                    category: "Food & Groceries",
-                    description: "Hidden",
-                    counterparty: "Hidden",
-                    amount: 4500000,
-                  },
-                ],
-                loans: [
-                  {
-                    id: "loan-emeka-1",
-                    borrower: "Hidden",
-                    amountLent: 5000000,
-                    received: 2000000,
-                    balance: 3000000,
-                    expectedBackBy: "31-10-2026",
-                    status: "Active",
-                  },
-                ],
-              },
-            },
-          ]),
-        });
-      }
-    });
-
-    await page.route("**/api/share-links/share-link-id-123", async (route) => {
-      if (route.request().method() === "DELETE") {
-        linkRevoked = true;
-        await route.fulfill({ status: 204 });
-      }
-    });
-
-    await page.goto("/export");
-
-    // Turn ON "Hide descriptions and names"
-    const hideDetailsSwitch = page.getByTestId("export-hide-details-switch");
-    await hideDetailsSwitch.check();
-    await expect(hideDetailsSwitch).toBeChecked();
-
-    // Click "Create share link" to open modal
-    await page.getByTestId("export-create-share-link-btn").click();
-    await expect(page.getByTestId("export-modal-submit-btn")).toBeVisible();
-
-    // Submit modal
-    await page.getByTestId("export-modal-submit-btn").click();
-
-    // Dialog appears with Copy and Share buttons
-    await expect(page.getByTestId("export-dialog-url-input")).toBeVisible();
-    await expect(page.getByTestId("export-dialog-copy-btn")).toBeVisible();
-    await expect(page.getByTestId("export-dialog-share-btn")).toBeVisible();
-
-    expect(capturedBody).toBeTruthy();
-    expect((capturedBody as Record<string, unknown> | null)?.hide_details).toBe(true);
-
-    // Open public page /s/[token] in a brand new signed-out context
-    const publicContext = await browser.newContext();
-    const publicPage = await publicContext.newPage();
-
-    // Intercept server response or mock for the public page
-    await publicPage.route(`**/s/${testToken}`, async (route) => {
-      if (linkRevoked) {
-        await route.fulfill({
-          status: 200,
-          contentType: "text/html",
-          body: `<!DOCTYPE html><html><body><div data-testid="link-unavailable">This link is no longer available</div></body></html>`,
-        });
-      } else {
-        await route.fulfill({
-          status: 200,
-          contentType: "text/html",
-          body: `<!DOCTYPE html><html>
-            <head><meta name="robots" content="noindex, nofollow" /></head>
-            <body>
-              <div id="report-view">
-                <h1>Money Map</h1>
-                <h2>Adaeze Okafor</h2>
-                <div>01-10-2026 to 31-10-2026</div>
-                <div>Income ₦200,000.00</div>
-                <div>Expenses ₦45,000.00</div>
-                <div>Giving ₦15,000.00</div>
-                <div>Left over ₦140,000.00</div>
-                <div>Money I lent balance ₦30,000.00</div>
-                <table>
-                  <tr><td>01-10-2026</td><td>Income</td><td>Salary</td><td>Hidden</td><td>₦200,000.00</td></tr>
-                  <tr><td>05-10-2026</td><td>Expenses</td><td>Food & Groceries</td><td>Hidden</td><td>₦45,000.00</td></tr>
-                </table>
-                <div>Loan to Hidden</div>
-                <footer>Made with Money Map</footer>
-              </div>
-            </body></html>`,
-        });
-      }
-    });
-
-    await publicPage.goto(`http://localhost:3000/s/${testToken}`);
-
-    // Verify public page elements
-    await expect(publicPage.getByRole("heading", { name: "Money Map" })).toBeVisible();
-    await expect(publicPage.getByText("Adaeze Okafor")).toBeVisible();
-    await expect(publicPage.getByText(/Made with Money Map/i)).toBeVisible();
-
-    // Verify "Hide descriptions and names": names and descriptions MUST NOT appear in HTML
-    const htmlContent = await publicPage.content();
-    expect(htmlContent).not.toContain("Market shopping");
-    expect(htmlContent).not.toContain("October Paycheck");
-    expect(htmlContent).not.toContain("Orphanage donation");
-    expect(htmlContent).not.toContain("Emeka");
-    expect(htmlContent).not.toContain("Supermarket Mart");
-
-    // Verify Settings > Share links displays the link
-    await page.goto("/settings");
-    await expect(page.getByRole("heading", { name: "Share links" })).toBeVisible();
-    await expect(page.getByTestId("share-link-item")).toBeVisible();
-
-    // Turn off link in settings
-    await page.getByTestId("revoke-share-link-btn").click();
-    await expect(page.getByText(/Share link turned off/i)).toBeVisible();
-
-    // Now reload public page in signed-out browser: shows "This link is no longer available"
-    await publicPage.reload();
-    await expect(publicPage.getByText("This link is no longer available")).toBeVisible();
-
-    await publicContext.close();
-  });
-
-  test("4. Single record export on /records/[id] and /lent/[id] with side-by-side buttons", async ({
+  test("3. Single record export on /records/[id] and /lent/[id] with Download PDF button", async ({
     page,
     context,
   }) => {
@@ -506,10 +295,7 @@ test.describe("Prompt 16: PDF export and share links (US-8.1, US-8.2)", () => {
     await page.goto("/records/entry-food-1");
 
     const pdfBtn = page.getByTestId("record-export-pdf-btn");
-    const shareBtn = page.getByTestId("record-export-share-btn");
-
     await expect(pdfBtn).toBeVisible();
-    await expect(shareBtn).toBeVisible();
 
     // Verify Download PDF on single record
     const downloadPromise = page.waitForEvent("download");
@@ -523,10 +309,7 @@ test.describe("Prompt 16: PDF export and share links (US-8.1, US-8.2)", () => {
     await page.goto("/lent/loan-emeka-1");
 
     const loanPdfBtn = page.getByTestId("record-export-pdf-btn");
-    const loanShareBtn = page.getByTestId("record-export-share-btn");
-
     await expect(loanPdfBtn).toBeVisible();
-    await expect(loanShareBtn).toBeVisible();
 
     const loanDownloadPromise = page.waitForEvent("download");
     await loanPdfBtn.click();
@@ -534,16 +317,5 @@ test.describe("Prompt 16: PDF export and share links (US-8.1, US-8.2)", () => {
 
     // Matches MoneyMap_Loan_Emeka_31-10-2026.pdf
     expect(loanDownload.suggestedFilename()).toBe("MoneyMap_Loan_Emeka_31-10-2026.pdf");
-  });
-
-  test("5. Cross-user isolation: user 2 cannot list or delete user 1's share links", async ({
-    request,
-  }) => {
-    // 1. Unauthorized request returns 401
-    const unauthRes = await request.get("/api/share-links");
-    expect(unauthRes.status()).toBe(401);
-
-    const unauthDelete = await request.delete("/api/share-links/some-id");
-    expect(unauthDelete.status()).toBe(401);
   });
 });

@@ -17,7 +17,7 @@ import { cleanupDuplicateCategories } from "@/lib/repo/seed";
 export * from "./rate-limit";
 export * from "./category-merge";
 
-export type SyncState = "synced" | "syncing" | "offline";
+export type SyncState = "synced" | "syncing" | "offline" | "error";
 
 export interface SyncStatusInfo {
   status: SyncState;
@@ -155,6 +155,16 @@ export async function push(
     });
 
     if (!res.ok) {
+      if (res.status === 422) {
+        // Permanent rejection: remove rejected items from outbox to prevent infinite stalling
+        const stuckRowIds = changes.map((c) => (c.row as { id: string }).id);
+        const toDelete = outboxItems
+          .filter((item) => stuckRowIds.includes(item.row_id) && item.seq !== undefined)
+          .map((item) => item.seq as number);
+        await database.outbox.bulkDelete(toDelete);
+        console.error("Permanent 422 sync rejection; removed stuck items from outbox:", stuckRowIds);
+        break;
+      }
       throw new Error(`Sync push failed with status ${res.status}`);
     }
 
@@ -326,7 +336,11 @@ export async function run(
     setSyncStatus("synced");
   } catch (error) {
     console.error("Sync cycle error:", error);
-    setSyncStatus("offline");
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setSyncStatus("offline");
+    } else {
+      setSyncStatus("error");
+    }
 
     // Network error backoff retry: 5 s, 15 s, 60 s, then every 5 min
     const delay = getBackoffDelay(retryAttempt);

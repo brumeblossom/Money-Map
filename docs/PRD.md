@@ -241,6 +241,8 @@ Each story has an ID the prompt pack will reference. A story is done only when e
 
 These are the final fields from Phase 1, including Chinedum's edits. Every category picker is a dropdown (a bottom-sheet list on phones) ending with "Other (type your own)". "Column" is where the value is stored (section 6). Amount rules for all forms: greater than 0, at most 2 decimals, at most 999,999,999,999.99.
 
+Every date picker (both phone and desktop): no future dates, except "Expected back by" on loans (which must be on or after Date lent). This includes Date lent, entry dates, money received, and edit forms. Future days are disabled in the calendar and rejected by Zod validation with the message "Date can't be in the future".
+
 There is NO "More details" section. Every field shows directly on the form. Required fields first, then optional fields marked "(optional)" in the label.
 
 ### 4.1 Income (`kind = income`)
@@ -249,7 +251,7 @@ There is NO "More details" section. Every field shows directly on the form. Requ
 |------------------------|-----------------------|----------|------------------------|------------------------------------------------------|
 | Amount                 | Decimal keypad        | Yes      | `entries.amount_minor` |                                                      |
 | Category               | Dropdown              | Yes      | `entries.category_id`  | Defaults to last used                                |
-| Date                   | Date picker           | Yes      | `entries.occurred_on`  | Defaults to today; future dates allowed up to 1 year |
+| Date                   | Date picker           | Yes      | `entries.occurred_on`  | Defaults to today; no future dates                   |
 | Source (optional)      | Text, max 80          | No       | `entries.counterparty` | e.g. employer, client, brand                         |
 | Repeats (optional)     | No / Weekly / Monthly | No       | `recurring_rules`      | Remind and tap to confirm (US-5.1)                   |
 | Description (optional) | Multi-line, max 500   | No       | `entries.description`  |                                                      |

@@ -16,7 +16,6 @@ import { cn } from "@/lib/utils";
 import { CurrencyPickerSettings } from "@/components/currency-picker-settings";
 import { CategoriesSettings } from "@/components/categories-settings";
 import { RecurringRulesList } from "@/components/recurring-rules-list";
-import { ShareLinksList } from "@/components/share-links-list";
 import { InstallPwaCard } from "@/components/install-pwa-card";
 
 export default function SettingsPage() {
@@ -114,22 +113,6 @@ export default function SettingsPage() {
     saveName(nameValue);
   };
 
-  const handleToggleEmailReminders = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const enabled = e.target.checked;
-    const userId = getCurrentUserId() || profile?.user_id || "guest";
-    try {
-      if (profile) {
-        await updateProfile(profile.user_id, { notifications_enabled: enabled });
-      } else {
-        await createProfile({ user_id: userId, notifications_enabled: enabled });
-      }
-      toast.success(enabled ? "Daily email reminders enabled" : "Daily email reminders disabled");
-    } catch (err) {
-      console.error("Failed to update reminder settings", err);
-      toast.error("Failed to update reminder settings");
-    }
-  };
-
   const handleSignOut = async () => {
     setIsSigningOut(true);
     try {
@@ -189,10 +172,8 @@ export default function SettingsPage() {
       if (typeof window !== "undefined") {
         localStorage.clear();
         sessionStorage.clear();
-        window.location.href = "/welcome";
-      } else {
-        router.replace("/welcome");
       }
+      router.replace("/welcome");
     } catch (err) {
       console.error("Delete account error:", err);
       toast.error("Failed to delete account. Please try again.");
@@ -205,281 +186,243 @@ export default function SettingsPage() {
       <div>
         <h2 className="text-xl font-bold tracking-tight text-foreground">Settings</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Profile, currency, categories, repeating entries, notifications, and account settings.
+          Profile, currency, categories, repeating entries, appearance, and account settings.
         </p>
       </div>
 
-      {/* 1. Profile Section */}
-      <div id="profile" className="rounded-xl border border-border bg-card p-5 shadow-xs">
-        <h3 className="text-base font-semibold text-foreground">Profile</h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Your display name is shown in the header and on reports and shared links.
-        </p>
-
-        <div className="mt-4 pt-4 border-t border-border space-y-1.5">
-          <div className="flex items-center justify-between">
-            <label
-              htmlFor="settings-name-input"
-              className="text-xs font-semibold text-foreground"
-            >
-              Display name
-            </label>
-            {isSavedTickVisible && (
-              <span
-                data-testid="name-saved-indicator"
-                className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 animate-in fade-in"
+      {/* 1. PROFILE Section */}
+      <div className="space-y-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+          Profile
+        </span>
+        <div id="profile" className="rounded-xl border border-border bg-card p-5 shadow-xs space-y-4">
+          {/* Display Name (editable, autosaves) */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor="settings-name-input"
+                className="text-xs font-semibold text-foreground"
               >
-                <Check className="size-3.5" /> Saved
-              </span>
+                Display name
+              </label>
+              {isSavedTickVisible && (
+                <span
+                  data-testid="name-saved-indicator"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 animate-in fade-in"
+                >
+                  <Check className="size-3.5" /> Saved
+                </span>
+              )}
+            </div>
+            <input
+              id="settings-name-input"
+              type="text"
+              data-testid="settings-name-input"
+              value={nameValue}
+              onChange={handleNameChange}
+              onBlur={handleNameBlur}
+              disabled={isGuest}
+              placeholder={isGuest ? "Sign in to set your name" : "Your name"}
+              maxLength={60}
+              className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+            {isGuest && (
+              <p className="text-[11px] text-muted-foreground">
+                Sign in to add your name and back up your data.
+              </p>
             )}
           </div>
-          <input
-            id="settings-name-input"
-            type="text"
-            data-testid="settings-name-input"
-            value={nameValue}
-            onChange={handleNameChange}
-            onBlur={handleNameBlur}
-            disabled={isGuest}
-            placeholder={isGuest ? "Sign in to set your name" : "Your name"}
-            maxLength={60}
-            className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          />
-          {isGuest && (
-            <p className="text-[11px] text-muted-foreground">
-              Sign in to add your name and back up your data.
+
+          {/* Email (read only) */}
+          <div className="space-y-1.5 pt-4 border-t border-border">
+            <label
+              htmlFor="settings-email-input"
+              className="text-xs font-semibold text-foreground"
+            >
+              Email
+            </label>
+            <input
+              id="settings-email-input"
+              type="email"
+              data-testid="settings-email-input"
+              value={isGuest ? "Not signed in" : (userEmail ?? "")}
+              readOnly
+              disabled
+              className="w-full rounded-xl border border-border bg-muted/60 px-4 py-2.5 text-sm text-muted-foreground cursor-not-allowed select-none"
+            />
+          </div>
+
+          {/* Currency */}
+          <CurrencyPickerSettings embedded />
+        </div>
+      </div>
+
+      {/* 2. YOUR DATA Section */}
+      <div className="space-y-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+          Your Data
+        </span>
+        <div className="space-y-4">
+          {/* Categories Card (max 5 with See all link) */}
+          <CategoriesSettings limit={5} />
+
+          {/* Repeating entries Card (max 5 with See all link) */}
+          <div id="repeating-entries" className="rounded-xl border border-border bg-card p-5 shadow-xs">
+            <div className="mb-4">
+              <h3 className="text-base font-semibold text-foreground">Repeating entries</h3>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Manage reminders for weekly and monthly recurring entries.
+              </p>
+            </div>
+
+            <RecurringRulesList limit={5} />
+          </div>
+        </div>
+      </div>
+
+      {/* 3. APPEARANCE Section */}
+      <div className="space-y-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+          Appearance
+        </span>
+        <div id="appearance" className="rounded-xl border border-border bg-card p-5 shadow-xs space-y-5">
+          <div>
+            <h3 className="text-base font-semibold text-foreground">Theme</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Choose how Money Map looks to you.
             </p>
+
+            <div className="mt-3 flex items-center gap-1.5 rounded-xl bg-muted p-1 sm:w-80">
+              <button
+                type="button"
+                data-testid="theme-light-btn"
+                onClick={() => setTheme("light")}
+                className={cn(
+                  "flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all cursor-pointer",
+                  theme === "light"
+                    ? "bg-card text-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Light
+              </button>
+              <button
+                type="button"
+                data-testid="theme-dark-btn"
+                onClick={() => setTheme("dark")}
+                className={cn(
+                  "flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all cursor-pointer",
+                  theme === "dark"
+                    ? "bg-card text-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Dark
+              </button>
+              <button
+                type="button"
+                data-testid="theme-system-btn"
+                onClick={() => setTheme("system")}
+                className={cn(
+                  "flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all cursor-pointer",
+                  theme === "system"
+                    ? "bg-card text-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                System
+              </button>
+            </div>
+          </div>
+
+          {/* Add to Home Screen help */}
+          <InstallPwaCard embedded />
+        </div>
+      </div>
+
+      {/* 4. ACCOUNT Section */}
+      <div className="space-y-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+          Account
+        </span>
+        <div id="account" className="rounded-xl border border-border bg-card p-5 shadow-xs">
+          {isGuest ? (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">Guest</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Guest · Sign in to back up
+                </p>
+              </div>
+              <Link
+                href="/welcome?intent=signin"
+                data-testid="settings-guest-signin-link"
+                className="inline-flex w-full h-11 items-center justify-start rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-xs hover:opacity-90 transition cursor-pointer"
+              >
+                Sign in to add your name and back up your data
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">Account</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Manage your signed-in account and device sessions.
+                </p>
+              </div>
+
+              <div className="space-y-2.5 pt-2">
+                {/* Sign out */}
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(true)}
+                  data-testid="settings-signout-btn"
+                  className="flex w-full h-11 items-center justify-start gap-2.5 rounded-xl border border-border bg-card px-4 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors cursor-pointer text-left"
+                >
+                  <LogOut className="size-4 shrink-0" />
+                  <span>Sign out</span>
+                </button>
+
+                {/* Sign out of all devices */}
+                <button
+                  type="button"
+                  onClick={() => setShowSignOutAllConfirm(true)}
+                  data-testid="settings-signout-all-btn"
+                  className="flex w-full h-11 items-center justify-start gap-2.5 rounded-xl border border-border bg-card px-4 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-left"
+                >
+                  <Globe className="size-4 shrink-0" />
+                  <span>Sign out of all devices</span>
+                </button>
+
+                {/* Divider with about 32px of space above it */}
+                <div className="mt-8 pt-4 border-t border-border">
+                  {/* Delete account */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteConfirmText("");
+                      setShowDeleteAccountModal(true);
+                    }}
+                    data-testid="settings-delete-account-btn"
+                    className="flex w-full h-11 items-center justify-start gap-2.5 rounded-xl border border-destructive/30 bg-destructive/10 px-4 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20 cursor-pointer text-left"
+                  >
+                    <Trash2 className="size-4 shrink-0" />
+                    <span>Delete account</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>
 
-      {/* 2. Currency Section */}
-      <CurrencyPickerSettings />
-
-      {/* 3. Categories Section */}
-      <CategoriesSettings />
-
-      {/* 4. Repeating Entries Section */}
-      <div id="repeating-entries" className="rounded-xl border border-border bg-card p-5 shadow-xs">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-base font-semibold text-foreground">Repeating entries</h3>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Manage reminders for weekly and monthly recurring entries.
-            </p>
-          </div>
-          <Link
-            href="/settings/repeating"
-            data-testid="settings-repeating-entries-link"
-            className="text-xs font-semibold text-primary hover:underline"
-          >
-            Manage
-          </Link>
-        </div>
-
-        <RecurringRulesList />
-      </div>
-
-      {/* 4. Share Links Section */}
-      <div className="rounded-xl border border-border bg-card p-5 shadow-xs">
-        <div className="flex items-center justify-between pb-3 border-b border-border">
-          <div>
-            <h3 className="text-base font-semibold text-foreground">Share links</h3>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Manage your active public links.
-            </p>
-          </div>
-          <Link
-            href="/export"
-            className="text-xs font-semibold text-primary hover:underline"
-          >
-            Create link
-          </Link>
-        </div>
-        <div className="mt-3">
-          <ShareLinksList />
-        </div>
-      </div>
-
-      {/* 4. Reminders Section */}
-      <div id="reminders" className="rounded-xl border border-border bg-card p-5 shadow-xs">
-        <h3 className="text-base font-semibold text-foreground">Reminders</h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Receive daily notifications for due loans and repeating entries.
-        </p>
-
-        <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
-          <label
-            htmlFor="email-reminders-toggle"
-            className="text-sm font-medium text-foreground cursor-pointer select-none"
-          >
-            Email me a daily reminder
-          </label>
-          <input
-            id="email-reminders-toggle"
-            data-testid="email-reminders-switch"
-            type="checkbox"
-            checked={profile?.notifications_enabled ?? false}
-            onChange={handleToggleEmailReminders}
-            className="size-5 rounded border-border accent-primary cursor-pointer"
-          />
-        </div>
-      </div>
-
-      {/* Appearance Section */}
-      <div id="appearance" className="rounded-xl border border-border bg-card p-5 shadow-xs">
-        <h3 className="text-base font-semibold text-foreground">Appearance</h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Choose how Money Map looks to you.
-        </p>
-
-        <div className="mt-4 flex items-center gap-1.5 rounded-xl bg-muted p-1 sm:w-80">
-          <button
-            type="button"
-            data-testid="theme-light-btn"
-            onClick={() => setTheme("light")}
-            className={cn(
-              "flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all cursor-pointer",
-              theme === "light"
-                ? "bg-card text-foreground shadow-xs"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            Light
-          </button>
-          <button
-            type="button"
-            data-testid="theme-dark-btn"
-            onClick={() => setTheme("dark")}
-            className={cn(
-              "flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all cursor-pointer",
-              theme === "dark"
-                ? "bg-card text-foreground shadow-xs"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            Dark
-          </button>
-          <button
-            type="button"
-            data-testid="theme-system-btn"
-            onClick={() => setTheme("system")}
-            className={cn(
-              "flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all cursor-pointer",
-              theme === "system"
-                ? "bg-card text-foreground shadow-xs"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            System
-          </button>
-        </div>
-      </div>
-
-      {/* Install App Section */}
-      <InstallPwaCard />
-
-      {/* 5. Account Section */}
-      <div id="account" className="rounded-xl border border-border bg-card p-5 shadow-xs">
-        <h3 className="text-base font-semibold text-foreground">Account</h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {isGuest
-            ? "You are currently using Money Map as a Guest."
-            : "Manage your signed-in account and device sessions."}
-        </p>
-
-        {isGuest ? (
-          <div className="mt-4 pt-4 border-t border-border space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Status
-              </span>
-              <span
-                data-testid="account-status-badge"
-                className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-foreground"
-              >
-                Guest
-              </span>
-            </div>
-
-            <Link
-              href="/welcome?intent=signin"
-              data-testid="settings-guest-signin-link"
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-xs hover:opacity-90 transition cursor-pointer"
-            >
-              Sign in to add your name and back up your data
-            </Link>
-          </div>
-        ) : (
-          <div className="mt-4 space-y-4 pt-4 border-t border-border">
-            {/* Email Field */}
-            <div className="space-y-1.5">
-              <label
-                htmlFor="settings-email-input"
-                className="text-xs font-semibold text-foreground"
-              >
-                Signed-in email
-              </label>
-              <input
-                id="settings-email-input"
-                type="email"
-                data-testid="settings-email-input"
-                value={userEmail ?? ""}
-                readOnly
-                disabled
-                className="w-full rounded-xl border border-border bg-muted/60 px-4 py-2.5 text-sm text-muted-foreground cursor-not-allowed select-none"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Your sign-in email cannot be changed.
-              </p>
-            </div>
-
-            {/* Session actions */}
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowConfirm(true)}
-                data-testid="settings-signout-btn"
-                className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
-              >
-                <LogOut className="size-4" />
-                <span>Sign out</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowSignOutAllConfirm(true)}
-                data-testid="settings-signout-all-btn"
-                className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-              >
-                <Globe className="size-4" />
-                <span>Sign out of all devices</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setDeleteConfirmText("");
-                  setShowDeleteAccountModal(true);
-                }}
-                data-testid="settings-delete-account-btn"
-                className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20 cursor-pointer ml-auto"
-              >
-                <Trash2 className="size-4" />
-                <span>Delete account</span>
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 6. App Version and Feedback */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-1 text-xs text-muted-foreground">
-        <span data-testid="app-version">Money Map v0.1.0</span>
+      {/* Footer row: Money Map v1 on left, Send feedback on right */}
+      <div className="flex items-center justify-between px-1 text-xs text-muted-foreground pt-2">
+        <span data-testid="app-version">Money Map v1</span>
         <a
-          href="mailto:feedback@moneymap.app?subject=Money%20Map%20Feedback"
+          href="mailto:workwithbrume@gmail.com?subject=Money%20Map%20feedback"
           data-testid="send-feedback-link"
-          className="inline-flex items-center gap-1.5 text-primary hover:underline font-medium"
+          className="inline-flex items-center gap-1.5 text-primary hover:underline font-medium cursor-pointer"
         >
           <Mail className="size-3.5" />
           <span>Send feedback</span>

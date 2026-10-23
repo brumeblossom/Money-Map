@@ -252,6 +252,8 @@ function EditLoanFormInner({
             label="Expected back by"
             value={expectedBackBy}
             onChange={setExpectedBackBy}
+            allowFuture={true}
+            minDate={dateLent}
             required
           />
 

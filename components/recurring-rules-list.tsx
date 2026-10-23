@@ -1,21 +1,30 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { toast } from "sonner";
-import { Pause, Play, Trash2, Repeat } from "lucide-react";
+import { Pause, Play, Trash2, Repeat, Pencil, X } from "lucide-react";
 import { useRecurringRules, useCategories } from "@/lib/repo/hooks";
 import { updateRecurringRule, softDeleteRecurringRule } from "@/lib/repo";
 import type { RecurringRuleRow } from "@/lib/db/dexie";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, toMinor, fromMinor } from "@/lib/format";
 
 export interface RecurringRulesListProps {
   currency?: string;
+  limit?: number;
 }
 
-export function RecurringRulesList({ currency = "NGN" }: RecurringRulesListProps) {
+export function RecurringRulesList({ currency = "NGN", limit }: RecurringRulesListProps) {
   const rules = useRecurringRules();
   const categories = useCategories();
   const [loadingRuleId, setLoadingRuleId] = React.useState<string | null>(null);
+
+  // Edit modal state
+  const [editingRule, setEditingRule] = React.useState<RecurringRuleRow | null>(null);
+  const [editAmountStr, setEditAmountStr] = React.useState("");
+  const [editDescription, setEditDescription] = React.useState("");
+  const [editFrequency, setEditFrequency] = React.useState<"weekly" | "monthly">("monthly");
+  const [isSavingEdit, setIsSavingEdit] = React.useState(false);
 
   const activeRules = React.useMemo(() => {
     if (!rules) return [];
@@ -23,6 +32,47 @@ export function RecurringRulesList({ currency = "NGN" }: RecurringRulesListProps
       .filter((r) => r.deleted_at === null)
       .sort((a, b) => a.next_due_on.localeCompare(b.next_due_on));
   }, [rules]);
+
+  const displayedRules = React.useMemo(() => {
+    return limit ? activeRules.slice(0, limit) : activeRules;
+  }, [activeRules, limit]);
+
+  const handleOpenEdit = (rule: RecurringRuleRow) => {
+    setEditingRule(rule);
+    const major = fromMinor(rule.amount_minor);
+    const parts = major.split(".");
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    setEditAmountStr(parts.join("."));
+    setEditDescription(rule.description || "");
+    setEditFrequency(rule.frequency as "weekly" | "monthly");
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRule) return;
+
+    const minor = toMinor(editAmountStr);
+    if (minor <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+
+    setIsSavingEdit(true);
+    try {
+      await updateRecurringRule(editingRule.id, {
+        amount_minor: minor,
+        description: editDescription.trim() || null,
+        frequency: editFrequency,
+      });
+      toast.success("Repeating entry updated");
+      setEditingRule(null);
+    } catch (err) {
+      console.error("Failed to update repeating rule", err);
+      toast.error("Failed to update entry");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
 
   const handleTogglePause = async (rule: RecurringRuleRow) => {
     try {
@@ -78,7 +128,7 @@ export function RecurringRulesList({ currency = "NGN" }: RecurringRulesListProps
 
   return (
     <div className="space-y-3" data-testid="recurring-rules-list">
-      {activeRules.map((rule) => {
+      {displayedRules.map((rule) => {
         const cat = categories?.find((c) => c.id === rule.category_id);
         const displayName =
           rule.description?.trim() || rule.counterparty?.trim() || cat?.name || "Entry";
@@ -139,8 +189,19 @@ export function RecurringRulesList({ currency = "NGN" }: RecurringRulesListProps
               </div>
             </div>
 
-            {/* Action buttons: Pause/Resume and Delete */}
+            {/* Action buttons: Edit, Pause/Resume and Delete */}
             <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+              <button
+                type="button"
+                data-testid="rule-edit-btn"
+                disabled={isLoading}
+                onClick={() => handleOpenEdit(rule)}
+                aria-label={`Edit ${displayName}`}
+                className="inline-flex size-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                <Pencil className="size-3.5" />
+              </button>
+
               <button
                 type="button"
                 data-testid={rule.is_paused ? "rule-resume-btn" : "rule-pause-btn"}
@@ -179,6 +240,100 @@ export function RecurringRulesList({ currency = "NGN" }: RecurringRulesListProps
           </div>
         );
       })}
+
+      {limit && (
+        <div className="pt-2 flex justify-end">
+          <Link
+            href="/settings/repeating"
+            data-testid="settings-repeating-entries-link"
+            className="text-xs font-semibold text-primary hover:underline"
+          >
+            See all repeating entries →
+          </Link>
+        </div>
+      )}
+
+      {/* Edit Rule Modal */}
+      {editingRule && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
+        >
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-foreground">Edit repeating entry</h3>
+              <button
+                type="button"
+                onClick={() => setEditingRule(null)}
+                className="text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-4 pt-1">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">Description</label>
+                <input
+                  type="text"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="e.g. Salary, Rent, Tithe"
+                  className="w-full rounded-xl border border-input bg-background px-3.5 py-2 text-xs text-foreground focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">Amount</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={editAmountStr}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[^0-9.]/g, "");
+                    const parts = raw.split(".");
+                    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                    setEditAmountStr(parts.join("."));
+                  }}
+                  placeholder="0.00"
+                  className="w-full rounded-xl border border-input bg-background px-3.5 py-2 text-xs text-foreground focus:outline-none focus:border-primary font-mono"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">Repeats</label>
+                <select
+                  value={editFrequency}
+                  onChange={(e) => setEditFrequency(e.target.value as "weekly" | "monthly")}
+                  className="w-full rounded-xl border border-input bg-background px-3.5 py-2 text-xs text-foreground focus:outline-none focus:border-primary cursor-pointer"
+                >
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingRule(null)}
+                  className="rounded-lg border border-input px-3.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingEdit}
+                  className="rounded-lg bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                >
+                  {isSavingEdit ? "Saving..." : "Save changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

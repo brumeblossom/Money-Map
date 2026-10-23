@@ -13,12 +13,13 @@ import {
   Pencil,
   Trash2,
   HandCoins,
+  FileDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RecordPaymentModal } from "@/components/record-payment-modal";
 import { EditLoanModal } from "@/components/edit-loan-modal";
-import { RecordExportBar } from "@/components/record-export-bar";
 import { buildSingleLoanReport } from "@/lib/report/builder";
+import { downloadReportPdf } from "@/lib/report/pdf-export";
 import {
   db,
   getLoan,
@@ -64,8 +65,32 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
   const [isRecordModalOpen, setIsRecordModalOpen] = React.useState(false);
   const [editingPayment, setEditingPayment] = React.useState<LoanPaymentRow | null>(null);
   const [isEditLoanModalOpen, setIsEditLoanModalOpen] = React.useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = React.useState(false);
 
   const today = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  const handleDownloadPdf = async () => {
+    if (!loan) return;
+    try {
+      setIsDownloadingPdf(true);
+      toast.info("Generating PDF...");
+      const snapshot = buildSingleLoanReport({
+        loan,
+        payments,
+        currency: effectiveCurrency,
+        userName: profile?.display_name || "",
+        hideDetails: false,
+        today,
+      });
+      await downloadReportPdf(snapshot);
+      toast.success("PDF downloaded");
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      toast.error("Failed to generate PDF");
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
 
   if (loan === undefined) {
     return (
@@ -186,8 +211,20 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
             <p className="text-sm text-muted-foreground">{categoryName}</p>
           </div>
 
-          {/* Loan Actions: Edit & Delete */}
+          {/* Loan Actions: Download PDF, Edit & Delete */}
           <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadPdf}
+              disabled={isDownloadingPdf}
+              data-testid="loan-export-pdf-button"
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-xl font-semibold cursor-pointer"
+            >
+              <FileDown className="size-3.5" />
+              <span>{isDownloadingPdf ? "Generating..." : "Download PDF"}</span>
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -306,23 +343,19 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
         </div>
       </div>
 
-      {/* Export & Share buttons (Prompt 16 / US-8.1, US-8.2) */}
-      <RecordExportBar
-        type="loans"
-        id={loan.id}
-        date={loan.due_on}
-        kind="lent"
-        getSnapshot={(hideDetails) =>
-          buildSingleLoanReport({
-            loan,
-            payments,
-            currency: effectiveCurrency,
-            userName: profile?.display_name || "",
-            hideDetails,
-            today,
-          })
-        }
-      />
+      {/* Phone: full-width button at the bottom of the details */}
+      <div className="sm:hidden pt-2">
+        <Button
+          variant="outline"
+          onClick={handleDownloadPdf}
+          disabled={isDownloadingPdf}
+          data-testid="loan-export-pdf-mobile-button"
+          className="w-full h-11 gap-2 rounded-xl font-semibold cursor-pointer"
+        >
+          <FileDown className="size-4" />
+          <span>{isDownloadingPdf ? "Generating PDF..." : "Download PDF"}</span>
+        </Button>
+      </div>
 
       {/* Record Money Received Action Button */}
       <div className="flex items-center justify-between">

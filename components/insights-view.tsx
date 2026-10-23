@@ -28,7 +28,9 @@ import {
   Plus,
   ArrowRight,
   Calendar,
+  FileDown,
 } from "lucide-react";
+import { toast } from "sonner";
 import { db, type CategoryRow } from "@/lib/db/dexie";
 import { useEntries, useCategories, useLoans, useLoanPayments } from "@/lib/repo/hooks";
 import {
@@ -38,6 +40,8 @@ import {
   diffInDays,
 } from "@/lib/calc";
 import { formatMoney, formatDate } from "@/lib/format";
+import { buildPeriodReport } from "@/lib/report/builder";
+import { downloadReportPdf } from "@/lib/report/pdf-export";
 import { Button } from "@/components/ui/button";
 import { DateField } from "@/components/date-field";
 import { EntryModal } from "@/components/entry-modal";
@@ -143,6 +147,34 @@ export function InsightsView() {
   });
 
   const currency = profile?.currency || "NGN";
+  const [isExportingPdf, setIsExportingPdf] = React.useState(false);
+
+  const handleExportPdf = async () => {
+    try {
+      setIsExportingPdf(true);
+      toast.info("Generating PDF...");
+      const snapshot = buildPeriodReport({
+        periodStart: activePeriod.start,
+        periodEnd: activePeriod.end,
+        kinds: ["income", "expense", "giving", "lent"],
+        hideDetails: false,
+        currency,
+        userName: profile?.display_name || null,
+        entries: entries || [],
+        categories: categories || [],
+        loans: loans || [],
+        loanPayments: loanPayments || [],
+        today,
+      });
+      await downloadReportPdf(snapshot);
+      toast.success("PDF downloaded");
+    } catch (err) {
+      console.error("Export PDF error:", err);
+      toast.error("Failed to export PDF");
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
 
   // Category map for rapid lookup
   const categoryMap = React.useMemo(() => {
@@ -219,42 +251,73 @@ export function InsightsView() {
     <div className="space-y-6 pb-20">
       {/* Page Title & Period Switcher */}
       <div className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Dashboard
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Financial insights, cash flow trends, and spending breakdown.
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              Dashboard
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Financial insights, cash flow trends, and spending breakdown.
+            </p>
+          </div>
+
+          {/* Desktop Export PDF button */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleExportPdf}
+            disabled={isExportingPdf}
+            data-testid="insights-export-pdf-button"
+            className="hidden sm:inline-flex items-center gap-2 rounded-xl font-semibold shrink-0 cursor-pointer"
+          >
+            <FileDown className="size-4" />
+            <span>{isExportingPdf ? "Generating..." : "Export PDF"}</span>
+          </Button>
         </div>
 
         {/* Period Switcher Chips */}
         <div className="flex flex-col gap-3">
-          <div
-            role="tablist"
-            aria-label="Period switcher"
-            className="flex flex-wrap items-center gap-1.5 rounded-xl border border-border/60 bg-muted/40 p-1 sm:gap-2"
-          >
-            {PERIOD_PRESETS.map((preset) => {
-              const isSelected = selectedPreset === preset.id;
-              return (
-                <button
-                  key={preset.id}
-                  role="tab"
-                  aria-selected={isSelected}
-                  onClick={() => handlePresetSelect(preset.id)}
-                  data-testid={`period-chip-${preset.id}`}
-                  className={cn(
-                    "rounded-lg px-3 py-1.5 text-xs font-semibold transition-all sm:text-sm",
-                    isSelected
-                      ? "bg-background text-foreground shadow-xs"
-                      : "text-muted-foreground hover:bg-background/50 hover:text-foreground",
-                  )}
-                >
-                  {preset.label}
-                </button>
-              );
-            })}
+          <div className="flex items-center gap-2">
+            <div
+              role="tablist"
+              aria-label="Period switcher"
+              className="flex flex-1 flex-wrap items-center gap-1.5 rounded-xl border border-border/60 bg-muted/40 p-1 sm:gap-2"
+            >
+              {PERIOD_PRESETS.map((preset) => {
+                const isSelected = selectedPreset === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    role="tab"
+                    aria-selected={isSelected}
+                    onClick={() => handlePresetSelect(preset.id)}
+                    data-testid={`period-chip-${preset.id}`}
+                    className={cn(
+                      "rounded-lg px-3 py-1.5 text-xs font-semibold transition-all sm:text-sm cursor-pointer",
+                      isSelected
+                        ? "bg-background text-foreground shadow-xs"
+                        : "text-muted-foreground hover:bg-background/50 hover:text-foreground",
+                    )}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Phone Export PDF icon button next to period selector */}
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={handleExportPdf}
+              disabled={isExportingPdf}
+              aria-label="Export PDF"
+              data-testid="insights-export-pdf-mobile-button"
+              className="sm:hidden size-10 rounded-xl shrink-0 cursor-pointer"
+            >
+              <FileDown className="size-4" />
+            </Button>
           </div>
 
           {/* Custom Date Range Picker */}

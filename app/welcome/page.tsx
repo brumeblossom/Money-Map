@@ -35,29 +35,15 @@ export default function WelcomePage() {
   const [showEmailForm, setShowEmailForm] = React.useState(false);
   const [firstName, setFirstName] = React.useState("");
   const [email, setEmail] = React.useState("");
-  const [isSharedDevice, setIsSharedDevice] = React.useState(false);
   const [nameError, setNameError] = React.useState<string | null>(null);
   const [emailError, setEmailError] = React.useState<string | null>(null);
   const [googleError, setGoogleError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
 
-  const applySharedDeviceFlag = () => {
-    if (typeof window !== "undefined") {
-      if (isSharedDevice) {
-        sessionStorage.setItem("moneymap_shared_device", "true");
-        localStorage.setItem("moneymap_was_shared_device", "true");
-      } else {
-        sessionStorage.removeItem("moneymap_shared_device");
-        localStorage.removeItem("moneymap_was_shared_device");
-      }
-    }
-  };
-
   const handleContinueWithGoogle = async () => {
     setIsGoogleLoading(true);
     setGoogleError(null);
-    applySharedDeviceFlag();
     try {
       const supabase = createClient();
       const origin = window.location.origin;
@@ -95,7 +81,6 @@ export default function WelcomePage() {
     }
 
     setIsLoading(true);
-    applySharedDeviceFlag();
 
     try {
       const trimmedName = validation.data.firstName.trim();
@@ -238,18 +223,6 @@ export default function WelcomePage() {
                 )}
               </div>
 
-              {/* Someone else's device Checkbox */}
-              <label className="flex items-center gap-2 pt-1 text-xs text-muted-foreground cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  data-testid="welcome-shared-device-checkbox"
-                  checked={isSharedDevice}
-                  onChange={(e) => setIsSharedDevice(e.target.checked)}
-                  className="size-4 rounded border-border accent-emerald-600 cursor-pointer"
-                />
-                <span>This is someone else&apos;s device</span>
-              </label>
-
               <button
                 type="submit"
                 data-testid="welcome-email-submit"
@@ -290,19 +263,6 @@ export default function WelcomePage() {
               </p>
             )}
           </div>
-
-          {!showEmailForm && (
-            <label className="flex items-center justify-center gap-2 pt-1 text-xs text-muted-foreground cursor-pointer select-none">
-              <input
-                type="checkbox"
-                data-testid="welcome-shared-device-checkbox-main"
-                checked={isSharedDevice}
-                onChange={(e) => setIsSharedDevice(e.target.checked)}
-                className="size-4 rounded border-border accent-emerald-600 cursor-pointer"
-              />
-              <span>This is someone else&apos;s device</span>
-            </label>
-          )}
 
           <div className="pt-2">
             {/* Try without an account: small text link */}

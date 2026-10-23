@@ -823,9 +823,11 @@ function LentEntryForm({
           label="Expected back by"
           value={expectedBackBy}
           onChange={(d) => setExpectedBackBy(d)}
+          allowFuture={true}
+          minDate={dateLent}
           required
         />
-        {expectedBackBy < dateLent && (
+        {expectedBackBy && dateLent && expectedBackBy < dateLent && (
           <span className="text-xs text-destructive">
             Expected back by date must be on or after Date lent
           </span>

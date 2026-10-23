@@ -697,7 +697,7 @@ export function habitsSummary(
 /**
  * Smart tip on the dashboard = the summary sentence with the largest absolute percent change
  * among categories that are at least 5% of Expenses;
- * if none qualify, "You're on track. Keep recording to see your habits."
+ * if none qualify, "Tips will appear here after a few weeks of records."
  */
 export function smartTip(
   categories: Array<{ id: string; name: string }>,
@@ -715,7 +715,7 @@ export function smartTip(
   }
 
   if (totalM0Expenses === 0) {
-    return "You're on track. Keep recording to see your habits.";
+    return "Tips will appear here after a few weeks of records.";
   }
 
   const summary = habitsSummary(categories, entries, currentMonthIso, currency);
@@ -747,7 +747,7 @@ export function smartTip(
     }
   }
 
-  return bestSentence ?? "You're on track. Keep recording to see your habits.";
+  return bestSentence ?? "Tips will appear here after a few weeks of records.";
 }
 
 // ============================================================================

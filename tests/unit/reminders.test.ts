@@ -1,8 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { getDueLoans, computeDueReminders, buildReminderEmailHtml } from "@/lib/calc/reminders";
 import type { LoanRow, LoanPaymentRow, RecurringRuleRow, ProfileRow } from "@/lib/db/dexie";
-import { GET } from "@/app/api/cron/reminders/route";
-import { NextRequest } from "next/server";
 
 describe("Reminders Calculation (US-4.3 & US-5.1)", () => {
   const dummyLoans: LoanRow[] = [
@@ -413,50 +411,5 @@ describe("User Isolation & Privacy (Two Users Test)", () => {
     expect(bobHtml).toContain("Bob Gym");
     expect(bobHtml).not.toContain("David");
     expect(bobHtml).not.toContain("Alice Rent");
-  });
-});
-
-describe("GET /api/cron/reminders Endpoint Protection & Configuration", () => {
-  beforeEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  it("returns 401 when Authorization header is missing", async () => {
-    vi.stubEnv("CRON_SECRET", "super-secret-cron-token");
-    const req = new NextRequest("http://localhost:3000/api/cron/reminders");
-
-    const res = await GET(req);
-    expect(res.status).toBe(401);
-    const data = await res.json();
-    expect(data.error).toBe("Unauthorized");
-  });
-
-  it("returns 401 when Authorization header does not match CRON_SECRET", async () => {
-    vi.stubEnv("CRON_SECRET", "super-secret-cron-token");
-    const req = new NextRequest("http://localhost:3000/api/cron/reminders", {
-      headers: {
-        authorization: "Bearer wrong-token",
-      },
-    });
-
-    const res = await GET(req);
-    expect(res.status).toBe(401);
-    const data = await res.json();
-    expect(data.error).toBe("Unauthorized");
-  });
-
-  it("returns { sent: 0, skipped: 'email not configured' } when authorized but RESEND_API_KEY is missing", async () => {
-    vi.stubEnv("CRON_SECRET", "super-secret-cron-token");
-    vi.stubEnv("RESEND_API_KEY", ""); // empty
-    const req = new NextRequest("http://localhost:3000/api/cron/reminders", {
-      headers: {
-        authorization: "Bearer super-secret-cron-token",
-      },
-    });
-
-    const res = await GET(req);
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data).toEqual({ sent: 0, skipped: "email not configured" });
   });
 });

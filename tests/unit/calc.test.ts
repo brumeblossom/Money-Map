@@ -500,7 +500,7 @@ describe("Calculation Engine (PRD Section 5)", () => {
 
       // Fallback with no data
       expect(smartTip(categories, [], "2026-10", "NGN")).toBe(
-        "You're on track. Keep recording to see your habits.",
+        "Tips will appear here after a few weeks of records.",
       );
 
       const entries = [

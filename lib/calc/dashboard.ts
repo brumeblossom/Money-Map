@@ -19,12 +19,12 @@ import {
 } from "./index";
 
 export const CATEGORY_DONUT_COLORS = [
-  "#10b981", // emerald-500
-  "#06b6d4", // cyan-500
-  "#6366f1", // indigo-500
-  "#f59e0b", // amber-500
-  "#ec4899", // pink-500
-  "#94a3b8", // slate-400 (Other)
+  "#2E6B4E", // Moss
+  "#4E9F94", // Teal
+  "#F5C451", // Sun
+  "#F26B4D", // Coral
+  "#8F6300", // Deep Sun
+  "#5B6170", // Slate / Other
 ];
 
 export interface CategorySpendItem {

@@ -38,20 +38,20 @@ export function ActionCard({
   const isGiving = label === "Giving";
 
   const colorStyles = isIncome
-    ? "hover:border-emerald-500/40 hover:bg-emerald-500/5 dark:hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+    ? "hover:border-money-income/40 hover:bg-money-income/5 text-money-income"
     : isExpenses
-      ? "hover:border-rose-500/40 hover:bg-rose-500/5 dark:hover:bg-rose-500/10 text-rose-600 dark:text-rose-400"
+      ? "hover:border-money-expense/40 hover:bg-money-expense/5 text-money-expense-text"
       : isGiving
-        ? "hover:border-purple-500/40 hover:bg-purple-500/5 dark:hover:bg-purple-500/10 text-purple-600 dark:text-purple-400"
-        : "hover:border-amber-500/40 hover:bg-amber-500/5 dark:hover:bg-amber-500/10 text-amber-600 dark:text-amber-400";
+        ? "hover:border-money-giving/40 hover:bg-money-giving/5 text-money-giving-text"
+        : "hover:border-money-lent/40 hover:bg-money-lent/5 text-money-lent-text";
 
   const iconBgStyles = isIncome
-    ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/20 dark:text-emerald-400"
+    ? "bg-secondary text-money-income"
     : isExpenses
-      ? "bg-rose-500/10 text-rose-600 dark:bg-rose-400/20 dark:text-rose-400"
+      ? "bg-money-expense/15 text-money-expense-text"
       : isGiving
-        ? "bg-purple-500/10 text-purple-600 dark:bg-purple-400/20 dark:text-purple-400"
-        : "bg-amber-500/10 text-amber-600 dark:bg-amber-400/20 dark:text-amber-400";
+        ? "bg-money-giving/20 text-money-giving-text"
+        : "bg-money-lent/15 text-money-lent-text";
 
   const formattedAmount = formatMoney(amountMinor, currency);
 

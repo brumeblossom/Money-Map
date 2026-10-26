@@ -294,7 +294,7 @@ export function CategoryHabitDetailView({ categoryId }: { categoryId: string }) 
           <div className="flex items-center gap-2">
             <span
               data-testid="category-share-percent"
-              className="rounded-full bg-primary/10 px-3 py-1 text-sm font-bold text-primary tabular-nums"
+              className="rounded-full bg-secondary px-3 py-1 text-sm font-bold text-primary tabular-nums"
             >
               {report.share}% of expenses
             </span>
@@ -352,8 +352,8 @@ export function CategoryHabitDetailView({ categoryId }: { categoryId: string }) 
                     "Spent",
                   ]}
                   contentStyle={{
-                    backgroundColor: "var(--color-card, #171717)",
-                    borderColor: "var(--color-border, #333)",
+                    backgroundColor: "var(--card)",
+                    borderColor: "var(--border)",
                     borderRadius: "0.75rem",
                     fontSize: "0.8125rem",
                     boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
@@ -362,9 +362,9 @@ export function CategoryHabitDetailView({ categoryId }: { categoryId: string }) 
                 <Line
                   type="monotone"
                   dataKey="amount_major"
-                  stroke="#10b981"
+                  stroke="var(--primary)"
                   strokeWidth={2.5}
-                  dot={{ r: 3, fill: "#10b981" }}
+                  dot={{ r: 3, fill: "var(--primary)" }}
                   activeDot={{ r: 5 }}
                   isAnimationActive={false}
                 />

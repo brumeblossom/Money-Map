@@ -215,9 +215,9 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
                 className={cn(
                   "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider",
                   status === "Paid off" &&
-                    "border-emerald-500/30 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+                    "border-money-income/30 bg-secondary text-money-income",
                   status === "Due soon" &&
-                    "border-amber-500/30 bg-amber-500/15 text-amber-600 dark:text-amber-400",
+                    "border-money-giving/40 bg-money-giving/20 text-money-giving-text",
                   status === "Overdue" &&
                     "border-destructive/30 bg-destructive/15 text-destructive",
                   status === "Active" &&
@@ -278,7 +278,7 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
           </div>
           <div className="rounded-xl border border-border/40 bg-background/50 p-4">
             <span className="text-xs font-medium text-muted-foreground">Received so far</span>
-            <div className="mt-1 text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
+            <div className="mt-1 text-2xl font-bold tracking-tight text-money-income">
               {formatMoney(received, effectiveCurrency)}
             </div>
           </div>
@@ -300,7 +300,7 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
             <div
               className={cn(
                 "h-full rounded-full transition-all duration-300",
-                status === "Paid off" ? "bg-emerald-500" : "bg-primary",
+                status === "Paid off" ? "bg-money-income" : "bg-primary",
               )}
               style={{ width: `${progressPercent}%` }}
             />
@@ -414,7 +414,7 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
                     className={cn(
                       "flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold",
                       isMilestoneMet
-                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                        ? "bg-secondary text-money-income"
                         : isMilestoneOverdue
                           ? "bg-destructive/15 text-destructive"
                           : "bg-secondary text-muted-foreground",
@@ -447,7 +447,7 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
                     className={cn(
                       "text-xs font-semibold",
                       isMilestoneMet
-                        ? "text-emerald-600 dark:text-emerald-400"
+                        ? "text-money-income"
                         : isMilestoneOverdue
                           ? "text-destructive"
                           : "text-muted-foreground",
@@ -494,7 +494,7 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
                 className="flex items-center justify-between py-3.5 first:pt-0 last:pb-0"
               >
                 <div className="space-y-0.5">
-                  <div className="text-base font-bold text-emerald-600 dark:text-emerald-400">
+                  <div className="text-base font-bold text-money-income">
                     +{formatMoney(p.amount_minor, effectiveCurrency)}
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">

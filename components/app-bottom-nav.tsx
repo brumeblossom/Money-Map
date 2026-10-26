@@ -39,8 +39,8 @@ export function AppBottomNav({ className }: { className?: string }) {
             >
               <div
                 className={cn(
-                  "flex size-7 items-center justify-center rounded-full transition-colors",
-                  isActive ? "bg-primary/10 text-primary" : "text-muted-foreground",
+                  "flex h-7 w-12 items-center justify-center rounded-full transition-colors",
+                  isActive ? "bg-secondary text-primary" : "text-muted-foreground",
                 )}
               >
                 <Icon className="size-4 shrink-0" />

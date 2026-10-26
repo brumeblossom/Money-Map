@@ -395,7 +395,7 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
             </span>
             <span
               data-testid="month-strip-income"
-              className="mt-0.5 block text-sm font-bold tracking-tight text-emerald-600 dark:text-emerald-400 sm:text-base tabular-nums"
+              className="mt-0.5 block text-sm font-bold tracking-tight text-money-income sm:text-base tabular-nums"
             >
               {formatMoney(totals.moneyIn, effectiveCurrency)}
             </span>
@@ -414,7 +414,7 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
             </span>
             <span
               data-testid="month-strip-expenses"
-              className="mt-0.5 block text-sm font-bold tracking-tight text-rose-600 dark:text-rose-400 sm:text-base tabular-nums"
+              className="mt-0.5 block text-sm font-bold tracking-tight text-money-expense-text sm:text-base tabular-nums"
             >
               {formatMoney(totals.moneyOut, effectiveCurrency)}
             </span>

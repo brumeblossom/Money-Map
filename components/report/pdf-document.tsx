@@ -36,13 +36,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 36,
     fontSize: 9,
     fontFamily: "NotoSans",
-    color: "#0f172a",
+    color: "#15181E",
     backgroundColor: "#ffffff",
   },
   header: {
     marginBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
+    borderBottomColor: "#E6E2D9",
     borderBottomStyle: "solid",
     paddingBottom: 12,
   },
@@ -51,16 +51,36 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
   },
-  title: {
-    fontSize: 20,
+  logoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  logoMark: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    backgroundColor: "#2E6B4E",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logoText: {
+    color: "#ffffff",
     fontFamily: "NotoSans",
     fontWeight: "bold",
-    color: "#0f172a",
+    fontSize: 12,
+    lineHeight: 1,
+  },
+  title: {
+    fontSize: 18,
+    fontFamily: "NotoSans",
+    fontWeight: "bold",
+    color: "#15181E",
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 10,
-    color: "#475569",
+    color: "#5B6170",
     marginTop: 4,
   },
   totalsGrid: {
@@ -70,18 +90,18 @@ const styles = StyleSheet.create({
   },
   totalCard: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#F7F5F0",
     padding: 8,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: "#E6E2D9",
     borderStyle: "solid",
   },
   totalLabel: {
     fontSize: 7.5,
     fontFamily: "NotoSans",
     fontWeight: "bold",
-    color: "#64748b",
+    color: "#5B6170",
     textTransform: "uppercase",
     marginBottom: 4,
   },
@@ -89,13 +109,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "NotoSans",
     fontWeight: "bold",
-    color: "#0f172a",
+    color: "#15181E",
   },
   totalValueIncome: {
-    color: "#059669",
+    color: "#2E6B4E",
   },
   totalValueExpense: {
-    color: "#e11d48",
+    color: "#C84628",
   },
   sectionTitle: {
     fontSize: 12,
@@ -242,7 +262,12 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
           <View style={styles.header}>
             <View style={styles.headerTop}>
               <View>
-                <Text style={styles.title}>Money Map</Text>
+                <View style={styles.logoContainer}>
+                  <View style={styles.logoMark}>
+                    <Text style={styles.logoText}>M</Text>
+                  </View>
+                  <Text style={styles.title}>Money Map</Text>
+                </View>
                 <Text style={styles.subtitle}>{snapshot.displayDate}</Text>
               </View>
             </View>
@@ -309,7 +334,12 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
           <View style={styles.header}>
             <View style={styles.headerTop}>
               <View>
-                <Text style={styles.title}>Money Map</Text>
+                <View style={styles.logoContainer}>
+                  <View style={styles.logoMark}>
+                    <Text style={styles.logoText}>M</Text>
+                  </View>
+                  <Text style={styles.title}>Money Map</Text>
+                </View>
                 <Text style={styles.subtitle}>Loan to {snapshot.borrower}</Text>
               </View>
             </View>
@@ -408,7 +438,12 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View>
-              <Text style={styles.title}>Money Map</Text>
+              <View style={styles.logoContainer}>
+                <View style={styles.logoMark}>
+                  <Text style={styles.logoText}>M</Text>
+                </View>
+                <Text style={styles.title}>Money Map</Text>
+              </View>
               <Text style={styles.subtitle}>{snapshot.periodLabel}</Text>
             </View>
           </View>
@@ -490,8 +525,8 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
                       styles.td,
                       styles.colAmount,
                       entry.action === "Income"
-                        ? { color: "#059669", fontFamily: "NotoSans", fontWeight: "bold" }
-                        : { color: "#e11d48", fontFamily: "NotoSans", fontWeight: "bold" },
+                        ? { color: "#2E6B4E", fontFamily: "NotoSans", fontWeight: "bold" }
+                        : { color: "#C84628", fontFamily: "NotoSans", fontWeight: "bold" },
                     ]}
                   >
                     {formatMoney(entry.amount, snapshot.currency)}

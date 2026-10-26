@@ -171,9 +171,9 @@ export function LentListView({
                     className={cn(
                       "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider",
                       status === "Paid off" &&
-                        "border-emerald-500/30 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+                        "border-money-income/30 bg-secondary text-money-income",
                       status === "Due soon" &&
-                        "border-amber-500/30 bg-amber-500/15 text-amber-600 dark:text-amber-400",
+                        "border-money-giving/40 bg-money-giving/20 text-money-giving-text",
                       status === "Overdue" &&
                         "border-destructive/30 bg-destructive/15 text-destructive",
                       status === "Active" &&
@@ -187,7 +187,7 @@ export function LentListView({
                 {/* Next Expected Date & Countdown */}
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   {status === "Paid off" ? (
-                    <span className="font-medium text-emerald-600 dark:text-emerald-400">Paid off</span>
+                    <span className="font-medium text-money-income">Paid off</span>
                   ) : nextDate ? (
                     <>
                       <Calendar className="size-3.5" />
@@ -199,7 +199,7 @@ export function LentListView({
                           status === "Overdue"
                             ? "text-destructive"
                             : status === "Due soon"
-                              ? "text-amber-600 dark:text-amber-400"
+                              ? "text-money-giving-text"
                               : "text-foreground",
                         )}
                       >
@@ -231,7 +231,7 @@ export function LentListView({
                 <div
                   className={cn(
                     "h-full rounded-full transition-all duration-300",
-                    status === "Paid off" ? "bg-emerald-500" : "bg-primary",
+                    status === "Paid off" ? "bg-money-income" : "bg-primary",
                   )}
                   style={{ width: `${progressPercent}%` }}
                 />
@@ -309,7 +309,7 @@ export function LentListView({
                     <ChevronRight className="size-4 text-muted-foreground" />
                   )}
                   <span>Paid off</span>
-                  <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-bold text-money-income">
                     {paidOffLoans.length}
                   </span>
                 </div>

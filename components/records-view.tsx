@@ -617,7 +617,7 @@ export function RecordsView() {
             onClick={() => handleTabChange("income")}
             className={`rounded-lg py-2 px-1 text-xs font-semibold transition-all sm:text-sm cursor-pointer ${
               activeTab === "income"
-                ? "bg-card text-foreground shadow-xs"
+                ? "bg-secondary text-secondary-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -632,7 +632,7 @@ export function RecordsView() {
             onClick={() => handleTabChange("expenses")}
             className={`rounded-lg py-2 px-1 text-xs font-semibold transition-all sm:text-sm cursor-pointer ${
               activeTab === "expenses"
-                ? "bg-card text-foreground shadow-xs"
+                ? "bg-secondary text-secondary-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -647,7 +647,7 @@ export function RecordsView() {
             onClick={() => handleTabChange("giving")}
             className={`rounded-lg py-2 px-1 text-xs font-semibold transition-all sm:text-sm cursor-pointer ${
               activeTab === "giving"
-                ? "bg-card text-foreground shadow-xs"
+                ? "bg-secondary text-secondary-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -662,7 +662,7 @@ export function RecordsView() {
             onClick={() => handleTabChange("lent")}
             className={`rounded-lg py-2 px-1 text-xs font-semibold transition-all sm:text-sm cursor-pointer ${
               activeTab === "lent"
-                ? "bg-card text-foreground shadow-xs"
+                ? "bg-secondary text-secondary-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -1292,10 +1292,10 @@ const RecordRowItem = React.memo(function RecordRowItem({
             <div
               className={`flex size-9 shrink-0 items-center justify-center rounded-full ${
                 isIncome
-                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                  ? "bg-secondary text-money-income"
                   : isExpense
-                  ? "bg-rose-500/10 text-rose-600 dark:text-rose-400"
-                  : "bg-violet-500/10 text-violet-600 dark:text-violet-400"
+                  ? "bg-money-expense/15 text-money-expense-text"
+                  : "bg-money-giving/20 text-money-giving-text"
               }`}
             >
               {isIncome && <ArrowDownLeft className="size-4" />}
@@ -1317,8 +1317,10 @@ const RecordRowItem = React.memo(function RecordRowItem({
             <span
               className={`text-sm font-bold sm:text-base tabular-nums ${
                 isIncome
-                  ? "text-emerald-600 dark:text-emerald-400"
-                  : "text-foreground"
+                  ? "text-money-income"
+                  : isExpense
+                  ? "text-money-expense-text"
+                  : "text-money-giving-text"
               }`}
             >
               {formattedAmount}

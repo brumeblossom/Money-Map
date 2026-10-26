@@ -269,7 +269,7 @@ export function InsightsView() {
                     className={cn(
                       "rounded-lg px-3 py-1.5 text-xs font-semibold transition-all sm:text-sm cursor-pointer",
                       isSelected
-                        ? "bg-background text-foreground shadow-xs"
+                        ? "bg-secondary text-secondary-foreground shadow-xs"
                         : "text-muted-foreground hover:bg-background/50 hover:text-foreground",
                     )}
                   >
@@ -344,8 +344,8 @@ export function InsightsView() {
               className={cn(
                 "text-3xl font-extrabold tracking-tight tabular-nums sm:text-4xl",
                 totals.leftOver >= 0
-                  ? "text-emerald-600 dark:text-emerald-400"
-                  : "text-rose-600 dark:text-rose-400",
+                  ? "text-money-income"
+                  : "text-money-expense-text",
               )}
             >
               {formatMoney(totals.leftOver, currency)}
@@ -361,9 +361,9 @@ export function InsightsView() {
                 leftOverChange === "New"
                   ? "border border-border/80 bg-muted/60 text-muted-foreground"
                   : leftOverChange > 0
-                    ? "border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                    ? "border border-money-income/20 bg-secondary text-money-income"
                     : leftOverChange < 0
-                      ? "border border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                      ? "border border-money-expense/20 bg-money-expense/15 text-money-expense-text"
                       : "border border-border/80 bg-muted/60 text-muted-foreground",
               )}
             >
@@ -394,13 +394,13 @@ export function InsightsView() {
           {/* Tile 1: Income */}
           <div
             data-testid="insights-tile-income-card"
-            className="group flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-4 shadow-xs transition-all hover:border-emerald-500/30 sm:p-5"
+            className="group flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-4 shadow-xs transition-all hover:border-money-income/30 sm:p-5"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Income
               </span>
-              <div className="rounded-full bg-emerald-500/10 p-2 text-emerald-600 dark:text-emerald-400">
+              <div className="rounded-full bg-secondary p-2 text-money-income">
                 <ArrowDownLeft className="size-4" />
               </div>
             </div>
@@ -417,13 +417,13 @@ export function InsightsView() {
           {/* Tile 2: Expenses */}
           <div
             data-testid="insights-tile-expenses-card"
-            className="group flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-4 shadow-xs transition-all hover:border-rose-500/30 sm:p-5"
+            className="group flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-4 shadow-xs transition-all hover:border-money-expense/30 sm:p-5"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Expenses
               </span>
-              <div className="rounded-full bg-rose-500/10 p-2 text-rose-600 dark:text-rose-400">
+              <div className="rounded-full bg-money-expense/15 p-2 text-money-expense-text">
                 <ArrowUpRight className="size-4" />
               </div>
             </div>
@@ -440,13 +440,13 @@ export function InsightsView() {
           {/* Tile 3: Giving */}
           <div
             data-testid="insights-tile-given-card"
-            className="group flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-4 shadow-xs transition-all hover:border-amber-500/30 sm:p-5"
+            className="group flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-4 shadow-xs transition-all hover:border-money-giving/30 sm:p-5"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Giving
               </span>
-              <div className="rounded-full bg-amber-500/10 p-2 text-amber-600 dark:text-amber-400">
+              <div className="rounded-full bg-money-giving/20 p-2 text-money-giving-text">
                 <Heart className="size-4" />
               </div>
             </div>
@@ -463,13 +463,13 @@ export function InsightsView() {
           {/* Tile 4: Money I lent */}
           <div
             data-testid="insights-tile-owed-card"
-            className="group flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-4 shadow-xs transition-all hover:border-indigo-500/30 sm:p-5"
+            className="group flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-4 shadow-xs transition-all hover:border-money-lent/30 sm:p-5"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Money I lent
               </span>
-              <div className="rounded-full bg-indigo-500/10 p-2 text-indigo-600 dark:text-indigo-400">
+              <div className="rounded-full bg-money-lent/15 p-2 text-money-lent-text">
                 <HandCoins className="size-4" />
               </div>
             </div>
@@ -584,8 +584,8 @@ export function InsightsView() {
                           "Amount",
                         ]}
                         contentStyle={{
-                          backgroundColor: "var(--color-card, #171717)",
-                          borderColor: "var(--color-border, #333)",
+                          backgroundColor: "var(--card)",
+                          borderColor: "var(--border)",
                           borderRadius: "0.75rem",
                           fontSize: "0.8125rem",
                           boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
@@ -717,8 +717,8 @@ export function InsightsView() {
                         formatMoney(Math.round(Number(val) * 100), currency),
                       ]}
                       contentStyle={{
-                        backgroundColor: "var(--color-card, #171717)",
-                        borderColor: "var(--color-border, #333)",
+                        backgroundColor: "var(--card)",
+                        borderColor: "var(--border)",
                         borderRadius: "0.75rem",
                         fontSize: "0.8125rem",
                         boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
@@ -728,14 +728,14 @@ export function InsightsView() {
                     <Bar
                       dataKey="income"
                       name="Income"
-                      fill="#10b981"
+                      fill="var(--money-income)"
                       radius={[4, 4, 0, 0]}
                       isAnimationActive={false}
                     />
                     <Bar
                       dataKey="expenses"
                       name="Expenses"
-                      fill="#f43f5e"
+                      fill="var(--money-expense)"
                       radius={[4, 4, 0, 0]}
                       isAnimationActive={false}
                     />
@@ -815,15 +815,15 @@ export function InsightsView() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
+                        <span className="text-sm font-bold text-foreground group-hover:text-primary">
                           {loan.counterparty}
                         </span>
                         <span
                           className={cn(
                             "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
                             status === "Overdue" && "bg-destructive/15 text-destructive",
-                            status === "Due soon" && "bg-amber-500/15 text-amber-600 dark:text-amber-400",
-                            status === "Active" && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                            status === "Due soon" && "bg-money-giving/20 text-money-giving-text",
+                            status === "Active" && "bg-secondary text-secondary-foreground",
                           )}
                         >
                           {status}
@@ -838,7 +838,7 @@ export function InsightsView() {
                     <div className="mt-2.5">
                       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                         <div
-                          className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                          className="h-full rounded-full bg-primary transition-all duration-300"
                           style={{ width: `${Math.min(100, Math.max(0, progressPercent))}%` }}
                         />
                       </div>
@@ -866,10 +866,10 @@ export function InsightsView() {
         {/* ================================================================= */}
         <div
           data-testid="insights-smart-tip-card"
-          className="flex flex-col justify-between rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 via-card to-card p-5 shadow-xs sm:p-6"
+          className="flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-5 shadow-xs sm:p-6"
         >
-          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-            <div className="rounded-full bg-emerald-500/15 p-2">
+          <div className="flex items-center gap-2 text-primary">
+            <div className="rounded-full bg-secondary p-2 text-primary">
               <Lightbulb className="size-5" />
             </div>
             <span className="text-xs font-bold uppercase tracking-wider">
@@ -962,10 +962,10 @@ export function InsightsView() {
                         className={cn(
                           "rounded-full p-2 text-xs",
                           isIncome
-                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                            ? "bg-secondary text-money-income"
                             : entry.kind === "giving"
-                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                              : "bg-rose-500/10 text-rose-600 dark:text-rose-400",
+                              ? "bg-money-giving/20 text-money-giving-text"
+                              : "bg-money-expense/15 text-money-expense-text",
                         )}
                       >
                         {isIncome ? (
@@ -992,8 +992,10 @@ export function InsightsView() {
                       className={cn(
                         "shrink-0 whitespace-nowrap ml-2 text-sm font-bold tabular-nums",
                         isIncome
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : "text-foreground",
+                          ? "text-money-income"
+                          : entry.kind === "giving"
+                            ? "text-money-giving-text"
+                            : "text-money-expense-text",
                       )}
                     >
                       {`${isIncome ? "+" : "-"}${formatMoney(entry.amount_minor, currency)}`}

@@ -1109,6 +1109,50 @@
     - Consistent 16px padding inside each row (`p-4`) and between rows.
     - Phones (360px - 430px): text column takes remaining width and truncates long names with ellipsis; three icon buttons stay on right without wrapping below text; tap targets at least 40px (`size-10`).
 
+### Prompt 17a: Rebrand, Plus Jakarta Sans, and Design Tokens
+- **Font investigation (Step 0 Answer)**:
+  - Commit: `cb95fb0d505f2a488a2ed05fd97130f0460bba90` during **Prompt 16b** ("fix: sync badge, records layout, remove share links and email reminders").
+  - Changed from `Geist` (`next/font/google`) to local `Noto Sans` (`next/font/local` importing `../public/fonts/NotoSans-*.ttf`) in `app/layout.tsx`.
+  - Reason: When bundling local Noto Sans TTFs for `@react-pdf/renderer` and Naira (₦) symbol support in prompt 16b, the agent replaced Geist with local Noto Sans app-wide in `app/layout.tsx`.
+- **Design Tokens in globals.css**:
+  - Light mode:
+    - `background`: `#F7F5F0` (warm off-white), `foreground`: `#15181E` (Ink)
+    - `card` / `popover`: `#FFFFFF`
+    - `muted-foreground`: `#5B6170` (WCAG AA compliant contrast > 4.9:1)
+    - `border` / `input`: `#E6E2D9`
+    - `ring`: `#2E6B4E`
+    - `primary` (Moss): `#2E6B4E` (hover: `#1F4D37`, text: `#FFFFFF`)
+    - `secondary` / soft (Mint): `#DCEBDD` (text: `#1F4D37`)
+    - `accent`: Sun `#F5C451`, Coral `#F26B4D`
+    - `destructive`: `#C53B30`
+    - `sidebar`: Moss Dark `#1F4D37`, text `#E8F1EA`, muted text `#A9C3B2`, active background `rgba(255,255,255,0.10)` with white text and 3px Mint left bar.
+    - `bottom nav`: card background, active item Moss with Mint pill behind the icon.
+  - Dark mode:
+    - `background`: `#111614`, `card`: `#1A201D`, `popover`: `#1F2622`
+    - `foreground`: `#F1F3F0`, `muted-foreground`: `#A3ABA6`
+    - `border` / `input`: `#2A322E`
+    - `primary`: `#3E8E65` (hover: `#4FA67A`, text: `#FFFFFF`)
+    - `secondary` / soft: `#1E3A2C` (text: `#CFE6D6`)
+    - `sidebar`: `#0E1311` with active indicator
+    - `destructive`: `#E05A4E`
+  - Money colours (WCAG AA verified):
+    - Income: Moss (`#2E6B4E` light / `#5DBB8A` dark)
+    - Expenses: Coral (`#F26B4D` fill; text adjusted to `#C84628` in light mode for 4.8:1 contrast on white / `#F2826A` dark)
+    - Giving: Sun (`#F5C451` fill; text adjusted to `#8F6300` in light mode for 4.8:1 contrast / `#F5C451` dark)
+    - Money I lent: Teal (`#4E9F94` light / `#6CC0B4` dark; text adjusted to `#276F66` in light mode for 4.5:1 contrast / `#6CC0B4` dark)
+- **Typography & Font Fallback**:
+  - `Plus Jakarta Sans` loaded via `next/font/google` (weights 400, 500, 600, 700, 800; display swap; latin subset) as the single app font.
+  - Added CSS `@font-face` fallback for `unicode-range: U+20A6` (₦) pointing to `/fonts/NotoSans-Regular.ttf` and `/fonts/NotoSans-Bold.ttf`.
+  - Type scale: page titles 28-34px / 800, card/section titles 17px / 700, body 15px / 500, captions/labels 13px / 500, uppercase labels 12px / 600 (tracking 0.06em). Amounts use 700 with `tabular-nums`.
+- **Shape and Spacing**:
+  - Radius: cards/sheets 16px, inputs/buttons 12px, pills fully rounded (9999px).
+  - Buttons: primary = Moss filled, secondary = Mint filled with Moss Dark text, outline = border + Ink text, destructive = red.
+- **Logo and Brand Icons**:
+  - Logo mark: rounded square in Moss `#2E6B4E` with bold white "M" next to "Money Map" in Plus Jakarta Sans 800. Implemented in `BrandLogoMark` component and rendered in sidebar, mobile header, welcome page, and PDFs.
+  - Replaced favicon (`favicon.ico`, `favicon.png`), Apple touch icon (180x180), and PWA icons (192, 512, maskable 192, maskable 512). Updated manifest theme colour to `#2E6B4E`.
+- **Design Rule Added**:
+  - "Use design tokens only, never hard-coded colours" added to `CLAUDE.md` and `docs/PROGRESS.md`.
+
 ## Environment variables for Vercel
 
 The following environment variables can now be safely removed from Vercel project settings:
@@ -1127,6 +1171,7 @@ The following environment variables can now be safely removed from Vercel projec
 
 ## Next prompt
 
-Prompt 18: settings and account (skip anything already done).
+Prompt 17b: landing page and login
+
 
 

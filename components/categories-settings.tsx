@@ -296,7 +296,7 @@ export function CategoriesSettings({ initialScope = "income", limit }: Categorie
             className={cn(
               "flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all cursor-pointer",
               activeScope === tab.scope
-                ? "bg-card text-foreground shadow-xs"
+                ? "bg-secondary text-secondary-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >

@@ -26,4 +26,7 @@ The full spec is `docs/PRD.md`.
 
 11. Every delete asks for confirmation first.
 
+12. Use design tokens only, never hard-coded colours.
+
 Read docs/PROGRESS.md before starting any task and update it when finishing.
+

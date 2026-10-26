@@ -196,19 +196,19 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
       <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-xs">
         <div className="flex items-center gap-2">
           {isIncome && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-money-income">
               <ArrowDownLeft className="size-3.5" />
               {actionLabel}
             </span>
           )}
           {isExpense && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-600 dark:text-rose-400">
+            <span className="inline-flex items-center gap-1 rounded-full bg-money-expense/15 px-2.5 py-1 text-xs font-semibold text-money-expense-text">
               <ArrowUpRight className="size-3.5" />
               {actionLabel}
             </span>
           )}
           {isGiving && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-2.5 py-1 text-xs font-semibold text-violet-600 dark:text-violet-400">
+            <span className="inline-flex items-center gap-1 rounded-full bg-money-giving/20 px-2.5 py-1 text-xs font-semibold text-money-giving-text">
               <Heart className="size-3.5" />
               {actionLabel}
             </span>
@@ -218,10 +218,12 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
         <div className="mt-3">
           <h1
             data-testid="detail-amount"
-            className={`text-3xl font-extrabold tracking-tight sm:text-4xl ${
+            className={`text-3xl font-extrabold tracking-tight sm:text-4xl tabular-nums ${
               isIncome
-                ? "text-emerald-600 dark:text-emerald-400"
-                : "text-foreground"
+                ? "text-money-income"
+                : isExpense
+                ? "text-money-expense-text"
+                : "text-money-giving-text"
             }`}
           >
             {formattedAmount}

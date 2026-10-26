@@ -5,12 +5,30 @@
 /* Dark mode follows class set by next-themes (with class strategy, PRD section 9). */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Naira sign fallback font: only applies to U+20A6 so ₦ renders reliably */
+@font-face {
+  font-family: 'NairaFallback';
+  src: url('/fonts/NotoSans-Regular.ttf') format('truetype');
+  font-weight: 400 500 600;
+  font-style: normal;
+  unicode-range: U+20A6;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NairaFallback';
+  src: url('/fonts/NotoSans-Bold.ttf') format('truetype');
+  font-weight: 700 800;
+  font-style: normal;
+  unicode-range: U+20A6;
+  font-display: swap;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-plus-jakarta-sans), 'NairaFallback', system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font-plus-jakarta-sans), 'NairaFallback', system-ui, -apple-system, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -18,7 +36,9 @@
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
   --color-sidebar: var(--sidebar);
+  --color-sidebar-indicator: var(--sidebar-indicator);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -27,105 +47,143 @@
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
+  --color-accent-coral: var(--accent-coral);
   --color-muted-foreground: var(--muted-foreground);
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
+  --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --color-money-in: var(--money-in);
-  --color-money-out: var(--money-out);
-  --color-money-accent: var(--money-accent);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+
+  --color-money-income: var(--money-income);
+  --color-money-income-foreground: var(--money-income-foreground);
+  --color-money-expense: var(--money-expense);
+  --color-money-expense-text: var(--money-expense-text);
+  --color-money-giving: var(--money-giving);
+  --color-money-giving-text: var(--money-giving-text);
+  --color-money-lent: var(--money-lent);
+  --color-money-lent-text: var(--money-lent-text);
+
+  --radius-sm: 0.5rem; /* 8px */
+  --radius-md: 0.75rem; /* 12px for inputs & buttons */
+  --radius-lg: 1rem; /* 16px for cards & sheets */
+  --radius-xl: 1rem; /* 16px */
+  --radius-2xl: 1.25rem;
+  --radius-full: 9999px;
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  --money-in: oklch(0.627 0.194 149.214);
-  --money-out: oklch(0.577 0.245 27.325);
-  --money-accent: oklch(0.55 0.18 240);
+  --background: #F7F5F0;
+  --foreground: #15181E;
+  --card: #FFFFFF;
+  --card-foreground: #15181E;
+  --popover: #FFFFFF;
+  --popover-foreground: #15181E;
+  --primary: #2E6B4E;
+  --primary-hover: #1F4D37;
+  --primary-foreground: #FFFFFF;
+  --secondary: #DCEBDD;
+  --secondary-foreground: #1F4D37;
+  --muted: #ECE8DF;
+  --muted-foreground: #5B6170;
+  --accent: #F5C451;
+  --accent-foreground: #15181E;
+  --accent-coral: #F26B4D;
+  --destructive: #C53B30;
+  --destructive-foreground: #FFFFFF;
+  --border: #E6E2D9;
+  --input: #E6E2D9;
+  --ring: #2E6B4E;
+
+  --sidebar: #1F4D37;
+  --sidebar-foreground: #E8F1EA;
+  --sidebar-muted: #A9C3B2;
+  --sidebar-primary: #2E6B4E;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: rgba(255, 255, 255, 0.10);
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: rgba(255, 255, 255, 0.12);
+  --sidebar-ring: #2E6B4E;
+  --sidebar-indicator: #DCEBDD;
+
+  --chart-1: #2E6B4E;
+  --chart-2: #F26B4D;
+  --chart-3: #F5C451;
+  --chart-4: #4E9F94;
+  --chart-5: #5B6170;
+
+  --money-income: #2E6B4E;
+  --money-income-foreground: #FFFFFF;
+  --money-expense: #F26B4D;
+  --money-expense-text: #C84628;
+  --money-giving: #F5C451;
+  --money-giving-text: #8F6300;
+  --money-lent: #4E9F94;
+  --money-lent-text: #276F66;
+
+  --radius: 1rem;
 }
 
 .dark {
   color-scheme: dark;
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-  --money-in: oklch(0.72 0.19 149.214);
-  --money-out: oklch(0.704 0.191 22.216);
-  --money-accent: oklch(0.65 0.18 240);
+  --background: #111614;
+  --foreground: #F1F3F0;
+  --card: #1A201D;
+  --card-foreground: #F1F3F0;
+  --popover: #1F2622;
+  --popover-foreground: #F1F3F0;
+  --primary: #3E8E65;
+  --primary-hover: #4FA67A;
+  --primary-foreground: #FFFFFF;
+  --secondary: #1E3A2C;
+  --secondary-foreground: #CFE6D6;
+  --muted: #1F2622;
+  --muted-foreground: #A3ABA6;
+  --accent: #F5C451;
+  --accent-foreground: #111614;
+  --accent-coral: #F2826A;
+  --destructive: #E05A4E;
+  --destructive-foreground: #FFFFFF;
+  --border: #2A322E;
+  --input: #2A322E;
+  --ring: #3E8E65;
+
+  --sidebar: #0E1311;
+  --sidebar-foreground: #E8F1EA;
+  --sidebar-muted: #A9C3B2;
+  --sidebar-primary: #3E8E65;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: rgba(255, 255, 255, 0.10);
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #3E8E65;
+  --sidebar-indicator: #DCEBDD;
+
+  --chart-1: #5DBB8A;
+  --chart-2: #F2826A;
+  --chart-3: #F5C451;
+  --chart-4: #6CC0B4;
+  --chart-5: #A3ABA6;
+
+  --money-income: #5DBB8A;
+  --money-income-foreground: #FFFFFF;
+  --money-expense: #F2826A;
+  --money-expense-text: #F2826A;
+  --money-giving: #F5C451;
+  --money-giving-text: #F5C451;
+  --money-lent: #6CC0B4;
+  --money-lent-text: #6CC0B4;
+
+  --radius: 1rem;
 }
 
 @layer base {
@@ -133,9 +191,13 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans font-medium text-[15px];
   }
   html {
     @apply font-sans;
   }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }

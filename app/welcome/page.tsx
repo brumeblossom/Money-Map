@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Loader2, Sparkles, ArrowLeft } from "lucide-react";
+import { Mail, Loader2, ArrowLeft } from "lucide-react";
+import { BrandLogoMark } from "@/components/brand-logo";
 import { createClient } from "@/lib/supabase/client";
 import { emailSignUpSchema } from "@/lib/schemas";
 import { mapAuthErrorMessage } from "@/lib/auth/errors";
@@ -123,13 +124,11 @@ export default function WelcomePage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-radial-[at_50%_0%] from-emerald-500/10 via-background to-background text-foreground">
+    <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-background text-foreground">
       <div className="w-full max-w-sm space-y-8 text-center">
         {/* Brand Header */}
-        <div className="space-y-3">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-600 shadow-lg shadow-emerald-600/25 ring-8 ring-emerald-500/10 dark:bg-emerald-500">
-            <Sparkles className="h-8 w-8 text-white dark:text-neutral-950" />
-          </div>
+        <div className="space-y-4">
+          <BrandLogoMark size="xl" className="mx-auto shadow-md" />
           <div className="space-y-1">
             <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
               Money Map
@@ -149,7 +148,7 @@ export default function WelcomePage() {
               data-testid="welcome-email-toggle"
               onClick={() => setShowEmailForm(true)}
               disabled={isGoogleLoading || isLoading}
-              className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-600/20 transition hover:bg-emerald-700 active:scale-[0.98] disabled:opacity-50 dark:bg-emerald-500 dark:text-neutral-950 dark:hover:bg-emerald-400 cursor-pointer"
+              className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
             >
               <Mail className="h-4 w-4" />
               <span>Continue with email</span>
@@ -184,7 +183,7 @@ export default function WelcomePage() {
                   placeholder="Your first name"
                   maxLength={60}
                   autoFocus
-                  className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground shadow-xs transition placeholder:text-muted-foreground focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground shadow-xs transition placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
                 />
                 {nameError && (
                   <p
@@ -211,7 +210,7 @@ export default function WelcomePage() {
                     if (emailError) setEmailError(null);
                   }}
                   placeholder="name@example.com"
-                  className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground shadow-xs transition placeholder:text-muted-foreground focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground shadow-xs transition placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
                 />
                 {emailError && (
                   <p
@@ -227,7 +226,7 @@ export default function WelcomePage() {
                 type="submit"
                 data-testid="welcome-email-submit"
                 disabled={isLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-600/20 transition hover:bg-emerald-700 active:scale-[0.98] disabled:opacity-50 dark:bg-emerald-500 dark:text-neutral-950 dark:hover:bg-emerald-400 cursor-pointer"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
               >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

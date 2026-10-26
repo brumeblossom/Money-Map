@@ -4,8 +4,8 @@
   "description": "Clear, private, offline-first personal finance.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#059669",
+  "background_color": "#F7F5F0",
+  "theme_color": "#2E6B4E",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",

@@ -11,6 +11,7 @@ import {
   subscribeSyncStatus,
   type SyncState,
 } from "@/lib/sync";
+import { BrandLogoMark } from "@/components/brand-logo";
 
 const ROUTE_TITLES: Record<string, string> = {
   "/": "Home",
@@ -174,8 +175,9 @@ export function AppHeader({
         className,
       )}
     >
-      <div className="flex items-center gap-3">
-        <h1 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+      <div className="flex items-center gap-2.5">
+        <BrandLogoMark size="sm" className="lg:hidden" />
+        <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
           {displayTitle}
         </h1>
       </div>
@@ -185,31 +187,31 @@ export function AppHeader({
         className={cn(
           "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
           isBrowserOffline
-            ? "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400"
+            ? "bg-secondary text-money-expense-text"
             : isSyncing
-              ? "bg-primary/10 text-primary"
+              ? "bg-secondary text-primary"
               : isSyncError
-                ? "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400"
+                ? "bg-secondary text-destructive"
                 : isGuest
                   ? "bg-secondary text-muted-foreground"
-                  : "bg-secondary/80 text-muted-foreground",
+                  : "bg-secondary text-muted-foreground",
         )}
         title={`Sync status: ${label}`}
         aria-label={`Sync status: ${label}`}
         data-testid="header-sync-badge"
       >
         {isBrowserOffline ? (
-          <CloudOff className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <CloudOff className="size-3.5 shrink-0 text-money-expense-text" />
         ) : isSyncing ? (
           <RefreshCw className="size-3.5 shrink-0 animate-spin text-primary" />
         ) : isSyncError ? (
-          <RefreshCw className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <RefreshCw className="size-3.5 shrink-0 text-destructive" />
         ) : isGuest ? (
           <Cloud className="size-3.5 shrink-0 text-muted-foreground" />
         ) : (
           <>
             <Cloud className="size-3.5 shrink-0 text-primary" />
-            <CheckCircle2 className="size-3 shrink-0 text-money-in" />
+            <CheckCircle2 className="size-3 shrink-0 text-money-income" />
           </>
         )}
         <span className="truncate">{label}</span>

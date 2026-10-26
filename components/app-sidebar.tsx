@@ -8,8 +8,8 @@ import {
   FileText,
   Home,
   Settings,
-  Wallet,
 } from "lucide-react";
+import { BrandLogoMark } from "@/components/brand-logo";
 import { useProfile } from "@/lib/repo/hooks";
 import { cn } from "cn";
 
@@ -94,16 +94,14 @@ export function AppSidebar({ className }: { className?: string }) {
     <aside
       data-testid="app-sidebar"
       className={cn(
-        "hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:w-[240px] lg:flex-col lg:border-r lg:border-border lg:bg-card/50 lg:backdrop-blur-sm",
+        "hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:w-[240px] lg:flex-col lg:border-r lg:border-sidebar-border lg:bg-sidebar lg:text-sidebar-foreground",
         className,
       )}
     >
       {/* Top Logo */}
-      <div className="flex h-14 items-center gap-2.5 border-b border-border px-5">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <Wallet className="size-4" />
-        </div>
-        <span className="text-base font-bold tracking-tight text-foreground">
+      <div className="flex h-14 items-center gap-2.5 border-b border-sidebar-border px-5">
+        <BrandLogoMark size="md" />
+        <span className="text-base font-extrabold tracking-tight text-sidebar-foreground">
           Money Map
         </span>
       </div>
@@ -122,16 +120,16 @@ export function AppSidebar({ className }: { className?: string }) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors select-none",
                 isActive
-                  ? "bg-accent text-accent-foreground font-semibold"
-                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                  ? "bg-sidebar-accent text-white font-semibold before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:bg-sidebar-indicator before:rounded-r"
+                  : "text-sidebar-muted hover:bg-sidebar-accent/50 hover:text-white",
               )}
             >
               <Icon
                 className={cn(
                   "size-4 shrink-0",
-                  isActive ? "text-primary" : "text-muted-foreground",
+                  isActive ? "text-sidebar-indicator" : "text-sidebar-muted",
                 )}
               />
               <span>{item.label}</span>
@@ -141,29 +139,29 @@ export function AppSidebar({ className }: { className?: string }) {
       </nav>
 
       {/* Bottom User Area: no avatar/user icon; show name and email or Guest · Sign in to back up */}
-      <div className="border-t border-border p-3">
+      <div className="border-t border-sidebar-border p-3">
         <Link
           href="/settings"
           data-testid="sidebar-settings-link"
-          className="flex items-center justify-between rounded-lg p-2 transition-colors hover:bg-accent/60"
+          className="flex items-center justify-between rounded-lg p-2 transition-colors hover:bg-sidebar-accent/50"
         >
           <div className="flex min-w-0 flex-1 flex-col text-left pr-2">
             {user ? (
               <>
-                <span className="truncate text-xs font-semibold text-foreground">
+                <span className="truncate text-xs font-semibold text-sidebar-foreground">
                   {user.name}
                 </span>
-                <span className="truncate text-[11px] text-muted-foreground">
+                <span className="truncate text-[11px] text-sidebar-muted">
                   {user.email}
                 </span>
               </>
             ) : (
-              <span className="truncate text-xs font-medium text-muted-foreground hover:text-foreground">
+              <span className="truncate text-xs font-medium text-sidebar-muted hover:text-sidebar-foreground">
                 Guest · Sign in to back up
               </span>
             )}
           </div>
-          <Settings className="size-4 text-muted-foreground shrink-0" />
+          <Settings className="size-4 text-sidebar-muted shrink-0" />
         </Link>
       </div>
     </aside>

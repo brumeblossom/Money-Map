@@ -8,22 +8,9 @@ import { AppBottomNav } from "@/components/app-bottom-nav";
 import { AppHeader } from "@/components/app-header";
 import { seedDefaultCategories, cleanupDuplicateCategories } from "@/lib/repo/seed";
 import { initSync } from "@/lib/sync";
-import { isTrialThemeRoute } from "@/lib/theme";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isTrialTheme = isTrialThemeRoute(pathname);
-
-  React.useEffect(() => {
-    if (isTrialTheme) {
-      document.documentElement.classList.add("theme-pawcare");
-    } else {
-      document.documentElement.classList.remove("theme-pawcare");
-    }
-    return () => {
-      document.documentElement.classList.remove("theme-pawcare");
-    };
-  }, [isTrialTheme]);
 
   React.useEffect(() => {
     seedDefaultCategories()
@@ -55,12 +42,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     pathname.startsWith("/lent");
 
   return (
-    <div
-      className={cn(
-        "min-h-screen bg-background text-foreground flex flex-col",
-        isTrialTheme && "theme-pawcare",
-      )}
-    >
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* Desktop 240px Sidebar */}
       <AppSidebar />
 

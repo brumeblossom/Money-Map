@@ -36,13 +36,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 36,
     fontSize: 9,
     fontFamily: "NotoSans",
-    color: "#15181E",
+    color: "#17191C",
     backgroundColor: "#ffffff",
   },
   header: {
     marginBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#E6E2D9",
+    borderBottomColor: "#E3E2E8",
     borderBottomStyle: "solid",
     paddingBottom: 12,
   },
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 5,
-    backgroundColor: "#2E6B4E",
+    backgroundColor: "#5B3FD1",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -75,12 +75,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: "NotoSans",
     fontWeight: "bold",
-    color: "#15181E",
+    color: "#17191C",
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 10,
-    color: "#5B6170",
+    color: "#5E636B",
     marginTop: 4,
   },
   totalsGrid: {
@@ -90,18 +90,18 @@ const styles = StyleSheet.create({
   },
   totalCard: {
     flex: 1,
-    backgroundColor: "#F7F5F0",
+    backgroundColor: "#F7F6FC",
     padding: 8,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#E6E2D9",
+    borderColor: "#E3E2E8",
     borderStyle: "solid",
   },
   totalLabel: {
     fontSize: 7.5,
     fontFamily: "NotoSans",
     fontWeight: "bold",
-    color: "#5B6170",
+    color: "#5E636B",
     textTransform: "uppercase",
     marginBottom: 4,
   },
@@ -109,13 +109,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "NotoSans",
     fontWeight: "bold",
-    color: "#15181E",
+    color: "#17191C",
   },
   totalValueIncome: {
-    color: "#2E6B4E",
+    color: "#1F8A63",
   },
   totalValueExpense: {
-    color: "#C84628",
+    color: "#C2412D",
   },
   sectionTitle: {
     fontSize: 12,
@@ -525,8 +525,8 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
                       styles.td,
                       styles.colAmount,
                       entry.action === "Income"
-                        ? { color: "#2E6B4E", fontFamily: "NotoSans", fontWeight: "bold" }
-                        : { color: "#C84628", fontFamily: "NotoSans", fontWeight: "bold" },
+                        ? { color: "#1F8A63", fontFamily: "NotoSans", fontWeight: "bold" }
+                        : { color: "#C2412D", fontFamily: "NotoSans", fontWeight: "bold" },
                     ]}
                   >
                     {formatMoney(entry.amount, snapshot.currency)}

@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Clear, private, offline-first personal finance.",
     start_url: "/",
     display: "standalone",
-    background_color: "#F7F5F0",
-    theme_color: "#2E6B4E",
+    background_color: "#F7F6FC",
+    theme_color: "#5B3FD1",
     icons: [
       {
         src: "/icons/icon-192x192.png",

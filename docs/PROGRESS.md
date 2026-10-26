@@ -1172,6 +1172,38 @@
   - Renamed middle figure label from "Expenses" to "Spent (Expenses + Giving)" on one line using `text-[10px] sm:text-xs font-medium text-muted-foreground whitespace-nowrap` in `components/home-view.tsx`.
   - Figures and calculations remain untouched; verified no other screen labels Expenses + Giving as "Expenses".
 
+### Prompt 17e: Violet Palette Across the Entire App
+- **Trial Theme Cleanup**:
+  - Removed PawCare trial theme (`.theme-pawcare`, `.dark.theme-pawcare`, `lib/theme.ts`, `TRIAL_THEME_ROUTES`, and all routing/effect hooks in `components/app-shell.tsx`).
+  - Violet palette applied uniformly across the entire app shell, pages, modals, dialogs, sheets, toasts, charts, and PDF reports.
+- **Violet Design Tokens (Final Palette)**:
+  - **Light Mode**:
+    - `background`: `#F7F6FC`, `card`/`popover`: `#FFFFFF`
+    - `foreground`: `#17191C`, `muted-foreground`: `#5E636B`, `border`/`input`: `#E3E2E8`, `ring`: `#5B3FD1`
+    - `primary` (Violet): `#5B3FD1` (hover/pressed `#4A31B5`, text on primary `#FFFFFF`)
+    - `secondary` / soft (selected tabs, pills, chips, synced badge, soft buttons): `#ECE8FC` with text `#3B2A99`
+    - `destructive`: `#C53B30`
+    - `sidebar`: background `#2A1F66`, text `#FFFFFF`, muted text `#BDB6E3`, active item `rgba(255,255,255,0.12)` with white text (no side line)
+    - `bottom nav`: card background, active item Violet `#5B3FD1` with soft `#ECE8FC` pill behind the icon
+    - `logo mark`: Violet square with bold white "M"; on dark sidebar, white square with `#2A1F66` "M"
+  - **Dark Mode**:
+    - `background`: `#121118`, `card`: `#1B1A23`, `popover`: `#211F2B`, `foreground`: `#F0F0F4`, `muted-foreground`: `#A7A5B4`, `border`: `#2C2A38`
+    - `primary`: `#8975DE` (hover `#9C8BE6`), text on primary `#15121F` (adjusted for WCAG AA compliance >4.9:1, white fails AA at 3.7:1)
+    - `secondary` / soft: `rgba(91,63,209,0.28)` with text `#CEC5F1`
+    - `sidebar`: `#171138` with same selected style
+  - **Money Colours (both modes; WCAG AA verified)**:
+    - Income: green `#1B7F5B` light (adjusted from `#1F8A63` for 4.7:1 WCAG AA text contrast on white) / `#62AD92` dark (text `#15121F` on dark badge)
+    - Expenses: coral `#E5604A` (icon/fill), amount text on light `#C2412D` (5.58:1 contrast) / `#EA806E` dark
+    - Giving: amber `#E8A93A` (icon/fill), amount text on light `#94650F` (5.05:1 contrast) / `#E8A93A` dark
+    - Money I lent: teal `#2E9AA6` (icon/fill), amount text on light `#1F7480` (5.00:1 contrast) / `#6DB8C1` dark
+    - Action card icon squares: use money color at 16% opacity (`bg-money-*/16`)
+- **Brand Assets & PDF**:
+  - Generated Violet `#5B3FD1` favicon (`favicon.ico`, `favicon.png`), Apple touch icon (180x180), and PWA icons (192, 512, maskable 192, maskable 512).
+  - Updated manifest theme color to `#5B3FD1` and background to `#F7F6FC`.
+  - Updated PDF report accent, logo mark, and table colors to Violet palette.
+- **Home month strip & sidebar item**:
+  - Preserved "Spent (Expenses + Giving)" on one line and no left vertical line on active sidebar items.
+
 ## Environment variables for Vercel
 
 The following environment variables can now be safely removed from Vercel project settings:

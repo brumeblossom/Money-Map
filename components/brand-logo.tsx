@@ -11,9 +11,11 @@ export interface BrandLogoProps {
 export function BrandLogoMark({
   className,
   size = "md",
+  variant = "default",
 }: {
   className?: string;
   size?: "sm" | "md" | "lg" | "xl";
+  variant?: "default" | "sidebar";
 }) {
   const sizeClasses = {
     sm: "size-6 rounded-[7px] text-xs",
@@ -22,11 +24,16 @@ export function BrandLogoMark({
     xl: "size-16 rounded-[18px] text-3xl",
   };
 
+  const isSidebar = variant === "sidebar";
+
   return (
     <div
       data-testid="brand-logo-mark"
       className={cn(
-        "flex items-center justify-center bg-primary text-primary-foreground font-extrabold select-none shadow-xs shrink-0",
+        "flex items-center justify-center font-extrabold select-none shadow-xs shrink-0",
+        isSidebar
+          ? "bg-white text-[#2A1F66]"
+          : "bg-primary text-primary-foreground",
         sizeClasses[size],
         className,
       )}

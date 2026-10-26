@@ -46,12 +46,12 @@ export function ActionCard({
         : "hover:border-money-lent/40 hover:bg-money-lent/5 text-money-lent-text";
 
   const iconBgStyles = isIncome
-    ? "bg-secondary text-money-income"
+    ? "bg-money-income/16 text-money-income"
     : isExpenses
-      ? "bg-money-expense/15 text-money-expense-text"
+      ? "bg-money-expense/16 text-money-expense-text"
       : isGiving
-        ? "bg-money-giving/20 text-money-giving-text"
-        : "bg-money-lent/15 text-money-lent-text";
+        ? "bg-money-giving/16 text-money-giving-text"
+        : "bg-money-lent/16 text-money-lent-text";
 
   const formattedAmount = formatMoney(amountMinor, currency);
 

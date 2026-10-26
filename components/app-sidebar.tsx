@@ -100,7 +100,7 @@ export function AppSidebar({ className }: { className?: string }) {
     >
       {/* Top Logo */}
       <div className="flex h-14 items-center gap-2.5 border-b border-sidebar-border px-5">
-        <BrandLogoMark size="md" />
+        <BrandLogoMark size="md" variant="sidebar" />
         <span className="text-base font-extrabold tracking-tight text-sidebar-foreground">
           Money Map
         </span>

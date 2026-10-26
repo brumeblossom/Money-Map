@@ -1153,6 +1153,25 @@
 - **Design Rule Added**:
   - "Use design tokens only, never hard-coded colours" added to `CLAUDE.md` and `docs/PROGRESS.md`.
 
+### Prompt 17d: PawCare Trial Palette, Sidebar Active Item, and Month Strip Label
+- **1. Sidebar Active Item (all pages, light and dark)**:
+  - Removed the small vertical indicator line (`before:absolute before:left-0 ...`) on the selected sidebar navigation item in `components/app-sidebar.tsx`.
+  - Retained background highlight (`bg-sidebar-accent`) and text/icon color (`text-white`) as specified.
+- **2. Trial Palette "PawCare" on Home and Records Only**:
+  - Added scoped theme class `.theme-pawcare` and `.dark.theme-pawcare` in `app/globals.css`.
+  - Palette tokens:
+    - Light: background `#F6FAFF` (Surface), card `#FFFFFF`, foreground `#15181E`, muted text `#5B6170`, border `#E3E8EF`, ring `#056A61`, primary `#056A61` (Deep Teal), hover `#04544D`, secondary soft tint `#E3F1EF` with text `#04544D`, sidebar `#056A61` with text `#E6F3F1`, muted `#A8D2CC`, selected item `rgba(255,255,255,0.12)` with white text (no side line), bottom nav white with Deep Teal selected item and `#E3F1EF` pill.
+    - Dark: background `#0F1716`, card `#172120`, popover `#1C2826`, foreground `#EEF3F2`, muted text `#A3B1AE`, border `#26332F`, primary `#0E8A7F` (hover `#12A091`), soft tint `#12302C` with text `#CDE9E4`, sidebar `#0A2724`.
+    - Money colours: Income `#056A61` light / `#2FB3A5` dark; Expenses fill `#FF7A59`, amount text on light `#A7391E` (6.3:1 contrast) / `#FF8F73` dark; Giving fill `#F4B860`, text on light `#8A5A00` (4.7:1 contrast) / `#F4B860` dark; Money I lent fill `#4E9F94`, text on light `#2F6F66` (4.6:1 contrast) / `#6CC0B4` dark.
+  - Switch location in `lib/theme.ts`:
+    - `export const TRIAL_THEME_ROUTES: readonly string[] = ["/", "/records"];`
+    - Applied in `components/app-shell.tsx` via `isTrialThemeRoute(pathname)` to the shell container and `document.documentElement` so all app chrome, pages, and portaled dialogs/sheets inherit PawCare on Home and Records while keeping Insights, Settings, Lent, etc. in Moss.
+    - Rollout everywhere in one line: `export const TRIAL_THEME_ROUTES: readonly string[] = ["*"];`
+    - Revert/remove completely in one line: `export const TRIAL_THEME_ROUTES: readonly string[] = [];`
+- **3. Home Month Strip Label**:
+  - Renamed middle figure label from "Expenses" to "Spent (Expenses + Giving)" on one line using `text-[10px] sm:text-xs font-medium text-muted-foreground whitespace-nowrap` in `components/home-view.tsx`.
+  - Figures and calculations remain untouched; verified no other screen labels Expenses + Giving as "Expenses".
+
 ## Environment variables for Vercel
 
 The following environment variables can now be safely removed from Vercel project settings:
@@ -1172,6 +1191,7 @@ The following environment variables can now be safely removed from Vercel projec
 ## Next prompt
 
 Prompt 17b: landing page and login
+
 
 
 

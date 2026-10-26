@@ -122,14 +122,14 @@ export function AppSidebar({ className }: { className?: string }) {
               className={cn(
                 "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors select-none",
                 isActive
-                  ? "bg-sidebar-accent text-white font-semibold before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:bg-sidebar-indicator before:rounded-r"
+                  ? "bg-sidebar-accent text-white font-semibold"
                   : "text-sidebar-muted hover:bg-sidebar-accent/50 hover:text-white",
               )}
             >
               <Icon
                 className={cn(
                   "size-4 shrink-0",
-                  isActive ? "text-sidebar-indicator" : "text-sidebar-muted",
+                  isActive ? "text-white" : "text-sidebar-muted",
                 )}
               />
               <span>{item.label}</span>

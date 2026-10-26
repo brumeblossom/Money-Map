@@ -409,8 +409,8 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
             className="px-2 block hover:opacity-80 transition-opacity"
             title="View Expenses records"
           >
-            <span className="block text-xs font-medium text-muted-foreground">
-              Expenses
+            <span className="block text-[10px] sm:text-xs font-medium text-muted-foreground whitespace-nowrap">
+              Spent (Expenses + Giving)
             </span>
             <span
               data-testid="month-strip-expenses"

@@ -1216,13 +1216,39 @@ The following environment variables can now be safely removed from Vercel projec
 - `SUPABASE_SERVICE_ROLE_KEY`: **Keep!** Required for `POST /api/account/delete` to delete auth users from `auth.users` and cascade user deletion.
 - `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`: **Keep!**
 
+### Prompt 17b: Landing page and login redesign
+- **1. Routing & Zero-Flash Delivery**:
+  - Middleware sets `moneymap_has_session` cookie (`1` or `0`), permits signed-out visitors on `"/"` without redirecting, and redirects protected routes to `/welcome` if no session.
+  - Signed-out visitors who are not in guest mode see the fast, server-rendered landing page at `"/"`.
+  - Signed-in users and guests who chose "Try without an account" go straight to app Home (`"/"`) with zero flash.
+  - "Get started" navigates to `/welcome?mode=signup`. "Sign in" navigates to `/welcome`. Phone and browser back buttons from `/welcome` return cleanly to the landing page.
+- **2. Landing Page (`components/landing-page-view.tsx`)**:
+  - Pure server-rendered Next.js page with 4 parts using design tokens (Violet palette: `#5B3FD1`, `#ECE8FC`, `#2A1F66`) and Plus Jakarta Sans font:
+    - **Header**: brand logo on left; "Sign in" (text button) and "Get started" (primary button) on right. On phones, logo + "Get started" button only.
+    - **Hero**: headline *"Know where your money goes."*, subtext *"Record your income, expenses, giving and money you've lent in seconds. See clear monthly totals and spending habits on your phone or laptop."*, buttons *"Get started, it's free"* (primary) and *"Sign in"* (outline). Beside on desktop / below on phones: live phone mockup showing real Home screen components with sample figures (`₦450,000.00` Income, `₦185,000.00` Spent, `₦265,000.00` Left over) and soft violet `#ECE8FC` backdrop shape (`bg-secondary`).
+    - **3 Feature Blocks**: *"Record in seconds"*, *"See your habits"*, *"Never forget money you lent"* in a row on desktop and stacked on phones, each with a small Violet icon in a soft violet rounded square.
+    - **Final CTA Band**: deep violet band (`#2A1F66` / `bg-sidebar`) with *"Start mapping your money today."* and white *"Get started"* button. Footer with *"© 2026 Money Map"* and *"Send feedback"* (`mailto:workwithbrume@gmail.com`).
+  - Search & Social Previews: metadata title, meta description, and dynamic Open Graph image (`app/opengraph-image.tsx`).
+- **3. Login / Sign-up Page Redesign (`/welcome`, `/auth/check-email`, `/auth/error`)**:
+  - Soft background with subtle violet gradient (`from-secondary/40 via-background to-background`).
+  - Single centered card (`max-w-[440px]`, `rounded-2xl` / 16px radius, `border`, `p-8` / `p-6` mobile).
+  - `/welcome`: logo mark, dynamic title (*"Create your account"* for sign-up, *"Welcome back"* for sign-in, *"Welcome to Money Map"* default), muted subtitle. Fields: First name + Email (name only for new accounts), "Continue with email" (primary, full width), divider "or", "Continue with Google" (outline, full width), "Try without an account" text link. Inline errors under fields. "Back to home" link above the card.
+  - `/auth/check-email`: centered 440px card with mail icon in soft violet circle, *"Check your email"*, email in bold, *"Resend"* with 60s countdown, *"Use a different email"*, and "Back to home" link.
+  - `/auth/error`: centered 440px card with friendly error explanations, *"Try again"* button, and "Back to home" link.
+- **4. Verification & Lighthouse**:
+  - `bun run typecheck`, `bun run lint`, and `bun run test` (18 files, 193 unit tests) pass with 0 errors.
+  - Playwright E2E suites:
+    - `tests/e2e/prompt17b-landing.spec.ts`: 12/12 passed across mobile (390px) and desktop (1280px).
+    - `tests/e2e/auth-flow.spec.ts`: 14/14 passed across mobile and desktop.
+  - Lighthouse mobile audit: Accessibility **100**, Performance **89** (FCP 1.8s, TBT 170ms, CLS 0).
+
 ## Known issues
 
 - None.
 
 ## Next prompt
 
-Prompt 17b: landing page and login
+Prompt 17c: private admin analytics
 
 
 

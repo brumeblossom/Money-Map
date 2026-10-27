@@ -28,6 +28,7 @@ interface WindowWithDb extends Window {
 }
 
 test.describe("Auth and Guest Mode Flow (Prompt 9)", () => {
+  test.describe.configure({ mode: "serial" });
   test("first-time visitor lands on /welcome, 'Try without an account' lands on Home in <1s", async ({
     page,
     context,
@@ -35,14 +36,14 @@ test.describe("Auth and Guest Mode Flow (Prompt 9)", () => {
     // 1. Clean cookies (first-time visitor)
     await context.clearCookies();
 
-    // 2. Navigating to / should redirect to /welcome
-    await page.goto("/");
+    // 2. Navigating to /welcome shows the welcome card
+    await page.goto("/welcome");
     await expect(page).toHaveURL(/\/welcome/);
 
     // Verify brand, pitch, and action buttons
-    await expect(page.getByRole("heading", { name: "Money Map" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Welcome to Money Map" })).toBeVisible();
     await expect(
-      page.getByText(/Track your money effortlessly with zero clutter/i),
+      page.getByText(/Private, offline-first personal finance with zero clutter/i),
     ).toBeVisible();
     await expect(page.getByTestId("welcome-google")).toBeVisible();
     await expect(page.getByTestId("welcome-email-toggle")).toBeVisible();
@@ -118,16 +119,20 @@ test.describe("Auth and Guest Mode Flow (Prompt 9)", () => {
     context,
   }) => {
     // Set guest cookie and start on Home
+    await context.clearCookies();
     await context.addCookies([
       { name: "moneymap_guest", value: "true", domain: "localhost", path: "/" },
+      { name: "moneymap_has_session", value: "1", domain: "localhost", path: "/" },
     ]);
     await page.goto("/");
     await expect(
       page.getByRole("heading", { name: "What are we recording today?" }),
     ).toBeVisible();
 
-    // Clear Dexie database for fresh test
+    // Clear Dexie database and storage for fresh test
     await page.evaluate(async () => {
+      localStorage.clear();
+      sessionStorage.clear();
       const db = (window as unknown as WindowWithDb).__db;
       if (db) {
         await db.entries.clear();
@@ -144,12 +149,14 @@ test.describe("Auth and Guest Mode Flow (Prompt 9)", () => {
     await page.getByPlaceholder("0.00").first().fill("5000");
     await page.getByRole("button", { name: "Save" }).click();
     await expect(page.getByText("Saved").first()).toBeVisible();
+    await page.waitForTimeout(500);
 
     // Add Entry 2 (Expense ₦2,000)
     await page.goto("/new/expense");
     await page.getByPlaceholder("0.00").first().fill("2000");
     await page.getByRole("button", { name: "Save" }).click();
     await expect(page.getByText("Saved").first()).toBeVisible();
+    await page.waitForTimeout(500);
 
     // Banner should still NOT be visible with 2 entries
     await page.goto("/");
@@ -160,10 +167,10 @@ test.describe("Auth and Guest Mode Flow (Prompt 9)", () => {
     await page.getByPlaceholder("0.00").first().fill("1000");
     await page.getByRole("button", { name: "Save" }).click();
     await expect(page.getByText("Saved").first()).toBeVisible();
+    await page.waitForTimeout(500);
 
     // Now Banner MUST be visible!
     await page.goto("/");
-    await page.waitForFunction(() => Boolean((window as unknown as { __db?: unknown }).__db));
     const banner = page.getByTestId("guest-banner");
     await expect(banner).toBeVisible();
     await expect(banner).toContainText(
@@ -185,13 +192,17 @@ test.describe("Auth and Guest Mode Flow (Prompt 9)", () => {
     context,
   }) => {
     // 1. Start as guest
+    await context.clearCookies();
     await context.addCookies([
       { name: "moneymap_guest", value: "true", domain: "localhost", path: "/" },
+      { name: "moneymap_has_session", value: "1", domain: "localhost", path: "/" },
     ]);
     await page.goto("/");
 
-    // Clear db for clean state
+    // Clear db and storage for clean state
     await page.evaluate(async () => {
+      localStorage.clear();
+      sessionStorage.clear();
       const db = (window as unknown as WindowWithDb).__db;
       if (db) {
         await db.entries.clear();
@@ -205,12 +216,18 @@ test.describe("Auth and Guest Mode Flow (Prompt 9)", () => {
     await page.getByPlaceholder("0.00").first().fill("15000");
     await page.getByRole("button", { name: "Save" }).click();
     await expect(page.getByText("Saved").first()).toBeVisible();
+    await page.waitForTimeout(500);
 
     await page.goto("/new/expense");
     await page.getByPlaceholder("0.00").first().fill("4500");
     await page.getByRole("button", { name: "Save" }).click();
     await expect(page.getByText("Saved").first()).toBeVisible();
+    await page.waitForTimeout(500);
     await page.goto("/");
+    await page.waitForFunction(async () => {
+      const db = (window as unknown as WindowWithDb).__db;
+      return db && (await db.entries.toArray()).length >= 2;
+    });
 
     // Verify outbox is 0 during guest mode
     const guestOutboxCount = await page.evaluate(async () => {

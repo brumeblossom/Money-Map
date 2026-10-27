@@ -36,12 +36,17 @@ export function CheckEmailClient() {
     try {
       const supabase = createClient();
       const origin = window.location.origin;
-      const pendingName = typeof window !== "undefined" ? sessionStorage.getItem("moneymap_pending_first_name") : null;
+      const pendingName =
+        typeof window !== "undefined"
+          ? sessionStorage.getItem("moneymap_pending_first_name")
+          : null;
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: `${origin}/auth/confirm`,
-          data: pendingName ? { first_name: pendingName, display_name: pendingName } : undefined,
+          data: pendingName
+            ? { first_name: pendingName, display_name: pendingName }
+            : undefined,
         },
       });
 
@@ -62,15 +67,28 @@ export function CheckEmailClient() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-radial-[at_50%_0%] from-emerald-500/10 via-background to-background text-foreground">
-      <div className="w-full max-w-sm space-y-8 text-center">
-        {/* Email Icon */}
+    <main className="flex min-h-screen flex-col items-center justify-start sm:justify-center p-4 sm:p-6 bg-gradient-to-b from-secondary/40 via-background to-background text-foreground pt-8 sm:pt-6">
+      {/* Small Back to home link above the card */}
+      <div className="w-full max-w-[440px] mb-3 flex items-center justify-start">
+        <Link
+          href="/"
+          data-testid="check-email-back-home"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="size-3.5" />
+          <span>Back to home</span>
+        </Link>
+      </div>
+
+      {/* Centred Card */}
+      <div className="w-full max-w-[440px] rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-xs text-center space-y-6">
+        {/* Mail Icon in a soft violet circle */}
         <div className="space-y-3">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-600 shadow-lg shadow-emerald-600/25 ring-8 ring-emerald-500/10 dark:bg-emerald-500">
-            <MailCheck className="h-8 w-8 text-white dark:text-neutral-950" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-primary shadow-xs">
+            <MailCheck className="h-8 w-8" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               Check your email
             </h1>
             <p className="text-sm text-muted-foreground leading-relaxed">
@@ -78,7 +96,7 @@ export function CheckEmailClient() {
               {email ? (
                 <span className="font-semibold text-foreground">{email}</span>
               ) : (
-                "your email"
+                <span className="font-semibold text-foreground">your email</span>
               )}
               . Tap the link in your email to sign in.
             </p>
@@ -86,7 +104,7 @@ export function CheckEmailClient() {
         </div>
 
         {/* Resend Section */}
-        <div className="space-y-3 rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
+        <div className="space-y-3 rounded-xl border border-border bg-background/50 p-4">
           <p className="text-xs text-muted-foreground">
             Didn&apos;t receive it? Check your spam folder or request a new link below.
           </p>
@@ -96,7 +114,7 @@ export function CheckEmailClient() {
             data-testid="auth-resend-button"
             onClick={handleResend}
             disabled={secondsLeft > 0 || isResending || !email}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent/80 px-4 py-2.5 text-sm font-semibold text-accent-foreground transition hover:bg-accent active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
           >
             {isResending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -112,9 +130,7 @@ export function CheckEmailClient() {
             <p
               data-testid="auth-resend-status"
               className={`text-xs font-medium ${
-                isResendError
-                  ? "text-destructive"
-                  : "text-emerald-600 dark:text-emerald-400"
+                isResendError ? "text-destructive" : "text-primary font-semibold"
               }`}
             >
               {resendStatus}
@@ -122,13 +138,13 @@ export function CheckEmailClient() {
           )}
         </div>
 
-        {/* Back Link */}
-        <div>
+        {/* Use a different email */}
+        <div className="pt-2">
           <Link
-            href="/welcome?intent=signin"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            href="/welcome?mode=signin"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-3.5 w-3.5" />
             <span>Use a different email</span>
           </Link>
         </div>

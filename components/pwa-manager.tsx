@@ -5,7 +5,13 @@ import { registerPwaServiceWorker } from "@/lib/pwa";
 
 export function PwaManager() {
   React.useEffect(() => {
-    registerPwaServiceWorker();
+    if (typeof window !== "undefined") {
+      if ("requestIdleCallback" in window) {
+        window.requestIdleCallback(() => registerPwaServiceWorker());
+      } else {
+        setTimeout(() => registerPwaServiceWorker(), 1500);
+      }
+    }
   }, []);
 
   return null;

@@ -471,12 +471,14 @@ export async function signOut(
     console.error("Supabase signOut error:", e);
   }
 
-  // 3. Clear mock cookies if any
+  // 3. Clear mock and session cookies if any
   if (typeof document !== "undefined") {
     document.cookie =
       "moneymap_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
     document.cookie =
       "moneymap_mock_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+    document.cookie =
+      "moneymap_has_session=0; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
   }
 
   // 4. Clear every Dexie table
@@ -528,6 +530,8 @@ export async function signOutAllDevices(
       "moneymap_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
     document.cookie =
       "moneymap_mock_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+    document.cookie =
+      "moneymap_has_session=0; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
   }
 
   await Promise.all([

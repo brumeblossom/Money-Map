@@ -60,9 +60,11 @@ export function AuthCallbackClient() {
         }
 
         if (authUser) {
-          // Clear guest cookie
+          // Clear guest cookie and set session indicator
           document.cookie =
             "moneymap_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+          document.cookie =
+            "moneymap_has_session=1; path=/; max-age=2592000; SameSite=Lax";
 
           if (code === "mock-code") {
             document.cookie = `moneymap_mock_user=${authUser.id}; path=/; max-age=2592000; SameSite=Lax`;

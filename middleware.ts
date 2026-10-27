@@ -47,6 +47,15 @@ export async function middleware(request: NextRequest) {
   const isGuest = request.cookies.get("moneymap_guest")?.value === "true";
   const path = request.nextUrl.pathname;
   const isSignInIntent = request.nextUrl.searchParams.get("intent") === "signin";
+  const hasSession = Boolean(user || isGuest);
+
+  // Set session hint cookie for server components and AppShell
+  response.cookies.set("moneymap_has_session", hasSession ? "1" : "0", {
+    path: "/",
+    sameSite: "lax",
+    httpOnly: false,
+    maxAge: SESSION_MAX_AGE,
+  });
 
   // Public/system routes and static assets that should never redirect
   if (
@@ -64,10 +73,15 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
+  // Signed-out visitors see the landing page at "/"; signed-in/guests see Home
+  if (path === "/") {
+    return response;
+  }
+
   // If user is on /welcome
   if (path === "/welcome") {
     // If user is signed in or guest, but has no explicit signin intent, send to home
-    if ((user || isGuest) && !isSignInIntent) {
+    if (hasSession && !isSignInIntent) {
       const url = request.nextUrl.clone();
       url.pathname = "/";
       return NextResponse.redirect(url);
@@ -75,8 +89,8 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // If user is neither signed in nor a guest, redirect to /welcome
-  if (!user && !isGuest) {
+  // If user is neither signed in nor a guest, redirect to /welcome for all other app routes
+  if (!hasSession) {
     const url = request.nextUrl.clone();
     url.pathname = "/welcome";
     return NextResponse.redirect(url);

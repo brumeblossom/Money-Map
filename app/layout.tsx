@@ -3,7 +3,6 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/app-shell";
-import { Toaster } from "@/components/ui/sonner";
 import { PwaManager } from "@/components/pwa-manager";
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -15,8 +14,13 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Money Map",
-  description: "Record your income, expenses, giving and money you lent.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://moneymap.app"),
+  title: {
+    default: "Money Map — Know where your money goes",
+    template: "%s | Money Map",
+  },
+  description:
+    "Record your income, expenses, giving and money you've lent in seconds. See clear monthly totals and spending habits on your phone or laptop.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
@@ -30,6 +34,19 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
     apple: "/icons/apple-touch-icon.png",
+  },
+  openGraph: {
+    title: "Money Map — Know where your money goes",
+    description:
+      "Record your income, expenses, giving and money you've lent in seconds. See clear monthly totals and spending habits on your phone or laptop.",
+    type: "website",
+    siteName: "Money Map",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Money Map — Know where your money goes",
+    description:
+      "Record your income, expenses, giving and money you've lent in seconds. See clear monthly totals and spending habits on your phone or laptop.",
   },
 };
 
@@ -62,7 +79,6 @@ export default function RootLayout({
           <React.Suspense fallback={null}>
             <AppShell>{children}</AppShell>
           </React.Suspense>
-          <Toaster />
         </ThemeProvider>
       </body>
     </html>

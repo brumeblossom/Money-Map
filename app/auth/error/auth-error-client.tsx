@@ -12,15 +12,28 @@ export function AuthErrorClient() {
   const message = getAuthErrorPageMessage(reason);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-radial-[at_50%_0%] from-emerald-500/10 via-background to-background text-foreground">
-      <div className="w-full max-w-sm space-y-8 text-center">
+    <main className="flex min-h-screen flex-col items-center justify-start sm:justify-center p-4 sm:p-6 bg-gradient-to-b from-secondary/40 via-background to-background text-foreground pt-8 sm:pt-6">
+      {/* Small Back to home link above the card */}
+      <div className="w-full max-w-[440px] mb-3 flex items-center justify-start">
+        <Link
+          href="/"
+          data-testid="auth-error-back-home"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="size-3.5" />
+          <span>Back to home</span>
+        </Link>
+      </div>
+
+      {/* Centred Card */}
+      <div className="w-full max-w-[440px] rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-xs text-center space-y-6">
         {/* Error Icon */}
         <div className="space-y-3">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10 ring-8 ring-destructive/5 text-destructive">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 text-destructive shadow-xs">
             <AlertCircle className="h-8 w-8" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               Unable to sign in
             </h1>
             <p
@@ -32,25 +45,15 @@ export function AuthErrorClient() {
           </div>
         </div>
 
-        {/* Action Button */}
-        <div className="space-y-3">
+        {/* Action Button: Try again */}
+        <div className="space-y-3 pt-2">
           <Link
             href="/welcome"
             data-testid="auth-error-try-again"
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-600/20 transition hover:bg-emerald-700 active:scale-[0.98] dark:bg-emerald-500 dark:text-neutral-950 dark:hover:bg-emerald-400"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98]"
           >
             <span>Try again</span>
           </Link>
-
-          <div>
-            <Link
-              href="/welcome"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              <span>Back to welcome</span>
-            </Link>
-          </div>
         </div>
       </div>
     </main>

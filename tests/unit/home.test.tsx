@@ -1,10 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import Home from "@/app/page";
+import { HomeView } from "@/components/home-view";
 
 describe("Home page", () => {
   it("renders heading and hint", () => {
-    render(<Home />);
+    render(<HomeView />);
     expect(
       screen.getByRole("heading", {
         level: 1,
@@ -16,7 +16,7 @@ describe("Home page", () => {
   });
 
   it("renders month switcher strip with Income, Expenses, Left over", () => {
-    render(<Home />);
+    render(<HomeView />);
     expect(screen.getByTestId("month-switcher-current")).toBeInTheDocument();
     expect(screen.getByTestId("month-strip-income")).toBeInTheDocument();
     expect(screen.getByTestId("month-strip-expenses")).toBeInTheDocument();
@@ -24,7 +24,7 @@ describe("Home page", () => {
   });
 
   it("renders the 4 action cards in order", () => {
-    render(<Home />);
+    render(<HomeView />);
     const incomeContainer = screen.getByTestId("action-card-income");
     const expenseContainer = screen.getByTestId("action-card-expense");
     const givingContainer = screen.getByTestId("action-card-giving");

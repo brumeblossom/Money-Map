@@ -33,6 +33,11 @@ export async function GET(request: NextRequest) {
       path: "/",
       expires: new Date(0),
     });
+    response.cookies.set("moneymap_has_session", "1", {
+      path: "/",
+      maxAge: SESSION_MAX_AGE,
+      sameSite: "lax",
+    });
     return response;
   }
 
@@ -102,10 +107,15 @@ export async function GET(request: NextRequest) {
       });
     });
 
-    // Clear guest cookie
+    // Clear guest cookie and set session indicator
     redirectResponse.cookies.set("moneymap_guest", "", {
       path: "/",
       expires: new Date(0),
+    });
+    redirectResponse.cookies.set("moneymap_has_session", "1", {
+      path: "/",
+      maxAge: SESSION_MAX_AGE,
+      sameSite: "lax",
     });
 
     return redirectResponse;

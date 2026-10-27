@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Mail, Loader2, ArrowLeft } from "lucide-react";
 import { BrandLogoMark } from "@/components/brand-logo";
 import { createClient } from "@/lib/supabase/client";
@@ -31,9 +32,14 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-export default function WelcomePage() {
+function WelcomeContent() {
   const router = useRouter();
-  const [showEmailForm, setShowEmailForm] = React.useState(false);
+  const searchParams = useSearchParams();
+  const mode = searchParams.get("mode");
+  const isSignUp = mode === "signup";
+  const isSignIn = mode === "signin";
+
+  const [userToggledEmailForm, setUserToggledEmailForm] = React.useState(false);
   const [firstName, setFirstName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [nameError, setNameError] = React.useState<string | null>(null);
@@ -41,6 +47,8 @@ export default function WelcomePage() {
   const [googleError, setGoogleError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
+
+  const showEmailForm = isSignUp || isSignIn || userToggledEmailForm;
 
   const handleContinueWithGoogle = async () => {
     setIsGoogleLoading(true);
@@ -69,36 +77,49 @@ export default function WelcomePage() {
     setNameError(null);
     setEmailError(null);
 
-    const validation = emailSignUpSchema.safeParse({
-      firstName,
-      email,
-    });
+    // If signin only, validate email; if signup or general, validate first name + email
+    const needsName = isSignUp || (!isSignIn && showEmailForm);
 
-    if (!validation.success) {
-      const fieldErrors = validation.error.flatten().fieldErrors;
-      if (fieldErrors.firstName?.[0]) setNameError(fieldErrors.firstName[0]);
-      if (fieldErrors.email?.[0]) setEmailError(fieldErrors.email[0]);
-      return;
+    if (needsName) {
+      const validation = emailSignUpSchema.safeParse({
+        firstName,
+        email,
+      });
+
+      if (!validation.success) {
+        const fieldErrors = validation.error.flatten().fieldErrors;
+        if (fieldErrors.firstName?.[0]) setNameError(fieldErrors.firstName[0]);
+        if (fieldErrors.email?.[0]) setEmailError(fieldErrors.email[0]);
+        return;
+      }
+    } else {
+      // Sign-in mode: validate email only
+      if (!email.trim() || !email.includes("@")) {
+        setEmailError("Enter a valid email");
+        return;
+      }
     }
 
     setIsLoading(true);
 
     try {
-      const trimmedName = validation.data.firstName.trim();
-      if (typeof window !== "undefined") {
+      const trimmedName = firstName.trim();
+      if (trimmedName && typeof window !== "undefined") {
         sessionStorage.setItem("moneymap_pending_first_name", trimmedName);
       }
 
       const supabase = createClient();
       const origin = window.location.origin;
       const { error } = await supabase.auth.signInWithOtp({
-        email: validation.data.email,
+        email: email.trim(),
         options: {
           emailRedirectTo: `${origin}/auth/confirm`,
-          data: {
-            first_name: trimmedName,
-            display_name: trimmedName,
-          },
+          data: trimmedName
+            ? {
+                first_name: trimmedName,
+                display_name: trimmedName,
+              }
+            : undefined,
         },
       });
 
@@ -108,7 +129,7 @@ export default function WelcomePage() {
         return;
       }
 
-      router.push(`/auth/check-email?email=${encodeURIComponent(validation.data.email)}`);
+      router.push(`/auth/check-email?email=${encodeURIComponent(email.trim())}`);
     } catch (err) {
       console.error("Failed to send OTP", err);
       setEmailError(mapAuthErrorMessage(err));
@@ -117,83 +138,102 @@ export default function WelcomePage() {
   };
 
   const handleTryWithoutAccount = () => {
-    // Set 30-day guest cookie
+    // Set 30-day guest cookie and session indicator
     document.cookie = "moneymap_guest=true; path=/; max-age=2592000; SameSite=Lax";
+    document.cookie = "moneymap_has_session=1; path=/; max-age=2592000; SameSite=Lax";
     router.push("/");
     router.refresh();
   };
 
+  const title = isSignUp
+    ? "Create your account"
+    : isSignIn
+    ? "Welcome back"
+    : "Welcome to Money Map";
+
+  const subtitle = isSignUp
+    ? "Start tracking your income, expenses and loans today."
+    : isSignIn
+    ? "Sign in to access your money map from any device."
+    : "Private, offline-first personal finance with zero clutter.";
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-background text-foreground">
-      <div className="w-full max-w-sm space-y-8 text-center">
-        {/* Brand Header */}
-        <div className="space-y-4">
-          <BrandLogoMark size="xl" className="mx-auto shadow-md" />
+    <main className="flex min-h-screen flex-col items-center justify-start sm:justify-center p-4 sm:p-6 bg-gradient-to-b from-secondary/40 via-background to-background text-foreground pt-8 sm:pt-6">
+      {/* Small Back to home link above the card */}
+      <div className="w-full max-w-[440px] mb-3 flex items-center justify-start">
+        <Link
+          href="/"
+          data-testid="welcome-back-home"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="size-3.5" />
+          <span>Back to home</span>
+        </Link>
+      </div>
+
+      {/* Centred Card */}
+      <div className="w-full max-w-[440px] rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-xs">
+        {/* Inside: Logo mark, title, one-line subtitle */}
+        <div className="text-center space-y-3 mb-6">
+          <BrandLogoMark size="lg" className="mx-auto shadow-sm" />
           <div className="space-y-1">
-            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-              Money Map
+            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              {title}
             </h1>
-            <p className="text-sm font-medium text-muted-foreground sm:text-base">
-              Track your money effortlessly with zero clutter. Private, offline-first personal finance.
+            <p className="text-sm font-medium text-muted-foreground">
+              {subtitle}
             </p>
           </div>
         </div>
 
-        {/* Action Buttons: Email (primary, filled), Google (outlined), Try without an account (small text link) */}
-        <div className="space-y-3.5">
-          {/* Email Flow */}
-          {!showEmailForm ? (
-            <button
-              type="button"
-              data-testid="welcome-email-toggle"
-              onClick={() => setShowEmailForm(true)}
-              disabled={isGoogleLoading || isLoading}
-              className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-            >
-              <Mail className="h-4 w-4" />
-              <span>Continue with email</span>
-            </button>
-          ) : (
-            <form onSubmit={handleSendLink} noValidate className="space-y-3 text-left">
-              <div className="flex items-center justify-between pb-1">
-                <button
-                  type="button"
-                  onClick={() => setShowEmailForm(false)}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer"
-                >
-                  <ArrowLeft className="size-3.5" /> Back
-                </button>
-                <span className="text-xs font-medium text-muted-foreground">Sign in with email</span>
-              </div>
-
-              {/* First Name Field */}
-              <div className="space-y-1">
-                <label htmlFor="welcome-first-name" className="text-xs font-medium text-muted-foreground">
-                  Your first name
-                </label>
-                <input
-                  id="welcome-first-name"
-                  type="text"
-                  data-testid="welcome-first-name-input"
-                  value={firstName}
-                  onChange={(e) => {
-                    setFirstName(e.target.value);
-                    if (nameError) setNameError(null);
-                  }}
-                  placeholder="Your first name"
-                  maxLength={60}
-                  autoFocus
-                  className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground shadow-xs transition placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
-                />
-                {nameError && (
-                  <p
-                    data-testid="welcome-name-error"
-                    className="text-xs font-medium text-destructive px-1"
+        {/* Form & Actions */}
+        <div className="space-y-4">
+          {showEmailForm ? (
+            <form onSubmit={handleSendLink} noValidate className="space-y-3.5 text-left">
+              {/* Back to toggle option if not directly in signup or signin mode */}
+              {!isSignUp && !isSignIn && (
+                <div className="flex items-center justify-between pb-1">
+                  <button
+                    type="button"
+                    onClick={() => setUserToggledEmailForm(false)}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer"
                   >
-                    {nameError}
-                  </p>
-                )}
-              </div>
+                    <ArrowLeft className="size-3.5" /> Back
+                  </button>
+                  <span className="text-xs font-medium text-muted-foreground">Continue with email</span>
+                </div>
+              )}
+
+              {/* First Name Field: only needed for new accounts / signup mode */}
+              {(isSignUp || (!isSignIn && showEmailForm)) && (
+                <div className="space-y-1">
+                  <label htmlFor="welcome-first-name" className="text-xs font-medium text-muted-foreground">
+                    First name
+                  </label>
+                  <input
+                    id="welcome-first-name"
+                    type="text"
+                    data-testid="welcome-first-name-input"
+                    value={firstName}
+                    onChange={(e) => {
+                      setFirstName(e.target.value);
+                      if (nameError) setNameError(null);
+                    }}
+                    placeholder="Your first name"
+                    maxLength={60}
+                    autoFocus={isSignUp}
+                    className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground shadow-xs transition placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
+                  />
+                  {nameError && (
+                    <p
+                      data-testid="welcome-name-error"
+                      className="text-xs font-medium text-destructive px-1"
+                    >
+                      {nameError}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Email Field */}
               <div className="space-y-1">
@@ -210,6 +250,7 @@ export default function WelcomePage() {
                     if (emailError) setEmailError(null);
                   }}
                   placeholder="name@example.com"
+                  autoFocus={!isSignUp}
                   className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground shadow-xs transition placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
                 />
                 {emailError && (
@@ -222,6 +263,7 @@ export default function WelcomePage() {
                 )}
               </div>
 
+              {/* Primary submit button */}
               <button
                 type="submit"
                 data-testid="welcome-email-submit"
@@ -231,13 +273,35 @@ export default function WelcomePage() {
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <span>Send me a link</span>
+                  <span>Continue with email</span>
                 )}
               </button>
             </form>
+          ) : (
+            /* Collapsed initial state when mode is unspecified: Continue with email toggle button */
+            <button
+              type="button"
+              data-testid="welcome-email-toggle"
+              onClick={() => setUserToggledEmailForm(true)}
+              disabled={isGoogleLoading || isLoading}
+              className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+            >
+              <Mail className="h-4 w-4" />
+              <span>Continue with email</span>
+            </button>
           )}
 
-          {/* Continue with Google (outlined) */}
+          {/* Divider "or" */}
+          <div className="relative my-4 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border" />
+            </div>
+            <div className="relative bg-card px-3 text-xs uppercase tracking-wider text-muted-foreground">
+              or
+            </div>
+          </div>
+
+          {/* Continue with Google (outline, full width, Google logo) */}
           <div className="space-y-1.5">
             <button
               type="button"
@@ -263,8 +327,8 @@ export default function WelcomePage() {
             )}
           </div>
 
-          <div className="pt-2">
-            {/* Try without an account: small text link */}
+          {/* Small text link "Try without an account" */}
+          <div className="pt-2 text-center">
             <button
               type="button"
               data-testid="welcome-try-guest"
@@ -277,5 +341,13 @@ export default function WelcomePage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function WelcomePage() {
+  return (
+    <React.Suspense fallback={null}>
+      <WelcomeContent />
+    </React.Suspense>
   );
 }

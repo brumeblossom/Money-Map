@@ -44,7 +44,9 @@ export async function middleware(request: NextRequest) {
   const mockUserCookie = request.cookies.get("moneymap_mock_user")?.value;
   const user = mockUserCookie ? { id: mockUserCookie } : authUser;
 
-  const isGuest = request.cookies.get("moneymap_guest")?.value === "true";
+  const isGuest =
+    request.cookies.get("moneymap_guest")?.value === "true" ||
+    request.cookies.get("mm_guest")?.value === "1";
   const path = request.nextUrl.pathname;
   const isSignInIntent = request.nextUrl.searchParams.get("intent") === "signin";
   const hasSession = Boolean(user || isGuest);
@@ -80,8 +82,15 @@ export async function middleware(request: NextRequest) {
 
   // If user is on /welcome
   if (path === "/welcome") {
-    // If user is signed in or guest, but has no explicit signin intent, send to home
-    if (hasSession && !isSignInIntent) {
+    const mode = request.nextUrl.searchParams.get("mode");
+    // A signed-in user who opens /welcome is sent to Home (unless setting a new password via reset flow)
+    if (user && mode !== "reset") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      return NextResponse.redirect(url);
+    }
+    // A guest without explicit signin intent is sent to Home
+    if (isGuest && !isSignInIntent) {
       const url = request.nextUrl.clone();
       url.pathname = "/";
       return NextResponse.redirect(url);

@@ -1242,6 +1242,35 @@ The following environment variables can now be safely removed from Vercel projec
     - `tests/e2e/auth-flow.spec.ts`: 14/14 passed across mobile and desktop.
   - Lighthouse mobile audit: Accessibility **100**, Performance **89** (FCP 1.8s, TBT 170ms, CLS 0).
 
+### Prompt 17f: Landing polish, password sign-in, and sign-out fix
+- **Part A: Landing Page Polish (`components/landing-page-view.tsx`)**:
+  - **A1. Hero Phone Mockup**: Put preview inside a realistic dark frame (`#17191C`), 40px outer radius, 10px bezel, camera notch pill, soft shadow. Decorative layers behind phone (`aria-hidden`, `pointer-events-none`): soft violet glow circle (`#ECE8FC` / dark soft token), faint dotted grid (Violet at ~15% opacity), 3 thin curved lines (Violet at ~25% opacity). Two floating white cards overlapping phone edge: `+₦250,000 · Salary` (Income green icon) and `Ada paid back ₦27,500` (Lent teal icon). Desktop: ~300px wide. Phone: ~240px wide, centered below hero, only the Salary card shown to prevent crowding, 0 horizontal scroll at 360px.
+  - **A2. Buttons**: Standardized button height to 52px on desktop and 48px on phones with 12px corner radius (`rounded-[12px]`) across landing page and auth cards.
+  - **A3. Section Backgrounds**: Added `--landing-alt` design token (`#F3F1FA` light mode, `#17161F` dark mode) for calm off-white full-width features section with 96px top/bottom padding on desktop and 64px on phones.
+  - **A4. Final Call-to-Action Band**: Full-width edge-to-edge section (no side margins, no rounded corners, no outer card) with Violet `#5B3FD1` to `#4A31B5` gradient. Centered white heading *"Start mapping your money today."*, white subtext at 80% opacity, and white "Get started" button with Violet text (52px tall, 12px radius). Subtle edge decorations at 8-12% opacity (large ₦ symbol on left, 3 outline coins top right, rising 4-dot chart bottom right; scaled down on mobile).
+  - **A5. Footer**: Thin strip below purple band on normal background: *"© 2026 Money Map"* and *"Send feedback"* (`mailto:workwithbrume@gmail.com`). Desktop 1 line; phone 2 centered lines with 24px padding.
+  - **A6. Phone Hero**: Heading is exactly 2 lines on phones: *"Know where your"* on line 1 and *"money goes."* on line 2 with no wrapping at 360px. Centered text. Hero buttons stacked, 70% width (max 320px), 48px tall, 12px apart.
+  - **A7. Phone Features**: Centered icon square, title, and text with 40px spacing between blocks.
+
+- **Part B: Sign-In, Sign-Up and Sign-Out (`app/welcome/page.tsx`, `lib/validation/password.ts`, `lib/sync/index.ts`)**:
+  - **B1. Routing**: Unsigned devices at `"/"` see the landing page; signed-in users and guests (`moneymap_guest=true` or `mm_guest=1`) go straight to Home. Signed-in users opening `/welcome` are automatically redirected to Home (unless setting a new password via `mode=reset`). Service worker navigation caching is network-first for `"/"` and `/welcome`.
+  - **B2. Sign-Out Fix**: Clears Supabase session, clears guest flags (`moneymap_guest`, `mm_guest`, local/session storage), clears Dexie tables, clears service worker page caches, and navigates full page to `"/"` so landing page renders immediately without showing an empty Home.
+  - **B3. Password Sign-In**: Replaces magic link for sign-in. One card, title *"Welcome back"*, subtitle *"Sign in to your Money Map"*: Google button, divider "or", Email, Password with show/hide eye button, "Forgot password?" link, full-width "Sign in" button, and "New here? Get started" link. No first name field, no magic link sent. Inline error mapping: wrong credentials -> *"Email or password is incorrect."*; unconfirmed email -> *"Please confirm your email first."* with 60s countdown resend confirmation button. Redundant back arrow and "Continue with email" removed from inside card.
+  - **B4. Get Started (Sign-Up)**: *"Create your account"*: Google button, divider "or", First name (1-30 chars), Email, Password (show/hide) with live checklist, full-width "Create account" button (disabled until valid), "Try without an account", and "Already have an account? Sign in". On submit, shows check-email card with 60s resend countdown and "Use a different email".
+  - **B5. Forgot Password & Set New Password**: *"Reset your password"* card sends reset link using Supabase default email templates (`redirectTo` / `emailRedirectTo`). Reset link lands in authenticated recovery session on `/welcome?mode=reset` with *"Set a new password"* card, show/hide eye toggle, live password rules checklist, and "Save password" button. On success: toasts "Password saved" and enters Home.
+  - **B7. Password Rules**: 4 rules (at least 8 characters, one uppercase letter A-Z, one lowercase letter a-z, one number 0-9) defined in shared Zod schema `lib/validation/password.ts`. Live checklist (`components/password-rules-checklist.tsx`) turns green with check tick (`text-money-income`) when met, stays muted when unmet, with `aria-live="polite"`. Create account and Save password buttons stay disabled until all 4 rules are met.
+  - **B6. Auth Plumbing**: Tested and verified with default Supabase templates, site URL resolution via `NEXT_PUBLIC_APP_URL` or request origin, and query parameter forwarding.
+
+- **Verification**:
+  - `bun run lint`: 0 errors.
+  - `bun run typecheck`: 0 errors.
+  - `bun run test`: 198/198 unit tests passed across 19 files.
+  - `bun run build`: Built production bundle successfully.
+  - Playwright tests:
+    - `tests/e2e/prompt17f.spec.ts`: 16/16 passed on mobile (390px / 360px) and desktop (1280px).
+    - `tests/e2e/prompt17b-landing.spec.ts`: 12/12 passed on mobile and desktop.
+    - `tests/e2e/auth-flow.spec.ts`: 14/14 passed on mobile and desktop.
+
 ## Known issues
 
 - None.
@@ -1249,6 +1278,7 @@ The following environment variables can now be safely removed from Vercel projec
 ## Next prompt
 
 Prompt 17c: private admin analytics
+
 
 
 

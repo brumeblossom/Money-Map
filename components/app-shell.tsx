@@ -20,7 +20,9 @@ const Toaster = dynamic(() => import("@/components/ui/sonner").then((m) => m.Toa
 
 function getSessionSnapshot(initial: boolean): boolean {
   if (typeof document === "undefined") return initial;
-  const isGuest = document.cookie.includes("moneymap_guest=true");
+  const isGuest =
+    document.cookie.includes("moneymap_guest=true") ||
+    document.cookie.includes("mm_guest=1");
   const hasMock = document.cookie.includes("moneymap_mock_user=");
   const hasSessionCookie = document.cookie.includes("moneymap_has_session=1");
   const hasSb = document.cookie

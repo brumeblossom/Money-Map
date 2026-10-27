@@ -3,10 +3,25 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Mail, Loader2, ArrowLeft } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Loader2,
+  ArrowLeft,
+  MailCheck,
+  RefreshCw,
+} from "lucide-react";
+import { toast } from "sonner";
 import { BrandLogoMark } from "@/components/brand-logo";
+import { PasswordRulesChecklist } from "@/components/password-rules-checklist";
 import { createClient } from "@/lib/supabase/client";
-import { emailSignUpSchema } from "@/lib/schemas";
+import {
+  isPasswordValid,
+  signUpFormSchema,
+  signInFormSchema,
+  resetPasswordRequestSchema,
+  setNewPasswordSchema,
+} from "@/lib/validation/password";
 import { mapAuthErrorMessage } from "@/lib/auth/errors";
 
 function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -32,30 +47,80 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+function getRedirectOrigin(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
+  }
+  if (typeof window !== "undefined" && window.location.origin) {
+    return window.location.origin.replace(/\/$/, "");
+  }
+  return "";
+}
+
+type ViewMode = "signin" | "signup" | "forgot" | "reset" | "check-email" | "reset-sent";
+
 function WelcomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const mode = searchParams.get("mode");
-  const isSignUp = mode === "signup";
-  const isSignIn = mode === "signin";
+  const urlMode = searchParams.get("mode");
 
-  const [userToggledEmailForm, setUserToggledEmailForm] = React.useState(false);
+  const computedMode: ViewMode = React.useMemo(() => {
+    if (urlMode === "signup") return "signup";
+    if (urlMode === "forgot") return "forgot";
+    if (urlMode === "reset") return "reset";
+    return "signin";
+  }, [urlMode]);
+
+  const [customMode, setCustomMode] = React.useState<ViewMode | null>(null);
+  const viewMode = customMode ?? computedMode;
+
+  const setViewMode = (m: ViewMode) => {
+    setCustomMode(m);
+  };
+
   const [firstName, setFirstName] = React.useState("");
   const [email, setEmail] = React.useState("");
-  const [nameError, setNameError] = React.useState<string | null>(null);
-  const [emailError, setEmailError] = React.useState<string | null>(null);
-  const [googleError, setGoogleError] = React.useState<string | null>(null);
+  const [password, setPassword] = React.useState("");
+  const [showPassword, setShowPassword] = React.useState(false);
+
+  const [fieldErrors, setFieldErrors] = React.useState<{
+    firstName?: string;
+    email?: string;
+    password?: string;
+  }>({});
+  const [generalError, setGeneralError] = React.useState<string | null>(null);
+  const [isUnconfirmedEmail, setIsUnconfirmedEmail] = React.useState(false);
+
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
 
-  const showEmailForm = isSignUp || isSignIn || userToggledEmailForm;
+  // 60-second countdown for resend operations
+  const [resendCountdown, setResendCountdown] = React.useState(0);
+  const [isResending, setIsResending] = React.useState(false);
+  const [resendStatus, setResendStatus] = React.useState<string | null>(null);
+  const [existingAccountNotice, setExistingAccountNotice] = React.useState(false);
+
+  React.useEffect(() => {
+    if (resendCountdown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCountdown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCountdown]);
+
+  const clearErrors = () => {
+    setFieldErrors({});
+    setGeneralError(null);
+    setIsUnconfirmedEmail(false);
+    setResendStatus(null);
+  };
 
   const handleContinueWithGoogle = async () => {
     setIsGoogleLoading(true);
-    setGoogleError(null);
+    clearErrors();
     try {
       const supabase = createClient();
-      const origin = window.location.origin;
+      const origin = getRedirectOrigin();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -63,41 +128,94 @@ function WelcomeContent() {
         },
       });
       if (error) {
-        setGoogleError(mapAuthErrorMessage(error));
+        setGeneralError(mapAuthErrorMessage(error));
         setIsGoogleLoading(false);
       }
     } catch (err) {
-      setGoogleError(mapAuthErrorMessage(err));
+      setGeneralError(mapAuthErrorMessage(err));
       setIsGoogleLoading(false);
     }
   };
 
-  const handleSendLink = async (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setNameError(null);
-    setEmailError(null);
+    clearErrors();
 
-    // If signin only, validate email; if signup or general, validate first name + email
-    const needsName = isSignUp || (!isSignIn && showEmailForm);
+    const parsed = signInFormSchema.safeParse({ email, password });
+    if (!parsed.success) {
+      const errs = parsed.error.flatten().fieldErrors;
+      setFieldErrors({
+        email: errs.email?.[0],
+        password: errs.password?.[0],
+      });
+      return;
+    }
 
-    if (needsName) {
-      const validation = emailSignUpSchema.safeParse({
-        firstName,
-        email,
+    setIsLoading(true);
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
       });
 
-      if (!validation.success) {
-        const fieldErrors = validation.error.flatten().fieldErrors;
-        if (fieldErrors.firstName?.[0]) setNameError(fieldErrors.firstName[0]);
-        if (fieldErrors.email?.[0]) setEmailError(fieldErrors.email[0]);
+      if (error) {
+        const msg = (error.message || "").toLowerCase();
+        if (
+          msg.includes("invalid login credentials") ||
+          msg.includes("invalid_credentials") ||
+          msg.includes("invalid_grant") ||
+          msg.includes("wrong password")
+        ) {
+          setGeneralError("Email or password is incorrect.");
+        } else if (
+          msg.includes("email not confirmed") ||
+          msg.includes("email_not_confirmed") ||
+          msg.includes("unconfirmed")
+        ) {
+          setIsUnconfirmedEmail(true);
+        } else {
+          setGeneralError(mapAuthErrorMessage(error));
+        }
+        setIsLoading(false);
         return;
       }
-    } else {
-      // Sign-in mode: validate email only
-      if (!email.trim() || !email.includes("@")) {
-        setEmailError("Enter a valid email");
-        return;
-      }
+
+      // Successful sign-in: clear guest cookies and enter Home
+      document.cookie =
+        "moneymap_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+      document.cookie =
+        "mm_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+      document.cookie =
+        "moneymap_has_session=1; path=/; max-age=2592000; SameSite=Lax";
+
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.href = "/";
+    } catch (err) {
+      setGeneralError(mapAuthErrorMessage(err));
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearErrors();
+
+    const parsed = signUpFormSchema.safeParse({
+      firstName,
+      email,
+      password,
+    });
+
+    if (!parsed.success) {
+      const errs = parsed.error.flatten().fieldErrors;
+      setFieldErrors({
+        firstName: errs.firstName?.[0],
+        email: errs.email?.[0],
+        password: errs.password?.[0],
+      });
+      return;
     }
 
     setIsLoading(true);
@@ -109,53 +227,197 @@ function WelcomeContent() {
       }
 
       const supabase = createClient();
-      const origin = window.location.origin;
-      const { error } = await supabase.auth.signInWithOtp({
+      const origin = getRedirectOrigin();
+      const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
+        password,
         options: {
-          emailRedirectTo: `${origin}/auth/confirm`,
-          data: trimmedName
-            ? {
-                first_name: trimmedName,
-                display_name: trimmedName,
-              }
-            : undefined,
+          data: {
+            first_name: trimmedName,
+            display_name: trimmedName,
+          },
+          emailRedirectTo: `${origin}/auth/confirm?next=/`,
         },
       });
 
       if (error) {
-        setEmailError(mapAuthErrorMessage(error));
+        // If email already registered, do not reveal it on screen; show the same check-email card
+        const msg = (error.message || "").toLowerCase();
+        if (
+          msg.includes("already registered") ||
+          msg.includes("user already exists") ||
+          msg.includes("email exists")
+        ) {
+          setExistingAccountNotice(true);
+          setResendCountdown(60);
+          setViewMode("check-email");
+          setIsLoading(false);
+          return;
+        }
+
+        setGeneralError(mapAuthErrorMessage(error));
         setIsLoading(false);
         return;
       }
 
-      router.push(`/auth/check-email?email=${encodeURIComponent(email.trim())}`);
+      // If user identities array is empty, Supabase already has this user
+      if (data?.user?.identities && data.user.identities.length === 0) {
+        setExistingAccountNotice(true);
+      }
+
+      setResendCountdown(60);
+      setViewMode("check-email");
+      setIsLoading(false);
     } catch (err) {
-      console.error("Failed to send OTP", err);
-      setEmailError(mapAuthErrorMessage(err));
+      setGeneralError(mapAuthErrorMessage(err));
       setIsLoading(false);
     }
   };
 
-  const handleTryWithoutAccount = () => {
-    // Set 30-day guest cookie and session indicator
-    document.cookie = "moneymap_guest=true; path=/; max-age=2592000; SameSite=Lax";
-    document.cookie = "moneymap_has_session=1; path=/; max-age=2592000; SameSite=Lax";
-    router.push("/");
-    router.refresh();
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearErrors();
+
+    const parsed = resetPasswordRequestSchema.safeParse({ email });
+    if (!parsed.success) {
+      setFieldErrors({ email: parsed.error.flatten().fieldErrors.email?.[0] });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const supabase = createClient();
+      const origin = getRedirectOrigin();
+      await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${origin}/auth/confirm?next=${encodeURIComponent("/welcome?mode=reset")}`,
+      });
+
+      // Always show generic success state to avoid email enumeration
+      setResendCountdown(60);
+      setViewMode("reset-sent");
+      setIsLoading(false);
+    } catch (err) {
+      console.error("Forgot password error:", err);
+      // Still show the confirmation message
+      setResendCountdown(60);
+      setViewMode("reset-sent");
+      setIsLoading(false);
+    }
   };
 
-  const title = isSignUp
-    ? "Create your account"
-    : isSignIn
-    ? "Welcome back"
-    : "Welcome to Money Map";
+  const handleSaveNewPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearErrors();
 
-  const subtitle = isSignUp
-    ? "Start tracking your income, expenses and loans today."
-    : isSignIn
-    ? "Sign in to access your money map from any device."
-    : "Private, offline-first personal finance with zero clutter.";
+    const parsed = setNewPasswordSchema.safeParse({ password });
+    if (!parsed.success) {
+      setFieldErrors({ password: parsed.error.flatten().fieldErrors.password?.[0] });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({ password });
+
+      if (error) {
+        setGeneralError(error.message);
+        setIsLoading(false);
+        return;
+      }
+
+      toast.success("Password saved");
+      document.cookie =
+        "moneymap_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+      document.cookie =
+        "mm_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+      document.cookie =
+        "moneymap_has_session=1; path=/; max-age=2592000; SameSite=Lax";
+
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.href = "/";
+    } catch (err) {
+      setGeneralError(mapAuthErrorMessage(err));
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (resendCountdown > 0 || !email || isResending) return;
+    setIsResending(true);
+    setResendStatus(null);
+
+    try {
+      const supabase = createClient();
+      const origin = getRedirectOrigin();
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: email.trim(),
+        options: {
+          emailRedirectTo: `${origin}/auth/confirm?next=/`,
+        },
+      });
+
+      if (error) {
+        setResendStatus(mapAuthErrorMessage(error));
+      } else {
+        setResendStatus("Confirmation email resent!");
+        setResendCountdown(60);
+      }
+    } catch (err) {
+      setResendStatus(mapAuthErrorMessage(err));
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const handleResendPasswordReset = async () => {
+    if (resendCountdown > 0 || !email || isResending) return;
+    setIsResending(true);
+    setResendStatus(null);
+
+    try {
+      const supabase = createClient();
+      const origin = getRedirectOrigin();
+      await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${origin}/auth/confirm?next=${encodeURIComponent("/welcome?mode=reset")}`,
+      });
+      setResendStatus("Reset link resent!");
+      setResendCountdown(60);
+    } catch (err) {
+      setResendStatus(mapAuthErrorMessage(err));
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const handleTryWithoutAccount = () => {
+    document.cookie = "moneymap_guest=true; path=/; max-age=2592000; SameSite=Lax";
+    document.cookie = "mm_guest=1; path=/; max-age=2592000; SameSite=Lax";
+    document.cookie = "moneymap_has_session=1; path=/; max-age=2592000; SameSite=Lax";
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.href = "/";
+  };
+
+  // Card headers and subtitles per view mode
+  let title = "Welcome back";
+  let subtitle = "Sign in to your Money Map";
+
+  if (viewMode === "signup") {
+    title = "Create your account";
+    subtitle = "Start tracking your income, expenses and loans today.";
+  } else if (viewMode === "forgot") {
+    title = "Reset your password";
+    subtitle = "Enter your email to receive a password reset link.";
+  } else if (viewMode === "reset") {
+    title = "Set a new password";
+    subtitle = "Choose a strong new password for your account.";
+  } else if (viewMode === "check-email" || viewMode === "reset-sent") {
+    title = "Check your email";
+    subtitle = "";
+  }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-start sm:justify-center p-4 sm:p-6 bg-gradient-to-b from-secondary/40 via-background to-background text-foreground pt-8 sm:pt-6">
@@ -173,71 +435,58 @@ function WelcomeContent() {
 
       {/* Centred Card */}
       <div className="w-full max-w-[440px] rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-xs">
-        {/* Inside: Logo mark, title, one-line subtitle */}
+        {/* Inside: Logo mark, title, subtitle */}
         <div className="text-center space-y-3 mb-6">
           <BrandLogoMark size="lg" className="mx-auto shadow-sm" />
           <div className="space-y-1">
             <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               {title}
             </h1>
-            <p className="text-sm font-medium text-muted-foreground">
-              {subtitle}
-            </p>
+            {subtitle && (
+              <p className="text-sm font-medium text-muted-foreground">
+                {subtitle}
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Form & Actions */}
-        <div className="space-y-4">
-          {showEmailForm ? (
-            <form onSubmit={handleSendLink} noValidate className="space-y-3.5 text-left">
-              {/* Back to toggle option if not directly in signup or signin mode */}
-              {!isSignUp && !isSignIn && (
-                <div className="flex items-center justify-between pb-1">
-                  <button
-                    type="button"
-                    onClick={() => setUserToggledEmailForm(false)}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer"
-                  >
-                    <ArrowLeft className="size-3.5" /> Back
-                  </button>
-                  <span className="text-xs font-medium text-muted-foreground">Continue with email</span>
-                </div>
+        {/* VIEW 1: SIGN IN */}
+        {viewMode === "signin" && (
+          <div className="space-y-4">
+            {/* Continue with Google */}
+            <button
+              type="button"
+              data-testid="welcome-google"
+              onClick={handleContinueWithGoogle}
+              disabled={isGoogleLoading || isLoading}
+              className="flex w-full items-center justify-center gap-3 h-12 sm:h-[52px] rounded-[12px] border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-xs transition hover:bg-muted/50 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+            >
+              {isGoogleLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              ) : (
+                <GoogleIcon />
               )}
+              <span>Continue with Google</span>
+            </button>
 
-              {/* First Name Field: only needed for new accounts / signup mode */}
-              {(isSignUp || (!isSignIn && showEmailForm)) && (
-                <div className="space-y-1">
-                  <label htmlFor="welcome-first-name" className="text-xs font-medium text-muted-foreground">
-                    First name
-                  </label>
-                  <input
-                    id="welcome-first-name"
-                    type="text"
-                    data-testid="welcome-first-name-input"
-                    value={firstName}
-                    onChange={(e) => {
-                      setFirstName(e.target.value);
-                      if (nameError) setNameError(null);
-                    }}
-                    placeholder="Your first name"
-                    maxLength={60}
-                    autoFocus={isSignUp}
-                    className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground shadow-xs transition placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
-                  />
-                  {nameError && (
-                    <p
-                      data-testid="welcome-name-error"
-                      className="text-xs font-medium text-destructive px-1"
-                    >
-                      {nameError}
-                    </p>
-                  )}
-                </div>
-              )}
+            {/* Divider "or" */}
+            <div className="relative my-4 flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border" />
+              </div>
+              <div className="relative bg-card px-3 text-xs uppercase tracking-wider text-muted-foreground">
+                or
+              </div>
+            </div>
 
-              {/* Email Field */}
+            {/* Sign-in Form */}
+            <form onSubmit={handleSignIn} noValidate className="space-y-3.5 text-left">
+              {/* Email */}
               <div className="space-y-1">
-                <label htmlFor="welcome-email" className="text-xs font-medium text-muted-foreground">
+                <label
+                  htmlFor="welcome-email"
+                  className="text-xs font-medium text-muted-foreground"
+                >
                   Email
                 </label>
                 <input
@@ -247,68 +496,169 @@ function WelcomeContent() {
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
-                    if (emailError) setEmailError(null);
+                    if (fieldErrors.email) setFieldErrors((p) => ({ ...p, email: undefined }));
+                    if (generalError) setGeneralError(null);
+                    if (isUnconfirmedEmail) setIsUnconfirmedEmail(false);
                   }}
                   placeholder="name@example.com"
-                  autoFocus={!isSignUp}
+                  autoFocus
                   className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground shadow-xs transition placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
                 />
-                {emailError && (
+                {fieldErrors.email && (
                   <p
                     data-testid="welcome-email-error"
                     className="text-xs font-medium text-destructive px-1"
                   >
-                    {emailError}
+                    {fieldErrors.email}
                   </p>
                 )}
               </div>
 
-              {/* Primary submit button */}
+              {/* Password with Forgot password? link */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="welcome-password"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearErrors();
+                      setViewMode("forgot");
+                    }}
+                    className="text-xs font-semibold text-primary hover:underline cursor-pointer"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    id="welcome-password"
+                    type={showPassword ? "text" : "password"}
+                    data-testid="welcome-password-input"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined }));
+                      if (generalError) setGeneralError(null);
+                    }}
+                    placeholder="Enter your password"
+                    className="w-full rounded-xl border border-input bg-background px-4 py-2.5 pr-11 text-sm text-foreground shadow-xs transition placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
+                  />
+                  <button
+                    type="button"
+                    data-testid="welcome-password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                {fieldErrors.password && (
+                  <p
+                    data-testid="welcome-password-error"
+                    className="text-xs font-medium text-destructive px-1"
+                  >
+                    {fieldErrors.password}
+                  </p>
+                )}
+              </div>
+
+              {/* Inline Errors */}
+              {generalError && (
+                <p
+                  data-testid="welcome-auth-error"
+                  className="text-xs font-medium text-destructive px-1"
+                >
+                  {generalError}
+                </p>
+              )}
+
+              {/* Email Not Confirmed prompt */}
+              {isUnconfirmedEmail && (
+                <div className="space-y-1.5 rounded-xl border border-border bg-background/60 p-3">
+                  <p
+                    data-testid="welcome-unconfirmed-error"
+                    className="text-xs font-medium text-destructive"
+                  >
+                    Please confirm your email first.
+                  </p>
+                  <button
+                    type="button"
+                    data-testid="welcome-resend-confirm"
+                    onClick={handleResendConfirmation}
+                    disabled={resendCountdown > 0 || isResending}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline disabled:opacity-50 cursor-pointer"
+                  >
+                    {isResending ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3 w-3" />
+                    )}
+                    <span>
+                      {resendCountdown > 0
+                        ? `Resend confirmation email (${resendCountdown}s)`
+                        : "Resend confirmation email"}
+                    </span>
+                  </button>
+                  {resendStatus && (
+                    <p className="text-xs text-primary font-medium">{resendStatus}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Submit button */}
               <button
                 type="submit"
-                data-testid="welcome-email-submit"
+                data-testid="welcome-signin-submit"
                 disabled={isLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                className="flex w-full items-center justify-center gap-2 h-12 sm:h-[52px] rounded-[12px] bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
               >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <span>Continue with email</span>
+                  <span>Sign in</span>
                 )}
               </button>
             </form>
-          ) : (
-            /* Collapsed initial state when mode is unspecified: Continue with email toggle button */
-            <button
-              type="button"
-              data-testid="welcome-email-toggle"
-              onClick={() => setUserToggledEmailForm(true)}
-              disabled={isGoogleLoading || isLoading}
-              className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-            >
-              <Mail className="h-4 w-4" />
-              <span>Continue with email</span>
-            </button>
-          )}
 
-          {/* Divider "or" */}
-          <div className="relative my-4 flex items-center justify-center">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative bg-card px-3 text-xs uppercase tracking-wider text-muted-foreground">
-              or
+            {/* Bottom link: New here? Get started */}
+            <div className="pt-2 text-center text-xs text-muted-foreground">
+              New here?{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  clearErrors();
+                  setViewMode("signup");
+                  router.push("/welcome?mode=signup");
+                }}
+                className="font-semibold text-primary underline-offset-4 hover:underline cursor-pointer"
+              >
+                Get started
+              </button>
             </div>
           </div>
+        )}
 
-          {/* Continue with Google (outline, full width, Google logo) */}
-          <div className="space-y-1.5">
+        {/* VIEW 2: GET STARTED (SIGN UP) */}
+        {viewMode === "signup" && (
+          <div className="space-y-4">
+            {/* Continue with Google */}
             <button
               type="button"
               data-testid="welcome-google"
               onClick={handleContinueWithGoogle}
               disabled={isGoogleLoading || isLoading}
-              className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold text-foreground shadow-xs transition hover:bg-accent/60 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+              className="flex w-full items-center justify-center gap-3 h-12 sm:h-[52px] rounded-[12px] border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-xs transition hover:bg-muted/50 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
             >
               {isGoogleLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -317,28 +667,460 @@ function WelcomeContent() {
               )}
               <span>Continue with Google</span>
             </button>
-            {googleError && (
-              <p
-                data-testid="welcome-google-error"
-                className="text-xs font-medium text-destructive px-1 text-left"
-              >
-                {googleError}
-              </p>
-            )}
-          </div>
 
-          {/* Small text link "Try without an account" */}
-          <div className="pt-2 text-center">
-            <button
-              type="button"
-              data-testid="welcome-try-guest"
-              onClick={handleTryWithoutAccount}
-              className="text-xs font-medium text-muted-foreground underline-offset-4 hover:underline hover:text-foreground transition cursor-pointer"
-            >
-              Try without an account
-            </button>
+            {/* Divider "or" */}
+            <div className="relative my-4 flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border" />
+              </div>
+              <div className="relative bg-card px-3 text-xs uppercase tracking-wider text-muted-foreground">
+                or
+              </div>
+            </div>
+
+            {/* Sign-up Form */}
+            <form onSubmit={handleSignUp} noValidate className="space-y-3.5 text-left">
+              {/* First Name */}
+              <div className="space-y-1">
+                <label
+                  htmlFor="welcome-first-name"
+                  className="text-xs font-medium text-muted-foreground"
+                >
+                  First name
+                </label>
+                <input
+                  id="welcome-first-name"
+                  type="text"
+                  data-testid="welcome-first-name-input"
+                  value={firstName}
+                  onChange={(e) => {
+                    setFirstName(e.target.value);
+                    if (fieldErrors.firstName) setFieldErrors((p) => ({ ...p, firstName: undefined }));
+                  }}
+                  placeholder="Your first name"
+                  maxLength={30}
+                  autoFocus
+                  className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground shadow-xs transition placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
+                />
+                {fieldErrors.firstName && (
+                  <p
+                    data-testid="welcome-name-error"
+                    className="text-xs font-medium text-destructive px-1"
+                  >
+                    {fieldErrors.firstName}
+                  </p>
+                )}
+              </div>
+
+              {/* Email */}
+              <div className="space-y-1">
+                <label
+                  htmlFor="welcome-email"
+                  className="text-xs font-medium text-muted-foreground"
+                >
+                  Email
+                </label>
+                <input
+                  id="welcome-email"
+                  type="email"
+                  data-testid="welcome-email-input"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (fieldErrors.email) setFieldErrors((p) => ({ ...p, email: undefined }));
+                    if (generalError) setGeneralError(null);
+                  }}
+                  placeholder="name@example.com"
+                  className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground shadow-xs transition placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
+                />
+                {fieldErrors.email && (
+                  <p
+                    data-testid="welcome-email-error"
+                    className="text-xs font-medium text-destructive px-1"
+                  >
+                    {fieldErrors.email}
+                  </p>
+                )}
+              </div>
+
+              {/* Password with Live Checklist */}
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="welcome-password"
+                  className="text-xs font-medium text-muted-foreground"
+                >
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="welcome-password"
+                    type={showPassword ? "text" : "password"}
+                    data-testid="welcome-password-input"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined }));
+                      if (generalError) setGeneralError(null);
+                    }}
+                    placeholder="Create a strong password"
+                    className="w-full rounded-xl border border-input bg-background px-4 py-2.5 pr-11 text-sm text-foreground shadow-xs transition placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
+                  />
+                  <button
+                    type="button"
+                    data-testid="welcome-password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+
+                {/* Password Rules Live Checklist */}
+                <PasswordRulesChecklist password={password} />
+
+                {fieldErrors.password && (
+                  <p
+                    data-testid="welcome-password-error"
+                    className="text-xs font-medium text-destructive px-1"
+                  >
+                    {fieldErrors.password}
+                  </p>
+                )}
+              </div>
+
+              {/* General Error */}
+              {generalError && (
+                <p
+                  data-testid="welcome-auth-error"
+                  className="text-xs font-medium text-destructive px-1"
+                >
+                  {generalError}
+                </p>
+              )}
+
+              {/* Submit button: Disabled until all 4 rules are met */}
+              <button
+                type="submit"
+                data-testid="welcome-signup-submit"
+                disabled={isLoading || !isPasswordValid(password) || !email || !firstName.trim()}
+                className="flex w-full items-center justify-center gap-2 h-12 sm:h-[52px] rounded-[12px] bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <span>Create account</span>
+                )}
+              </button>
+            </form>
+
+            {/* Try without an account */}
+            <div className="pt-2 text-center">
+              <button
+                type="button"
+                data-testid="welcome-try-guest"
+                onClick={handleTryWithoutAccount}
+                className="text-xs font-medium text-muted-foreground underline-offset-4 hover:underline hover:text-foreground transition cursor-pointer"
+              >
+                Try without an account
+              </button>
+            </div>
+
+            {/* Bottom link: Already have an account? Sign in */}
+            <div className="text-center text-xs text-muted-foreground">
+              Already have an account?{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  clearErrors();
+                  setViewMode("signin");
+                  router.push("/welcome?mode=signin");
+                }}
+                className="font-semibold text-primary underline-offset-4 hover:underline cursor-pointer"
+              >
+                Sign in
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* VIEW 3: CHECK EMAIL (SIGN UP CONFIRMATION) */}
+        {viewMode === "check-email" && (
+          <div className="space-y-6 text-center">
+            {/* Mail Icon in soft violet circle */}
+            <div className="space-y-3">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-primary shadow-xs">
+                <MailCheck className="h-8 w-8" />
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                We sent you a link to confirm your account to{" "}
+                <span className="font-semibold text-foreground">{email}</span>.
+              </p>
+            </div>
+
+            {/* Resend section with 60-second countdown */}
+            <div className="space-y-3 rounded-xl border border-border bg-background/50 p-4">
+              <p className="text-xs text-muted-foreground">
+                Didn&apos;t receive it? Check your spam folder or resend the link below.
+              </p>
+              <button
+                type="button"
+                data-testid="auth-resend-button"
+                onClick={handleResendConfirmation}
+                disabled={resendCountdown > 0 || isResending}
+                className="flex w-full items-center justify-center gap-2 h-12 sm:h-[52px] rounded-[12px] bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+              >
+                {isResending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                <span>
+                  {resendCountdown > 0
+                    ? `Resend (${resendCountdown}s)`
+                    : "Resend confirmation email"}
+                </span>
+              </button>
+              {resendStatus && (
+                <p className="text-xs text-primary font-medium">{resendStatus}</p>
+              )}
+            </div>
+
+            {/* Actions: Use a different email & Already have an account? Sign in */}
+            <div className="space-y-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  clearErrors();
+                  setViewMode("signup");
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Use a different email</span>
+              </button>
+              {(existingAccountNotice || true) && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearErrors();
+                      setViewMode("signin");
+                      router.push("/welcome?mode=signin");
+                    }}
+                    className="text-xs font-semibold text-primary underline-offset-4 hover:underline cursor-pointer"
+                  >
+                    Already have an account? Sign in
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* VIEW 4: FORGOT PASSWORD */}
+        {viewMode === "forgot" && (
+          <div className="space-y-4">
+            <form onSubmit={handleForgotPassword} noValidate className="space-y-3.5 text-left">
+              <div className="space-y-1">
+                <label
+                  htmlFor="welcome-forgot-email"
+                  className="text-xs font-medium text-muted-foreground"
+                >
+                  Email
+                </label>
+                <input
+                  id="welcome-forgot-email"
+                  type="email"
+                  data-testid="welcome-forgot-email-input"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (fieldErrors.email) setFieldErrors((p) => ({ ...p, email: undefined }));
+                    if (generalError) setGeneralError(null);
+                  }}
+                  placeholder="name@example.com"
+                  autoFocus
+                  className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground shadow-xs transition placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
+                />
+                {fieldErrors.email && (
+                  <p className="text-xs font-medium text-destructive px-1">
+                    {fieldErrors.email}
+                  </p>
+                )}
+              </div>
+
+              {generalError && (
+                <p className="text-xs font-medium text-destructive px-1">
+                  {generalError}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                data-testid="welcome-forgot-submit"
+                disabled={isLoading || !email.trim()}
+                className="flex w-full items-center justify-center gap-2 h-12 sm:h-[52px] rounded-[12px] bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <span>Send reset link</span>
+                )}
+              </button>
+            </form>
+
+            <div className="pt-2 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  clearErrors();
+                  setViewMode("signin");
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Back to sign in</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* VIEW 5: RESET LINK SENT */}
+        {viewMode === "reset-sent" && (
+          <div className="space-y-6 text-center">
+            <div className="space-y-3">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-primary shadow-xs">
+                <MailCheck className="h-8 w-8" />
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                If an account exists for{" "}
+                <span className="font-semibold text-foreground">{email}</span>, we&apos;ve sent a reset link.
+              </p>
+            </div>
+
+            <div className="space-y-3 rounded-xl border border-border bg-background/50 p-4">
+              <p className="text-xs text-muted-foreground">
+                Didn&apos;t get the link? Wait for the timer to finish before requesting another.
+              </p>
+              <button
+                type="button"
+                onClick={handleResendPasswordReset}
+                disabled={resendCountdown > 0 || isResending}
+                className="flex w-full items-center justify-center gap-2 h-12 sm:h-[52px] rounded-[12px] bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+              >
+                {isResending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                <span>
+                  {resendCountdown > 0
+                    ? `Resend (${resendCountdown}s)`
+                    : "Resend reset link"}
+                </span>
+              </button>
+              {resendStatus && (
+                <p className="text-xs text-primary font-medium">{resendStatus}</p>
+              )}
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  clearErrors();
+                  setViewMode("signin");
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Back to sign in</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* VIEW 6: SET NEW PASSWORD */}
+        {viewMode === "reset" && (
+          <div className="space-y-4">
+            <form onSubmit={handleSaveNewPassword} noValidate className="space-y-3.5 text-left">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="welcome-reset-password"
+                  className="text-xs font-medium text-muted-foreground"
+                >
+                  New password
+                </label>
+                <div className="relative">
+                  <input
+                    id="welcome-reset-password"
+                    type={showPassword ? "text" : "password"}
+                    data-testid="welcome-reset-password-input"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined }));
+                      if (generalError) setGeneralError(null);
+                    }}
+                    placeholder="Enter your new password"
+                    autoFocus
+                    className="w-full rounded-xl border border-input bg-background px-4 py-2.5 pr-11 text-sm text-foreground shadow-xs transition placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/20"
+                  />
+                  <button
+                    type="button"
+                    data-testid="welcome-reset-password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+
+                <PasswordRulesChecklist password={password} />
+
+                {fieldErrors.password && (
+                  <p className="text-xs font-medium text-destructive px-1">
+                    {fieldErrors.password}
+                  </p>
+                )}
+              </div>
+
+              {generalError && (
+                <p
+                  data-testid="welcome-reset-error"
+                  className="text-xs font-medium text-destructive px-1"
+                >
+                  {generalError}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                data-testid="welcome-reset-submit"
+                disabled={isLoading || !isPasswordValid(password)}
+                className="flex w-full items-center justify-center gap-2 h-12 sm:h-[52px] rounded-[12px] bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <span>Save password</span>
+                )}
+              </button>
+            </form>
+          </div>
+        )}
       </div>
     </main>
   );

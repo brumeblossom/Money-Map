@@ -493,7 +493,7 @@ describe("Sync Engine (PRD Sections 7 & 8)", () => {
     expect(await testDb.profiles.count()).toBe(0);
     expect(await testDb.meta.count()).toBe(0);
 
-    // Navigated to /welcome
-    expect(pushedUrls).toContain("/welcome");
+    // Navigated to /
+    expect(pushedUrls).toContain("/");
   });
 });

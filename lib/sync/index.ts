@@ -471,14 +471,30 @@ export async function signOut(
     console.error("Supabase signOut error:", e);
   }
 
-  // 3. Clear mock and session cookies if any
+  // 3. Clear mock and session cookies and storage
   if (typeof document !== "undefined") {
     document.cookie =
       "moneymap_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
     document.cookie =
+      "mm_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+    document.cookie =
       "moneymap_mock_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
     document.cookie =
       "moneymap_has_session=0; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+    try {
+      localStorage.removeItem("moneymap_guest");
+      sessionStorage.removeItem("moneymap_guest");
+    } catch {}
+  }
+
+  // Clear service worker HTML caches so signed-out visitors always see landing page
+  if (typeof caches !== "undefined") {
+    try {
+      await Promise.all([
+        caches.delete("pages-html-cache"),
+        caches.delete("pages-rsc-cache"),
+      ]);
+    } catch {}
   }
 
   // 4. Clear every Dexie table
@@ -496,12 +512,13 @@ export async function signOut(
   // 5. Reset active user ID
   setCurrentUserId(null);
 
-  // 6. Navigate to /welcome
+  // 6. Full page navigation to "/" so landing page renders cleanly
   if (router) {
-    router.push("/welcome");
-  } else if (typeof window !== "undefined") {
+    router.push("/");
+  }
+  if (typeof window !== "undefined") {
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-    window.location.href = "/welcome";
+    window.location.href = "/";
   }
 }
 
@@ -529,9 +546,24 @@ export async function signOutAllDevices(
     document.cookie =
       "moneymap_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
     document.cookie =
+      "mm_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+    document.cookie =
       "moneymap_mock_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
     document.cookie =
       "moneymap_has_session=0; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+    try {
+      localStorage.removeItem("moneymap_guest");
+      sessionStorage.removeItem("moneymap_guest");
+    } catch {}
+  }
+
+  if (typeof caches !== "undefined") {
+    try {
+      await Promise.all([
+        caches.delete("pages-html-cache"),
+        caches.delete("pages-rsc-cache"),
+      ]);
+    } catch {}
   }
 
   await Promise.all([
@@ -548,10 +580,11 @@ export async function signOutAllDevices(
   setCurrentUserId(null);
 
   if (router) {
-    router.push("/welcome");
-  } else if (typeof window !== "undefined") {
+    router.push("/");
+  }
+  if (typeof window !== "undefined") {
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-    window.location.href = "/welcome";
+    window.location.href = "/";
   }
 }
 

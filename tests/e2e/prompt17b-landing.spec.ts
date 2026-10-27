@@ -85,7 +85,7 @@ test.describe("Prompt 17b: Landing Page & Redesigned Auth Flow", () => {
     ).toBeVisible();
     await expect(page.getByTestId("welcome-first-name-input")).toBeVisible();
     await expect(page.getByTestId("welcome-email-input")).toBeVisible();
-    await expect(page.getByTestId("welcome-email-submit")).toBeVisible();
+    await expect(page.getByTestId("welcome-signup-submit")).toBeVisible();
     await expect(page.getByTestId("welcome-google")).toBeVisible();
     await expect(page.getByTestId("welcome-try-guest")).toBeVisible();
   });
@@ -98,7 +98,7 @@ test.describe("Prompt 17b: Landing Page & Redesigned Auth Flow", () => {
 
     await expect(page).toHaveURL("http://localhost:3000/welcome");
     await expect(
-      page.getByRole("heading", { name: "Welcome to Money Map" })
+      page.getByRole("heading", { name: "Welcome back" })
     ).toBeVisible();
 
     // Verify "Back to home" link above the card

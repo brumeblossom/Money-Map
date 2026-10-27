@@ -64,13 +64,17 @@ export function AuthCallbackClient() {
           document.cookie =
             "moneymap_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
           document.cookie =
+            "mm_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+          document.cookie =
             "moneymap_has_session=1; path=/; max-age=2592000; SameSite=Lax";
 
           if (code === "mock-code") {
             document.cookie = `moneymap_mock_user=${authUser.id}; path=/; max-age=2592000; SameSite=Lax`;
           }
 
-          router.replace("/");
+          const defaultNext = searchParams.get("type") === "recovery" ? "/welcome?mode=reset" : "/";
+          const next = searchParams.get("next") || searchParams.get("redirect_to") || defaultNext;
+          router.replace(next);
           return;
         }
 

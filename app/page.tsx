@@ -5,7 +5,9 @@ import { LandingPageView } from "@/components/landing-page-view";
 export default async function HomePage() {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("moneymap_has_session")?.value;
-  const isGuest = cookieStore.get("moneymap_guest")?.value === "true";
+  const isGuest =
+    cookieStore.get("moneymap_guest")?.value === "true" ||
+    cookieStore.get("mm_guest")?.value === "1";
   const mockUser = cookieStore.get("moneymap_mock_user")?.value;
   const hasSbAuth = cookieStore.getAll().some((c) => c.name.includes("-auth-token"));
 

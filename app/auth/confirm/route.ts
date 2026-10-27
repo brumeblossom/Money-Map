@@ -8,7 +8,8 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const token_hash = searchParams.get("token_hash") || searchParams.get("token");
   const type = (searchParams.get("type") || "email") as EmailOtpType;
-  const next = searchParams.get("next") ?? "/";
+  const defaultNext = type === "recovery" ? "/welcome?mode=reset" : "/";
+  const rawNext = searchParams.get("next") || searchParams.get("redirect_to") || defaultNext;
 
   const redirectTo = request.nextUrl.clone();
   redirectTo.search = "";
@@ -22,7 +23,9 @@ export async function GET(request: NextRequest) {
 
   // Handle mock token for test suites
   if (token_hash === "mock-token" || token_hash === "test-token") {
-    redirectTo.pathname = next;
+    const targetUrl = new URL(rawNext, request.url);
+    redirectTo.pathname = targetUrl.pathname;
+    redirectTo.search = targetUrl.search;
     const response = NextResponse.redirect(redirectTo);
     response.cookies.set("moneymap_mock_user", "test-authed-user-999", {
       path: "/",
@@ -30,6 +33,10 @@ export async function GET(request: NextRequest) {
       sameSite: "lax",
     });
     response.cookies.set("moneymap_guest", "", {
+      path: "/",
+      expires: new Date(0),
+    });
+    response.cookies.set("mm_guest", "", {
       path: "/",
       expires: new Date(0),
     });
@@ -95,7 +102,9 @@ export async function GET(request: NextRequest) {
   }
 
   if (!error) {
-    redirectTo.pathname = next;
+    const targetUrl = new URL(rawNext, request.url);
+    redirectTo.pathname = targetUrl.pathname;
+    redirectTo.search = targetUrl.search;
     const redirectResponse = NextResponse.redirect(redirectTo);
 
     // Apply any auth cookies from Supabase to the redirect response
@@ -107,8 +116,12 @@ export async function GET(request: NextRequest) {
       });
     });
 
-    // Clear guest cookie and set session indicator
+    // Clear guest cookies and set session indicator
     redirectResponse.cookies.set("moneymap_guest", "", {
+      path: "/",
+      expires: new Date(0),
+    });
+    redirectResponse.cookies.set("mm_guest", "", {
       path: "/",
       expires: new Date(0),
     });

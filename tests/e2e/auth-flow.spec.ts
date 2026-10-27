@@ -36,17 +36,13 @@ test.describe("Auth and Guest Mode Flow (Prompt 9)", () => {
     // 1. Clean cookies (first-time visitor)
     await context.clearCookies();
 
-    // 2. Navigating to /welcome shows the welcome card
-    await page.goto("/welcome");
+    // 2. Navigating to /welcome?mode=signup shows the signup card
+    await page.goto("/welcome?mode=signup");
     await expect(page).toHaveURL(/\/welcome/);
 
     // Verify brand, pitch, and action buttons
-    await expect(page.getByRole("heading", { name: "Welcome to Money Map" })).toBeVisible();
-    await expect(
-      page.getByText(/Private, offline-first personal finance with zero clutter/i),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Create your account" })).toBeVisible();
     await expect(page.getByTestId("welcome-google")).toBeVisible();
-    await expect(page.getByTestId("welcome-email-toggle")).toBeVisible();
     await expect(page.getByTestId("welcome-try-guest")).toBeVisible();
 
     // 3. Click 'Try without an account' and time the transition
@@ -67,42 +63,46 @@ test.describe("Auth and Guest Mode Flow (Prompt 9)", () => {
     expect(guestCookie?.value).toBe("true");
   });
 
-  test("email validation shows 'Enter a valid email' and valid email goes to /auth/check-email with 60s countdown", async ({
+  test("email validation shows 'Enter a valid email' and valid signup goes to check-email with 60s countdown", async ({
     page,
     context,
   }) => {
     await context.clearCookies();
 
-    // Intercept Supabase OTP request
-    await page.route("**/auth/v1/otp*", async (route) => {
+    // Intercept Supabase signup request
+    await page.route("**/auth/v1/signup*", async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          user: {
+            id: "test-user-id",
+            email: "chinedu@example.com",
+            identities: [{ id: "identity-1" }],
+          },
+        }),
       });
     });
 
-    await page.goto("/welcome?intent=signin");
+    await page.goto("/welcome?mode=signup");
 
-    // Click 'Continue with email'
-    await page.getByTestId("welcome-email-toggle").click();
     const emailInput = page.getByTestId("welcome-email-input");
     await expect(emailInput).toBeVisible();
 
     // Type invalid email and submit
     await emailInput.fill("invalid-email-address");
-    await page.getByTestId("welcome-email-submit").click();
+    await page.getByTestId("welcome-password-input").fill("Password1");
+    await page.getByTestId("welcome-first-name-input").fill("Chinedu");
+    await page.getByTestId("welcome-signup-submit").click();
 
     // Shows "Enter a valid email"
     await expect(page.getByTestId("welcome-email-error")).toHaveText("Enter a valid email");
 
-    // Fill first name and type valid email and submit
-    await page.getByTestId("welcome-first-name-input").fill("Chinedu");
+    // Fix valid email and submit
     await emailInput.fill("chinedu@example.com");
-    await page.getByTestId("welcome-email-submit").click();
+    await page.getByTestId("welcome-signup-submit").click();
 
-    // Lands on /auth/check-email
-    await expect(page).toHaveURL(/\/auth\/check-email/);
+    // Shows check-email card
     await expect(
       page.getByRole("heading", { name: "Check your email" }),
     ).toBeVisible();
@@ -366,7 +366,7 @@ test.describe("Auth and Guest Mode Flow (Prompt 9)", () => {
 
     // Returns to /welcome
     await expect(page).toHaveURL(/\/welcome/);
-    await expect(page.getByRole("heading", { name: "Money Map" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
   });
 
   test("/auth/error displays other_browser notice when opened across browsers", async ({

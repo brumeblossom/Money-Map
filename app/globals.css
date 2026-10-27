@@ -26,6 +26,7 @@
 
 @theme inline {
   --color-background: var(--background);
+  --color-landing-alt: var(--landing-alt);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-plus-jakarta-sans), 'NairaFallback', system-ui, -apple-system, sans-serif;
   --font-heading: var(--font-plus-jakarta-sans), 'NairaFallback', system-ui, -apple-system, sans-serif;
@@ -83,6 +84,7 @@
 
 :root {
   --background: #F7F6FC;
+  --landing-alt: #F3F1FA;
   --foreground: #17191C;
   --card: #FFFFFF;
   --card-foreground: #17191C;
@@ -136,6 +138,7 @@
 .dark {
   color-scheme: dark;
   --background: #121118;
+  --landing-alt: #17161F;
   --foreground: #F0F0F4;
   --card: #1B1A23;
   --card-foreground: #F0F0F4;

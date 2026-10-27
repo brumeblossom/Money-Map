@@ -181,11 +181,22 @@ export const emailSignUpSchema = z.object({
     .string()
     .trim()
     .min(1, "Enter your first name")
-    .max(60, "Name must be 60 characters or less"),
+    .max(30, "Name must be 30 characters or less"),
   email: z.string().trim().email("Enter a valid email"),
 });
 
 export type EmailSignUpData = z.infer<typeof emailSignUpSchema>;
+
+export {
+  passwordSchema,
+  signUpFormSchema,
+  signInFormSchema,
+  resetPasswordRequestSchema,
+  setNewPasswordSchema,
+  checkPasswordRules,
+  isPasswordValid,
+} from "@/lib/validation/password";
+export type { PasswordRuleCheck } from "@/lib/validation/password";
 
 // -------------------------------------------------------------
 // Sync API Schemas (PRD section 7, section 8)

@@ -4,11 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build --webpack",
+    "build": "bun --bun next build --webpack",
     "start": "next start",
-    "lint": "eslint",
-    "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run",
+    "lint": "bun --bun eslint",
+    "typecheck": "bun --bun next typegen && bun --bun tsc --noEmit",
+    "test": "bun --bun vitest run",
     "e2e": "playwright test",
     "format": "prettier --write .",
     "db:types": "supabase gen types typescript --linked > lib/db/database.types.ts"
@@ -21,6 +21,7 @@
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
     "@tanstack/react-virtual": "^3.14.21",
+    "@vercel/analytics": "^2.0.1",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.0",
     "dexie": "^4.4.6",

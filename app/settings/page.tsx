@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, Globe, Trash2, Mail, Pencil } from "lucide-react";
+import { LogOut, Globe, Trash2, Mail, Pencil, Shield } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -36,15 +36,25 @@ export default function SettingsPage() {
   const profile = useProfile();
   const [userEmail, setUserEmail] = React.useState<string | null>(null);
   const [isGuest, setIsGuest] = React.useState<boolean>(true);
+  const [isAdmin, setIsAdmin] = React.useState<boolean>(false);
 
   // Check auth session for email & guest status
   React.useEffect(() => {
     async function checkAuth() {
       try {
-        if (typeof document !== "undefined" && document.cookie.match(/moneymap_mock_user=([^;]+)/)) {
-          setUserEmail("user@example.com");
-          setIsGuest(false);
-          return;
+        if (typeof document !== "undefined") {
+          const hasAdminCookie =
+            document.cookie.includes("moneymap_is_admin=1") ||
+            document.cookie.includes("moneymap_mock_admin=1");
+          if (hasAdminCookie) {
+            setIsAdmin(true);
+          }
+
+          if (document.cookie.match(/moneymap_mock_user=([^;]+)/)) {
+            setUserEmail("user@example.com");
+            setIsGuest(false);
+            return;
+          }
         }
 
         const supabase = createClient();
@@ -52,12 +62,17 @@ export default function SettingsPage() {
         if (data?.session?.user) {
           setUserEmail(data.session.user.email ?? "user@example.com");
           setIsGuest(false);
+          fetch("/api/admin/check")
+            .then((res) => setIsAdmin(res.status === 200))
+            .catch(() => setIsAdmin(false));
         } else {
           setIsGuest(true);
+          setIsAdmin(false);
         }
       } catch (e) {
         console.error("Auth check error in settings", e);
         setIsGuest(true);
+        setIsAdmin(false);
       }
     }
     checkAuth();
@@ -408,6 +423,20 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      {/* Phone Admin Link */}
+      {isAdmin && (
+        <div className="lg:hidden px-1 pt-2">
+          <Link
+            href="/admin"
+            data-testid="settings-admin-link"
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground shadow-xs transition-colors hover:bg-muted"
+          >
+            <Shield className="size-3.5 text-primary" />
+            <span>Admin Dashboard</span>
+          </Link>
+        </div>
+      )}
 
       {/* Footer row: Money Map v1 on left, Send feedback on right */}
       <div className="flex items-center justify-between px-1 text-xs text-muted-foreground pt-4">

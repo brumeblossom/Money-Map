@@ -21,6 +21,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/insights/habits": "Habits",
   "/export": "Export",
   "/settings": "Settings",
+  "/admin": "Admin",
   "/welcome": "Welcome",
   "/auth/check-email": "Check your email",
 };

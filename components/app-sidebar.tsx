@@ -8,6 +8,7 @@ import {
   FileText,
   Home,
   Settings,
+  Shield,
 } from "lucide-react";
 import { BrandLogoMark } from "@/components/brand-logo";
 import { useProfile } from "@/lib/repo/hooks";
@@ -30,6 +31,7 @@ export function AppSidebar({ className }: { className?: string }) {
   const pathname = usePathname();
   const profile = useProfile();
   const [authUser, setAuthUser] = React.useState<{ email: string; fallbackName?: string } | null>(null);
+  const [isAdmin, setIsAdmin] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     let subscription: { unsubscribe: () => void } | null = null;
@@ -37,6 +39,13 @@ export function AppSidebar({ className }: { className?: string }) {
     async function checkUser() {
       try {
         if (typeof document !== "undefined") {
+          const hasAdminCookie =
+            document.cookie.includes("moneymap_is_admin=1") ||
+            document.cookie.includes("moneymap_mock_admin=1");
+          if (hasAdminCookie) {
+            setIsAdmin(true);
+          }
+
           const match = document.cookie.match(/moneymap_mock_user=([^;]+)/);
           if (match) {
             setAuthUser({
@@ -55,8 +64,13 @@ export function AppSidebar({ className }: { className?: string }) {
             email: sessionData.session.user.email || "",
             fallbackName: sessionData.session.user.user_metadata?.full_name || "User",
           });
+          // Verify admin status on server
+          fetch("/api/admin/check")
+            .then((res) => setIsAdmin(res.status === 200))
+            .catch(() => setIsAdmin(false));
         } else {
           setAuthUser(null);
+          setIsAdmin(false);
         }
 
         const { data: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -65,13 +79,18 @@ export function AppSidebar({ className }: { className?: string }) {
               email: session.user.email || "",
               fallbackName: session.user.user_metadata?.full_name || "User",
             });
+            fetch("/api/admin/check")
+              .then((res) => setIsAdmin(res.status === 200))
+              .catch(() => setIsAdmin(false));
           } else {
             setAuthUser(null);
+            setIsAdmin(false);
           }
         });
         subscription = authSub.subscription;
       } catch {
         setAuthUser(null);
+        setIsAdmin(false);
       }
     }
 
@@ -139,7 +158,22 @@ export function AppSidebar({ className }: { className?: string }) {
       </nav>
 
       {/* Bottom User Area: no avatar/user icon; show name and email or Guest · Sign in to back up */}
-      <div className="border-t border-sidebar-border p-3">
+      <div className="border-t border-sidebar-border p-3 space-y-1">
+        {isAdmin && (
+          <Link
+            href="/admin"
+            data-testid="sidebar-admin-link"
+            className={cn(
+              "flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors",
+              pathname === "/admin"
+                ? "bg-sidebar-accent text-white"
+                : "text-sidebar-muted hover:bg-sidebar-accent/50 hover:text-white"
+            )}
+          >
+            <Shield className="size-3.5 shrink-0" />
+            <span>Admin</span>
+          </Link>
+        )}
         <Link
           href="/settings"
           data-testid="sidebar-settings-link"

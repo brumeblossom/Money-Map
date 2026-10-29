@@ -5,6 +5,7 @@ import "./globals.css";
 import { AppShell } from "@/components/app-shell";
 import { PwaManager } from "@/components/pwa-manager";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Analytics } from "@vercel/analytics/react";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -76,6 +77,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <PwaManager />
+          <Analytics />
           <React.Suspense fallback={null}>
             <AppShell>{children}</AppShell>
           </React.Suspense>

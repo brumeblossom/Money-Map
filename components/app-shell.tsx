@@ -95,7 +95,8 @@ export function AppShell({
     pathname.startsWith("/new/") ||
     pathname.startsWith("/records") ||
     pathname.startsWith("/insights") ||
-    pathname.startsWith("/lent");
+    pathname.startsWith("/lent") ||
+    pathname.startsWith("/admin");
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">

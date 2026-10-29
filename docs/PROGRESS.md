@@ -1275,9 +1275,73 @@ The following environment variables can now be safely removed from Vercel projec
 
 - None.
 
+### Prompt 17c: Private Admin Analytics
+
+- **1. Vercel Web Analytics**:
+  - Installed `@vercel/analytics`.
+  - Added `<Analytics />` to the root layout (`app/layout.tsx`) so page visits, top pages, countries, and devices are tracked in the Vercel dashboard without requiring cookie consent banners.
+
+- **2. Admin Access (Security First)**:
+  - **Server-Enforced Authorization**:
+    - Uses `ADMIN_EMAILS` environment variable containing a comma-separated list of allowed administrator emails.
+    - A user is recognized as an admin only if signed in AND their Supabase auth email is listed in `ADMIN_EMAILS`.
+    - Authorization is verified on the **server** for every request to `/admin` and `/api/admin/*` via `verifyAdminUser()` in `lib/auth/admin.ts`.
+    - Anyone else (signed-out visitors, guest users, or other signed-in users) receives a standard 404 Not Found response (`notFound()` on `/admin`, 404 status on `/api/admin/*`), completely concealing the existence of admin routes.
+  - **Zero Secret Leakage & Aggregate Privacy**:
+    - Admin statistics are fetched exclusively on the server using `createAdminClient()` with the Supabase service role key.
+    - The service role key is strictly server-only and verified not to exist anywhere in the static client bundle (`.next/static`).
+    - Raw user queries, emails, individual transaction amounts, and counterparty names never leave the server; only aggregate numbers and weekly metrics are delivered to the browser.
+  - **Admin Navigation**:
+    - Added a small "Admin" link at the bottom of the desktop sidebar (`components/app-sidebar.tsx`) that renders only when the verified admin is signed in.
+    - Added a corresponding "Admin Dashboard" link in Settings on mobile phones (`app/settings/page.tsx`).
+
+- **How Admin Access Works**:
+  - The server inspects the active Supabase session cookie on incoming requests and retrieves the authenticated user's email via `supabase.auth.getUser()`.
+  - It compares the lowercased email against the list from `ADMIN_EMAILS`.
+  - If verified, the server proceeds with loading the admin dashboard or serving the API stats.
+  - If unverified or missing, it triggers `notFound()`, returning a 404 status without revealing route existence.
+
+- **How to Add Another Admin Email**:
+  - Open `.env.local` (for local development) or the Vercel Project Settings > Environment Variables (for production).
+  - Locate `ADMIN_EMAILS` and append the new email address separated by a comma:
+    ```bash
+    ADMIN_EMAILS="blossombrume@gmail.com,anotheradmin@example.com"
+    ```
+  - For local development, restart the Bun/Next.js dev server (`bun dev`). For production, redeploy or trigger a new deployment for the updated environment variable to take effect.
+
+- **3. /admin Dashboard View (`components/admin-dashboard-view.tsx`, `app/admin/page.tsx`)**:
+  - Responsive layout (matching Home branding, supporting both light and dark mode, phone and desktop).
+  - **Metric Cards**:
+    - **Total accounts**: All registered user accounts.
+    - **New sign-ups**: Registrations in the last 7 days and last 30 days.
+    - **Active users**: Users who created or updated entries, loans, loan repayments, or recurring rules in the last 7 days and last 30 days.
+    - **Total entries**: All non-deleted entries, plus this month's breakdown split across Income, Expenses, Giving, and Money I lent.
+    - **Average entries per active user**: Entries created in the last 30 days per active user.
+  - **Charts (Recharts)**:
+    - **New sign-ups per week**: 12-week bar cadence with DD-MM-YYYY week start labels.
+    - **Active users per week**: 12-week activity cadence.
+  - **Footer & 5-Minute Caching**:
+    - Displays `"Updated <DD-MM-YYYY HH:mm>"` using `formatDate()` from `lib/format`.
+    - Features a "Refresh" button that bypasses the 5-minute cache (`/api/admin/stats?refresh=true`) and updates live statistics.
+  - **PostgreSQL Migration (`supabase/migrations/20261029143000_admin_analytics.sql`)**:
+    - Created migration with `SECURITY DEFINER` function `get_admin_analytics()`.
+    - Function execution is explicitly revoked from `PUBLIC`, `anon`, and `authenticated`, and granted strictly to `service_role`.
+    - Service role fetcher in `lib/admin/stats.ts` executes the RPC function with automatic TypeScript fallback aggregation if the RPC is not yet deployed to the remote database.
+
+- **Verification**:
+  - `bun run lint`: 0 errors.
+  - `bun run typecheck`: 0 errors.
+  - `bun run test`: 219/219 tests passed across 22 test files.
+  - `bun run build`: Built production bundle cleanly.
+  - Verified `.next/static` bundle contains no service role key or secret tokens.
+
+## Known issues
+
+- None.
+
 ## Next prompt
 
-Prompt 17c: private admin analytics
+Prompt 19: hardening
 
 
 

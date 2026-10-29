@@ -59,10 +59,26 @@ export async function middleware(request: NextRequest) {
     maxAge: SESSION_MAX_AGE,
   });
 
+  // Set admin hint cookie based on verified auth email
+  const adminEmails = (process.env.ADMIN_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  const userEmail = authUser?.email?.trim().toLowerCase();
+  const isAdmin = Boolean(userEmail && adminEmails.includes(userEmail));
+
+  response.cookies.set("moneymap_is_admin", isAdmin ? "1" : "0", {
+    path: "/",
+    sameSite: "lax",
+    httpOnly: false,
+    maxAge: SESSION_MAX_AGE,
+  });
+
   // Public/system routes and static assets that should never redirect
   if (
     path.startsWith("/_next") ||
     path.startsWith("/api") ||
+    path.startsWith("/admin") ||
     path.startsWith("/auth/") ||
     path.startsWith("/icons/") ||
     path.startsWith("/images/") ||

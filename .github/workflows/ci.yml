@@ -37,4 +37,14 @@ jobs:
 
       - name: Build
         run: bun run build
-# Playwright e2e will be added to CI in Prompt 19.
+
+      - name: Install Playwright Browsers
+        run: bun x playwright install --with-deps chromium
+
+      - name: Playwright E2E Tests
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ADMIN_EMAILS: ${{ secrets.ADMIN_EMAILS }}
+        run: bun run e2e

@@ -1373,13 +1373,54 @@ The following environment variables can now be safely removed from Vercel projec
   - `bun run test`: 228/228 tests passed across 23 test files (including new `tests/unit/settings-gaps.test.ts`).
   - `bun run build`: Production build completed cleanly with all routes compiled and optimized.
 
+### Prompt 19: Hardening
+- **1. Accessibility (WCAG 2.2 AA & Axe Core)**:
+  - Installed `@axe-core/playwright` and created comprehensive accessibility test suite `tests/e2e/accessibility.spec.ts`.
+  - Audited all 14 routes at both mobile (390px) and desktop (1280px) viewports: `/welcome`, `/`, `/records`, `/insights`, `/insights/habits`, `/lent`, `/settings`, `/settings/categories`, `/settings/repeating`, `/export`, `/new/income`, `/new/expense`, `/new/giving`, `/new/lent`.
+  - Fixed color contrast on `components/action-card.tsx` ("Records" badge button upgraded from `text-muted-foreground/80` to `text-foreground/80` exceeding 4.5:1 ratio).
+  - All 32 Axe test cases passed with **0 serious or critical violations**.
+  - Verified keyboard-only navigation on desktop and minimum 44px touch targets on mobile.
+- **2. Performance & Bundle Size**:
+  - Lazy-loaded heavy chart libraries (Recharts) across all dashboard and detail views:
+    - Extracted and dynamically imported `components/category-donut-chart.tsx`, `components/cash-flow-chart.tsx`, `components/category-trend-chart.tsx`, and `components/admin-activity-charts.tsx`.
+  - Lazy-loaded PDF report generator (`@react-pdf/renderer` dynamically imported on-demand only in `lib/report/pdf-export.ts`).
+  - First-load JS for `/` is **188 KB** gzipped (well under the 200 KB PRD threshold).
+  - First-load JS for `/insights` is **187 KB** gzipped.
+  - Lighthouse mobile audit results:
+    - `/`: **Performance 96**, **Accessibility 96**, **Best Practices 100**, **SEO 100**.
+    - `/insights`: **Performance 95**, **Accessibility 96**, **Best Practices 100**, **SEO 100**.
+- **3. Security**:
+  - Added strict production security headers in `next.config.ts`:
+    - Content-Security-Policy (CSP) restricting scripts, connections, and styles to authorized origins (`*.supabase.co`, `va.vercel-scripts.com`, `vitals.vercel-insights.com`).
+    - HTTP Strict Transport Security (`max-age=63072000; includeSubDomains; preload`).
+    - `X-Frame-Options: DENY`.
+    - `X-Content-Type-Options: nosniff`.
+    - `Referrer-Policy: strict-origin-when-cross-origin`.
+    - `Permissions-Policy: camera=(), microphone=(), geolocation=(), browsing-topics=()`.
+  - Confirmed via static analysis that `SUPABASE_SERVICE_ROLE_KEY` is 100% absent from all client bundles in `.next/static`.
+  - Verified every API route (`/api/account/delete`, `/api/admin/check`, `/api/admin/stats`, `/api/sync/pull`, `/api/sync/push`) strictly validates requests with Zod schemas and validates user authentication on the server.
+- **4. End-to-End Tests & CI**:
+  - Verified that all 9 required PRD Section 10 tests exist and pass:
+    1. Guest records an entry (`entry-flow.spec.ts`).
+    2. Sign in keeps guest data (`auth-flow.spec.ts`).
+    3. Each of the four forms saves (`entry-flow.spec.ts`, `lent-flow.spec.ts`).
+    4. Edit and delete with Undo (`entry-flow.spec.ts`, `records-flow.spec.ts`).
+    5. Loan with two repayments reaches Paid off (`lent-flow.spec.ts`).
+    6. Repeat reminder is confirmed (`recurring-entries.spec.ts`, `reminders.spec.ts`).
+    7. Dashboard totals match Records (`insights-dashboard.spec.ts`).
+    8. PDF downloads with extracted text matching (`prompt16.spec.ts`).
+    9. App works with network switched off (`offline-pwa.spec.ts`).
+  - Updated GitHub Actions CI workflow (`.github/workflows/ci.yml`) to install Playwright chromium and run E2E tests using GitHub Actions secrets (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_EMAILS`).
+- **5. Dates Integrity**:
+  - Audited date displays across all components; confirmed all user-visible dates are formatted via `formatDate()` to display `DD-MM-YYYY`.
+
 ## Known issues
 
 - None.
 
 ## Next prompt
 
-Prompt 19: hardening
+Prompt 20: launch
 
 
 

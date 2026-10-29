@@ -3,20 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useLiveQuery } from "dexie-react-hooks";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Legend,
-} from "recharts";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -44,6 +32,34 @@ import { DateField } from "@/components/date-field";
 import { EntryModal } from "@/components/entry-modal";
 import { ExportModal } from "@/components/export-modal";
 import { cn } from "@/lib/utils";
+
+const CategoryDonutChart = dynamic(
+  () =>
+    import("@/components/category-donut-chart").then(
+      (mod) => mod.CategoryDonutChart,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground animate-pulse">
+        Loading chart...
+      </div>
+    ),
+  },
+);
+
+const CashFlowChart = dynamic(
+  () =>
+    import("@/components/cash-flow-chart").then((mod) => mod.CashFlowChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground animate-pulse">
+        Loading chart...
+      </div>
+    ),
+  },
+);
 
 const PERIOD_PRESETS: Array<{ id: PeriodPreset; label: string }> = [
   { id: "thisWeek", label: "This week" },
@@ -556,43 +572,11 @@ export function InsightsView() {
                 aria-hidden="true"
               >
                 {isMounted ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={spendingByCategory.items}
-                        dataKey="amount_minor"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={55}
-                        outerRadius={80}
-                        paddingAngle={3}
-                        isAnimationActive={false}
-                        onClick={(_, index) => {
-                          const item = spendingByCategory.items[index];
-                          if (item) handleCategoryClick(item.id);
-                        }}
-                        cursor="pointer"
-                      >
-                        {spendingByCategory.items.map((item) => (
-                          <Cell key={item.id} fill={item.color} stroke="transparent" />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip
-                        formatter={(val: unknown) => [
-                          formatMoney(Number(val), currency),
-                          "Amount",
-                        ]}
-                        contentStyle={{
-                          backgroundColor: "var(--card)",
-                          borderColor: "var(--border)",
-                          borderRadius: "0.75rem",
-                          fontSize: "0.8125rem",
-                          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <CategoryDonutChart
+                    items={spendingByCategory.items}
+                    currency={currency}
+                    onCategoryClick={handleCategoryClick}
+                  />
                 ) : (
                   <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
                     Loading chart...
@@ -692,55 +676,7 @@ export function InsightsView() {
               aria-hidden="true"
             >
               {isMounted ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={cashFlowSeries} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
-                    <XAxis
-                      dataKey="label"
-                      tickLine={false}
-                      axisLine={false}
-                      fontSize={11}
-                      tickMargin={8}
-                    />
-                    <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      fontSize={11}
-                      tickFormatter={(val) => {
-                        if (val >= 1_000_000) return `${(val / 1_000_000).toFixed(1)}M`;
-                        if (val >= 1_000) return `${(val / 1_000).toFixed(0)}k`;
-                        return `${val}`;
-                      }}
-                    />
-                    <RechartsTooltip
-                      formatter={(val: unknown) => [
-                        formatMoney(Math.round(Number(val) * 100), currency),
-                      ]}
-                      contentStyle={{
-                        backgroundColor: "var(--card)",
-                        borderColor: "var(--border)",
-                        borderRadius: "0.75rem",
-                        fontSize: "0.8125rem",
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                      }}
-                    />
-                    <Legend wrapperStyle={{ fontSize: "0.75rem", paddingTop: "0.5rem" }} />
-                    <Bar
-                      dataKey="income"
-                      name="Income"
-                      fill="var(--money-income)"
-                      radius={[4, 4, 0, 0]}
-                      isAnimationActive={false}
-                    />
-                    <Bar
-                      dataKey="expenses"
-                      name="Expenses"
-                      fill="var(--money-expense)"
-                      radius={[4, 4, 0, 0]}
-                      isAnimationActive={false}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                <CashFlowChart data={cashFlowSeries} currency={currency} />
               ) : (
                 <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
                   Loading chart...

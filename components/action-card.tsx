@@ -104,7 +104,7 @@ export function ActionCard({
                 e.stopPropagation();
                 router.push(recordsHref);
               }}
-              className="rounded-md px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground/80 hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+              className="rounded-md px-1.5 py-0.5 text-[11px] font-medium text-foreground/80 hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
               title={`View ${label} records`}
               aria-label={`View ${label} records`}
             >

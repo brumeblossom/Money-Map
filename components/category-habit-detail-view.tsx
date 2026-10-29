@@ -3,16 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useLiveQuery } from "dexie-react-hooks";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-} from "recharts";
 import {
   ArrowLeft,
   ArrowRight,
@@ -33,6 +25,21 @@ import { formatMoney, formatDate } from "@/lib/format";
 import { DateField } from "@/components/date-field";
 import { HabitBadge } from "@/components/habits-view";
 import { cn } from "@/lib/utils";
+
+const CategoryTrendChart = dynamic(
+  () =>
+    import("@/components/category-trend-chart").then(
+      (mod) => mod.CategoryTrendChart,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground animate-pulse">
+        Loading chart...
+      </div>
+    ),
+  },
+);
 
 const PERIOD_PRESETS: Array<{ id: PeriodPreset; label: string }> = [
   { id: "thisWeek", label: "This week" },
@@ -323,53 +330,7 @@ export function CategoryHabitDetailView({ categoryId }: { categoryId: string }) 
 
         <div className="mt-4 h-56 w-full pt-2" aria-hidden="true">
           {isMounted ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={report.sixMonthTrend}
-                margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
-                <XAxis
-                  dataKey="label"
-                  tickLine={false}
-                  axisLine={false}
-                  fontSize={11}
-                  tickMargin={8}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  fontSize={11}
-                  tickFormatter={(val) => {
-                    if (val >= 1_000_000) return `${(val / 1_000_000).toFixed(1)}M`;
-                    if (val >= 1_000) return `${(val / 1_000).toFixed(0)}k`;
-                    return `${val}`;
-                  }}
-                />
-                <RechartsTooltip
-                  formatter={(val: unknown) => [
-                    formatMoney(Math.round(Number(val) * 100), currency),
-                    "Spent",
-                  ]}
-                  contentStyle={{
-                    backgroundColor: "var(--card)",
-                    borderColor: "var(--border)",
-                    borderRadius: "0.75rem",
-                    fontSize: "0.8125rem",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="amount_major"
-                  stroke="var(--primary)"
-                  strokeWidth={2.5}
-                  dot={{ r: 3, fill: "var(--primary)" }}
-                  activeDot={{ r: 5 }}
-                  isAnimationActive={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <CategoryTrendChart data={report.sixMonthTrend} currency={currency} />
           ) : (
             <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
               Loading chart...

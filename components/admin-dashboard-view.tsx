@@ -14,19 +14,41 @@ import {
   Heart,
   HandCoins,
 } from "lucide-react";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip as RechartsTooltip,
-  CartesianGrid,
-} from "recharts";
+import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
 import type { AdminAnalytics } from "@/lib/admin/types";
 import { cn } from "@/lib/utils";
+
+const AdminSignupsChart = dynamic(
+  () =>
+    import("@/components/admin-activity-charts").then(
+      (m) => m.AdminSignupsChart,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full items-center justify-center text-xs text-muted-foreground animate-pulse">
+        Loading chart...
+      </div>
+    ),
+  },
+);
+
+const AdminActiveUsersChart = dynamic(
+  () =>
+    import("@/components/admin-activity-charts").then(
+      (m) => m.AdminActiveUsersChart,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full items-center justify-center text-xs text-muted-foreground animate-pulse">
+        Loading chart...
+      </div>
+    ),
+  },
+);
 
 export interface AdminDashboardViewProps {
   initialData: AdminAnalytics;
@@ -299,45 +321,7 @@ export function AdminDashboardView({ initialData }: AdminDashboardViewProps) {
 
           <div className="h-56 w-full pt-2" aria-hidden="true">
             {isMounted ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={data.signups_per_week}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
-                  <XAxis
-                    dataKey="week_start"
-                    tickLine={false}
-                    axisLine={false}
-                    fontSize={10}
-                    tickMargin={6}
-                    tickFormatter={(val) => formatDate(val).slice(0, 5)}
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    fontSize={10}
-                    allowDecimals={false}
-                  />
-                  <RechartsTooltip
-                    formatter={(val: unknown) => [Number(val).toLocaleString(), "Sign-ups"]}
-                    labelFormatter={(label) => `Week of ${formatDate(String(label))}`}
-                    contentStyle={{
-                      backgroundColor: "var(--card)",
-                      borderColor: "var(--border)",
-                      borderRadius: "0.75rem",
-                      fontSize: "0.8125rem",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                    }}
-                  />
-                  <Bar
-                    dataKey="count"
-                    fill="var(--primary)"
-                    radius={[4, 4, 0, 0]}
-                    isAnimationActive={false}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+              <AdminSignupsChart data={data.signups_per_week} />
             ) : (
               <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
                 Loading chart...
@@ -360,45 +344,7 @@ export function AdminDashboardView({ initialData }: AdminDashboardViewProps) {
 
           <div className="h-56 w-full pt-2" aria-hidden="true">
             {isMounted ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={data.active_users_per_week}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
-                  <XAxis
-                    dataKey="week_start"
-                    tickLine={false}
-                    axisLine={false}
-                    fontSize={10}
-                    tickMargin={6}
-                    tickFormatter={(val) => formatDate(val).slice(0, 5)}
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    fontSize={10}
-                    allowDecimals={false}
-                  />
-                  <RechartsTooltip
-                    formatter={(val: unknown) => [Number(val).toLocaleString(), "Active users"]}
-                    labelFormatter={(label) => `Week of ${formatDate(String(label))}`}
-                    contentStyle={{
-                      backgroundColor: "var(--card)",
-                      borderColor: "var(--border)",
-                      borderRadius: "0.75rem",
-                      fontSize: "0.8125rem",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                    }}
-                  />
-                  <Bar
-                    dataKey="count"
-                    fill="var(--money-income)"
-                    radius={[4, 4, 0, 0]}
-                    isAnimationActive={false}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+              <AdminActiveUsersChart data={data.active_users_per_week} />
             ) : (
               <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
                 Loading chart...

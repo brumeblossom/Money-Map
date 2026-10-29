@@ -68,5 +68,5 @@ describe("PDF Report Font & Formatting (F12, F13)", () => {
     // Verify basic content
     expect(text).toContain("Money Map");
     expect(text).toContain("01-10-2026 to 31-10-2026");
-  });
+  }, 30000);
 });

@@ -1335,6 +1335,44 @@ The following environment variables can now be safely removed from Vercel projec
   - `bun run build`: Built production bundle cleanly.
   - Verified `.next/static` bundle contains no service role key or secret tokens.
 
+### Prompt 18: Settings gaps & clean-up
+- **1. Currency (Profile Card)**:
+  - Validated searchable list of ISO currencies in `components/currency-picker-settings.tsx` embedded in the Settings Profile card.
+  - Defaults to `NGN` (₦); selecting any currency updates the user profile in Dexie (and syncs to Supabase) without changing stored `amount_minor` integer amounts.
+  - Formats all money displays across Home, Records, Insights, Lending, and generated PDF reports using `Intl.NumberFormat` with the active currency symbol.
+- **2. Categories (Delete & Hide Rules)**:
+  - Updated `components/categories-settings.tsx` and `components/categories-page-view.tsx` with strict deletion and hide constraints:
+    - Default categories (`is_default = true`) can be hidden or unhidden, but can never be deleted (delete button is omitted and action rejected).
+    - Custom categories can only be deleted if completely unused across both `entries` and `loans`.
+    - If a custom category is used in any entries or loans, deletion is blocked and a toast notification offers a one-click "Hide" action instead.
+    - Every category deletion triggers an explicit confirmation dialog before soft-deleting.
+- **3. Delete Account**:
+  - Requires typing `"DELETE"` in all-caps to confirm.
+  - Sends a secure `POST /api/account/delete` request with service role execution in `app/api/account/delete/route.ts` that removes the auth user (cascading across all user rows and database records).
+  - Clears all local device storage (Dexie stores: `entries`, `loans`, `loan_payments`, `categories`, `recurring_rules`, `profiles`, `outbox`, `meta`, plus `localStorage`, `sessionStorage`, and Supabase local session).
+  - Redirects the user directly to the landing page `"/"` (not `"/welcome"`).
+- **4. Change Password & Set Password**:
+  - Added "Change password" (or "Set password" for Google-only users) button to the Account card in `app/settings/page.tsx` positioned directly above "Sign out" matching button height and style.
+  - Opens the modal with:
+    - Current password (rendered for password accounts; omitted for Google-only accounts).
+    - New password with show/hide toggle and the live password rules checklist (8+ chars, uppercase, lowercase, number; powered by shared Zod schema `lib/validation/password.ts`).
+    - Confirm new password with show/hide toggle and match indicator.
+    - Save button disabled until all 4 rules are satisfied, confirm password matches, and current password is provided.
+  - Re-authenticates by signing in with the current password via `supabase.auth.signInWithPassword` before calling `supabase.auth.updateUser`.
+  - If current password is incorrect, displays `"Current password is incorrect."` error toast.
+  - On success, toasts `"Password changed"` and maintains the active signed-in session.
+  - For Google-only accounts without a password, displays "Set password", verifies a recent sign-in within 10 minutes (prompting to sign in again if stale), and sets the initial password.
+- **5. Clean-up of Leftovers**:
+  - Removed deprecated `share_links` and `push_subscriptions` table deletions from `app/api/account/delete/route.ts`.
+  - Removed unused `checkShareLinksRateLimit` from `lib/sync/rate-limit.ts`.
+  - Removed outdated email reminders switch check from `tests/e2e/reminders.spec.ts`.
+  - Refactored `/settings/categories` page into a server component with `instant = false` and client view `components/categories-page-view.tsx` wrapped in `<Suspense>`.
+- **Verification**:
+  - `bun run lint`: 0 errors.
+  - `bun run typecheck`: 0 errors.
+  - `bun run test`: 228/228 tests passed across 23 test files (including new `tests/unit/settings-gaps.test.ts`).
+  - `bun run build`: Production build completed cleanly with all routes compiled and optimized.
+
 ## Known issues
 
 - None.

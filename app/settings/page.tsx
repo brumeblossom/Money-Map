@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, Globe, Trash2, Mail, Pencil, Shield } from "lucide-react";
+import { LogOut, Globe, Trash2, Mail, Pencil, Shield, KeyRound, Eye, EyeOff } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { toast } from "sonner";
+import type { User } from "@supabase/supabase-js";
 import { db } from "@/lib/db/dexie";
 import { signOut, signOutAllDevices } from "@/lib/sync";
 import { useProfile } from "@/lib/repo/hooks";
@@ -17,6 +18,8 @@ import { CurrencyPickerSettings } from "@/components/currency-picker-settings";
 import { CategoriesSettings } from "@/components/categories-settings";
 import { RecurringRulesList } from "@/components/recurring-rules-list";
 import { InstallPwaCard } from "@/components/install-pwa-card";
+import { PasswordRulesChecklist } from "@/components/password-rules-checklist";
+import { isPasswordValid } from "@/lib/validation/password";
 import { displayNameSchema } from "@/lib/schemas";
 
 export default function SettingsPage() {
@@ -37,6 +40,23 @@ export default function SettingsPage() {
   const [userEmail, setUserEmail] = React.useState<string | null>(null);
   const [isGuest, setIsGuest] = React.useState<boolean>(true);
   const [isAdmin, setIsAdmin] = React.useState<boolean>(false);
+  const [currentUser, setCurrentUser] = React.useState<User | null>(null);
+  const [hasPassword, setHasPassword] = React.useState<boolean>(true);
+
+  // Change password modal state
+  const [showPasswordModal, setShowPasswordModal] = React.useState(false);
+  const [currentPassword, setCurrentPassword] = React.useState("");
+  const [newPassword, setNewPassword] = React.useState("");
+  const [confirmPassword, setConfirmPassword] = React.useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = React.useState(false);
+  const [showNewPassword, setShowNewPassword] = React.useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+  const [isSavingPassword, setIsSavingPassword] = React.useState(false);
+
+  const passwordRulesMet = isPasswordValid(newPassword);
+  const passwordsMatch = newPassword.length > 0 && newPassword === confirmPassword;
+  const currentPasswordFilled = hasPassword ? currentPassword.length > 0 : true;
+  const canSavePassword = passwordRulesMet && passwordsMatch && currentPasswordFilled;
 
   // Check auth session for email & guest status
   React.useEffect(() => {
@@ -53,15 +73,34 @@ export default function SettingsPage() {
           if (document.cookie.match(/moneymap_mock_user=([^;]+)/)) {
             setUserEmail("user@example.com");
             setIsGuest(false);
+            setHasPassword(true);
             return;
           }
         }
 
         const supabase = createClient();
-        const { data } = await supabase.auth.getSession();
-        if (data?.session?.user) {
-          setUserEmail(data.session.user.email ?? "user@example.com");
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user) {
+          setCurrentUser(user);
+          setUserEmail(user.email ?? "user@example.com");
           setIsGuest(false);
+
+          const providers: string[] = (user.app_metadata?.providers as string[]) ?? [];
+          const identities = user.identities ?? [];
+          const isEmailUser =
+            providers.includes("email") ||
+            user.app_metadata?.provider === "email" ||
+            identities.some((i) => i.provider === "email");
+
+          const isGoogleOnly =
+            (providers.includes("google") || identities.some((i) => i.provider === "google")) &&
+            !isEmailUser;
+
+          setHasPassword(!isGoogleOnly);
+
           fetch("/api/admin/check")
             .then((res) => setIsAdmin(res.status === 200))
             .catch(() => setIsAdmin(false));
@@ -77,6 +116,102 @@ export default function SettingsPage() {
     }
     checkAuth();
   }, []);
+
+  const handleOpenPasswordModal = () => {
+    if (!hasPassword) {
+      const lastSignIn = currentUser?.last_sign_in_at
+        ? new Date(currentUser.last_sign_in_at).getTime()
+        : 0;
+      const isRecent = Date.now() - lastSignIn < 10 * 60 * 1000;
+      if (!isRecent) {
+        toast.error("Please sign in again before setting a password.");
+        return;
+      }
+    }
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+    setShowPasswordModal(true);
+  };
+
+  const handleSavePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSavePassword || isSavingPassword) return;
+
+    setIsSavingPassword(true);
+    const supabase = createClient();
+
+    try {
+      if (hasPassword) {
+        if (!userEmail) {
+          toast.error("User email not found");
+          setIsSavingPassword(false);
+          return;
+        }
+
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: userEmail,
+          password: currentPassword,
+        });
+
+        if (signInError) {
+          toast.error("Current password is incorrect.");
+          setIsSavingPassword(false);
+          return;
+        }
+
+        const { error: updateError } = await supabase.auth.updateUser({
+          password: newPassword,
+        });
+
+        if (updateError) {
+          toast.error(updateError.message || "Failed to update password");
+          setIsSavingPassword(false);
+          return;
+        }
+
+        toast.success("Password changed");
+        setShowPasswordModal(false);
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        const lastSignIn = currentUser?.last_sign_in_at
+          ? new Date(currentUser.last_sign_in_at).getTime()
+          : 0;
+        const isRecent = Date.now() - lastSignIn < 10 * 60 * 1000;
+        if (!isRecent) {
+          toast.error("Please sign in again before setting a password.");
+          setIsSavingPassword(false);
+          return;
+        }
+
+        const { error: updateError } = await supabase.auth.updateUser({
+          password: newPassword,
+        });
+
+        if (updateError) {
+          toast.error(updateError.message || "Failed to set password");
+          setIsSavingPassword(false);
+          return;
+        }
+
+        toast.success("Password changed");
+        setHasPassword(true);
+        setShowPasswordModal(false);
+        setNewPassword("");
+        setConfirmPassword("");
+      }
+    } catch (err) {
+      console.error("Change password error:", err);
+      toast.error("An error occurred while updating your password");
+    } finally {
+      setIsSavingPassword(false);
+    }
+  };
 
   // Edit name modal state
   const [showEditNameModal, setShowEditNameModal] = React.useState(false);
@@ -176,7 +311,7 @@ export default function SettingsPage() {
         localStorage.clear();
         sessionStorage.clear();
       }
-      router.replace("/welcome");
+      router.replace("/");
     } catch (err) {
       console.error("Delete account error:", err);
       toast.error("Failed to delete account. Please try again.");
@@ -380,6 +515,17 @@ export default function SettingsPage() {
               </div>
 
               <div className="space-y-2.5 pt-2">
+                {/* Change password / Set password */}
+                <button
+                  type="button"
+                  onClick={handleOpenPasswordModal}
+                  data-testid="settings-change-password-btn"
+                  className="flex w-full sm:w-[240px] h-11 items-center justify-start gap-2.5 rounded-xl border border-border bg-card px-4 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors cursor-pointer text-left"
+                >
+                  <KeyRound className="size-4 shrink-0" />
+                  <span>{hasPassword ? "Change password" : "Set password"}</span>
+                </button>
+
                 {/* Sign out */}
                 <button
                   type="button"
@@ -639,6 +785,161 @@ export default function SettingsPage() {
                   className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {isSavingName ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Change / Set Password Modal */}
+      {showPasswordModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
+        >
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-xl space-y-4">
+            <h3 className="text-lg font-semibold text-foreground">
+              {hasPassword ? "Change password" : "Set password"}
+            </h3>
+
+            <form onSubmit={handleSavePassword} className="space-y-4">
+              {/* Current Password (only for accounts with password) */}
+              {hasPassword && (
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="current-password-input"
+                    className="text-xs font-semibold text-foreground"
+                  >
+                    Current password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="current-password-input"
+                      type={showCurrentPassword ? "text" : "password"}
+                      data-testid="current-password-input"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="••••••••"
+                      autoFocus
+                      className="w-full rounded-xl border border-input bg-background px-4 py-2.5 pr-10 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword((prev) => !prev)}
+                      tabIndex={-1}
+                      data-testid="toggle-current-password-btn"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1 cursor-pointer"
+                      aria-label={showCurrentPassword ? "Hide current password" : "Show current password"}
+                    >
+                      {showCurrentPassword ? (
+                        <EyeOff className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* New Password */}
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="new-password-input"
+                  className="text-xs font-semibold text-foreground"
+                >
+                  New password
+                </label>
+                <div className="relative">
+                  <input
+                    id="new-password-input"
+                    type={showNewPassword ? "text" : "password"}
+                    data-testid="new-password-input"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    autoFocus={!hasPassword}
+                    className="w-full rounded-xl border border-input bg-background px-4 py-2.5 pr-10 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword((prev) => !prev)}
+                    tabIndex={-1}
+                    data-testid="toggle-new-password-btn"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1 cursor-pointer"
+                    aria-label={showNewPassword ? "Hide new password" : "Show new password"}
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="size-4" />
+                    ) : (
+                      <Eye className="size-4" />
+                    )}
+                  </button>
+                </div>
+
+                {/* Password Rules Live Checklist */}
+                <PasswordRulesChecklist password={newPassword} />
+              </div>
+
+              {/* Confirm New Password */}
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="confirm-password-input"
+                  className="text-xs font-semibold text-foreground"
+                >
+                  Confirm new password
+                </label>
+                <div className="relative">
+                  <input
+                    id="confirm-password-input"
+                    type={showConfirmPassword ? "text" : "password"}
+                    data-testid="confirm-password-input"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full rounded-xl border border-input bg-background px-4 py-2.5 pr-10 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    tabIndex={-1}
+                    data-testid="toggle-confirm-password-btn"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1 cursor-pointer"
+                    aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="size-4" />
+                    ) : (
+                      <Eye className="size-4" />
+                    )}
+                  </button>
+                </div>
+                {confirmPassword && newPassword !== confirmPassword && (
+                  <p className="text-xs text-destructive">Passwords do not match.</p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  disabled={isSavingPassword}
+                  onClick={() => setShowPasswordModal(false)}
+                  className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!canSavePassword || isSavingPassword}
+                  data-testid="save-password-btn"
+                  className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {isSavingPassword
+                    ? "Saving..."
+                    : hasPassword
+                    ? "Change password"
+                    : "Set password"}
                 </button>
               </div>
             </form>

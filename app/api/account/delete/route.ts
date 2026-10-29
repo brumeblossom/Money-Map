@@ -46,10 +46,6 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient();
 
   try {
-    // Clean up dependent tables first
-    await admin.from("share_links").delete().eq("user_id", userId);
-    await admin.from("push_subscriptions").delete().eq("user_id", userId);
-
     const { data: userLoans } = await admin
       .from("loans")
       .select("id")

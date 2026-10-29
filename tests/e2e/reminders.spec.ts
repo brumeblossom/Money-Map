@@ -204,31 +204,5 @@ test.describe("Reminders (Prompt 15 / US-4.3 & US-5.1)", () => {
       return await win.__db.entries.count();
     });
     expect(entryCount).toBe(1);
-
-    // 6. Verify Settings > Reminders switch
-    await page.goto("/settings");
-    await page.waitForSelector("#reminders");
-
-    const remindersSection = page.locator("#reminders");
-    await expect(remindersSection).toBeVisible();
-    await expect(remindersSection).toContainText("Email me a daily reminder");
-
-    const emailSwitch = page.locator('[data-testid="email-reminders-switch"]');
-    await expect(emailSwitch).toBeVisible();
-    // Default is off
-    await expect(emailSwitch).not.toBeChecked();
-
-    // Toggle switch on
-    await emailSwitch.click();
-    await expect(emailSwitch).toBeChecked();
-    await expect(page.locator("body")).toContainText("Daily email reminders enabled");
-
-    // Capture Settings screenshot with Reminders switch
-    await page.screenshot({
-      path: isMobile
-        ? "tests/e2e/screenshots/reminders-settings-390.png"
-        : "tests/e2e/screenshots/reminders-settings-1280.png",
-      fullPage: true,
-    });
   });
 });

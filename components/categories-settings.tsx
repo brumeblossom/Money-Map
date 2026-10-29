@@ -159,18 +159,31 @@ export function CategoriesSettings({ initialScope = "income", limit }: Categorie
       return;
     }
 
-    // Check if category is used by any existing entries
-    const usedCount = await db.entries
-      .where("category_id")
-      .equals(cat.id)
-      .filter((e) => e.deleted_at === null)
-      .count();
+    // Check if category is used by any existing entries or active loans
+    const [entriesCount, loansCount] = await Promise.all([
+      db.entries
+        .where("category_id")
+        .equals(cat.id)
+        .filter((e) => e.deleted_at === null)
+        .count(),
+      db.loans
+        .filter((l) => l.category_id === cat.id && l.deleted_at === null)
+        .count(),
+    ]);
+
+    const usedCount = entriesCount + loansCount;
 
     if (usedCount > 0) {
       toast.error(
         `Category is used in ${usedCount} ${
           usedCount === 1 ? "entry" : "entries"
         }. Hide it instead.`,
+        {
+          action: {
+            label: "Hide",
+            onClick: () => handleToggleHide(cat),
+          },
+        },
       );
       return;
     }

@@ -77,15 +77,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <PwaManager />
-          <Analytics
-            beforeSend={(event) =>
-              typeof window !== "undefined" &&
-              (window.location.hostname === "localhost" ||
-                window.location.hostname === "127.0.0.1")
-                ? null
-                : event
-            }
-          />
+          <Analytics />
           <React.Suspense fallback={null}>
             <AppShell>{children}</AppShell>
           </React.Suspense>

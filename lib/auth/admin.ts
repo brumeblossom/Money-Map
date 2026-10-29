@@ -50,3 +50,4 @@ export async function verifyAdminUser(): Promise<{
     return { isAdmin: false, email: null, userId: null };
   }
 }
+

@@ -22,3 +22,4 @@ export interface AdminAnalytics {
   active_users_per_week: WeeklyMetric[];
   generated_at: string; // ISO 8601 timestamp
 }
+

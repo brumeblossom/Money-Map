@@ -237,10 +237,9 @@ export async function getAdminAnalytics(forceRefresh = false): Promise<AdminAnal
 
   try {
     // Attempt RPC execution
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any).rpc("get_admin_analytics");
+    const { data, error } = await supabase.rpc("get_admin_analytics");
     if (!error && data) {
-      cachedAnalytics = data as AdminAnalytics;
+      cachedAnalytics = data as unknown as AdminAnalytics;
       lastCachedTimestamp = Date.now();
       return cachedAnalytics;
     }

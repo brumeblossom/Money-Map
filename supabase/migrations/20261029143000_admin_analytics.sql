@@ -164,3 +164,4 @@ revoke all on function public.get_admin_analytics() from public;
 revoke all on function public.get_admin_analytics() from anon;
 revoke all on function public.get_admin_analytics() from authenticated;
 grant execute on function public.get_admin_analytics() to service_role;
+

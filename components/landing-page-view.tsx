@@ -12,11 +12,14 @@ import {
 } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { AccountDeletedToast } from "@/components/account-deleted-toast";
 
 export function LandingPageView() {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-background text-foreground flex flex-col selection:bg-secondary selection:text-secondary-foreground">
-      {/* 1. Header: logo left; right side "Sign in" (text button) and "Get started" (primary). Phones: logo + "Get started" only */}
+      <AccountDeletedToast />
+      {/* 1. Header: logo left; right side "Sign in" (text button) and "Get started" (primary). Phones: logo + switch only */}
       <header className="sticky top-0 z-30 w-full border-b border-border/60 bg-background/85 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link
@@ -28,6 +31,7 @@ export function LandingPageView() {
           </Link>
 
           <div className="flex items-center gap-2 sm:gap-4">
+            <ThemeToggle />
             <Link
               href="/welcome"
               prefetch={false}
@@ -39,7 +43,7 @@ export function LandingPageView() {
             <Button
               asChild
               data-testid="landing-get-started-header"
-              className="h-10 sm:h-[44px] rounded-xl bg-primary text-primary-foreground font-semibold px-4 sm:px-5 hover:bg-primary-hover shadow-xs cursor-pointer"
+              className="hidden sm:inline-flex h-10 sm:h-[44px] rounded-xl bg-primary text-primary-foreground font-semibold px-4 sm:px-5 hover:bg-primary-hover shadow-xs cursor-pointer"
             >
               <Link href="/welcome?mode=signup" prefetch={false}>Get started</Link>
             </Button>

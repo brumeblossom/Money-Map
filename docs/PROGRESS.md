@@ -1414,13 +1414,57 @@ The following environment variables can now be safely removed from Vercel projec
 - **5. Dates Integrity**:
   - Audited date displays across all components; confirmed all user-visible dates are formatted via `formatDate()` to display `DD-MM-YYYY`.
 
+### Prompt 17g: Theme Switch & Delete Account Fix
+
+- **Part A: Light / Dark Theme Switch**:
+  - Created shared component `components/theme-toggle.tsx` powered by `next-themes`:
+    - 40px square icon button (`size-10`, `rounded-xl`, ghost style, design tokens only).
+    - Dynamic Lucide icons: `Moon` when in light mode, `Sun` when in dark mode.
+    - `aria-label` and `title`: `"Switch to dark mode"` / `"Switch to light mode"`.
+    - One tap toggles resolved theme and persists it. Synchronized immediately with Settings > Appearance choices (Light, Dark, System) and vice versa.
+    - Zero hydration flash and zero layout shift using `React.useSyncExternalStore` hydration placeholder (`size-10 shrink-0`).
+  - **Where it appears**:
+    - **Landing page header**:
+      - Desktop: Left of "Sign in" (order: theme switch, Sign in, Get started).
+      - Phones (< 640px): "Get started" button removed from header (hero already has it). Header on phones shows logo on left and theme switch on right.
+    - **Inside the app**: Rendered in `AppHeader` across all app pages (Home, Records, Money I lent, Insights, Settings, entry pages, Admin) on phones and desktop, at the right end of the top bar next to the sync status badge.
+    - **Auth pages**: Rendered in the top-right corner outside the card (`/welcome`, `/auth/check-email`, `/auth/error`) on both phones and desktop.
+- **Part B: Delete Account Fix**:
+  - **Server (`app/api/account/delete/route.ts`)**:
+    - Guarded against missing `SUPABASE_SERVICE_ROLE_KEY`, logging an error and returning HTTP 500 `{ error: "server_error" }`.
+    - Hardened `lib/supabase/admin.ts` to throw error when service role key is absent rather than falling back to anon key.
+    - Checked all Supabase admin calls and handled `deleteUser()` error explicitly.
+    - On success, returns HTTP 200 `{ ok: true }` and explicitly expires all auth/session cookies (`sb-*`, `moneymap_guest`, `mm_guest`, `moneymap_mock_user`, `moneymap_has_session`, `moneymap_is_admin`).
+  - **Browser (`app/settings/page.tsx` & `lib/sync/index.ts`)**:
+    - Wrapped deletion request in a 20-second `AbortController` timeout.
+    - **On failure or timeout**: Stops the spinner, keeps the delete modal open, and shows a user-friendly toast:
+      - Network/Server error: `"Couldn't delete your account. Please try again."`
+      - Timeout (> 20s): `"This is taking too long. Check your connection and try again."`
+    - **On success**:
+      1. Calls `stopSync()` to halt sync engine loops and polling timers.
+      2. Calls shared `clearLocalSession(db)` helper in `lib/sync/index.ts`:
+         - Clears all auth cookies and session storage items.
+         - Clears browser CacheStorage via `caches.delete()`.
+         - Clears and removes local Dexie IndexedDB tables (`db.delete()`).
+         - Resets local user ID state. Each async clean-up step is guarded with a 3-second timeout to prevent deadlocks.
+      3. Skips `supabase.auth.signOut()` (auth user is already deleted on the server).
+      4. Navigates to landing page via full window replacement: `window.location.replace("/?deleted=1")`.
+    - **Landing Page Toast (`components/account-deleted-toast.tsx`)**:
+      - Inspects URL query params on load; when `?deleted=1` is present, fires `"Your account has been deleted."` success toast and immediately removes `?deleted=1` from the URL bar via `window.history.replaceState()`.
+- **Verification**:
+  - ESLint: 0 errors.
+  - TypeScript typecheck: 0 errors.
+  - Vitest: 228/228 tests passing across 23 test suites.
+  - Production build: Succeeded (`next build --webpack`).
+  - Playwright E2E: 14/14 tests passing across phone (390px) and desktop (1280px) viewports in `tests/e2e/theme-and-delete.spec.ts`.
+
 ## Known issues
 
 - None.
 
 ## Next prompt
 
-Prompt 20: launch
+"Landing page redesign" (to be agreed), then Prompt 20: launch
 
 
 

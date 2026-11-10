@@ -12,6 +12,7 @@ import {
   type SyncState,
 } from "@/lib/sync";
 import { BrandLogoMark } from "@/components/brand-logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const ROUTE_TITLES: Record<string, string> = {
   "/": "Home",
@@ -183,39 +184,42 @@ export function AppHeader({
         </h1>
       </div>
 
-      {/* Sync Status Badge (PRD Section 8 / Section A) */}
-      <div
-        className={cn(
-          "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
-          isBrowserOffline
-            ? "bg-secondary text-money-expense-text"
-            : isSyncing
-              ? "bg-secondary text-primary"
-              : isSyncError
-                ? "bg-secondary text-destructive"
-                : isGuest
-                  ? "bg-secondary text-muted-foreground"
-                  : "bg-secondary text-muted-foreground",
-        )}
-        title={`Sync status: ${label}`}
-        aria-label={`Sync status: ${label}`}
-        data-testid="header-sync-badge"
-      >
-        {isBrowserOffline ? (
-          <CloudOff className="size-3.5 shrink-0 text-money-expense-text" />
-        ) : isSyncing ? (
-          <RefreshCw className="size-3.5 shrink-0 animate-spin text-primary" />
-        ) : isSyncError ? (
-          <RefreshCw className="size-3.5 shrink-0 text-destructive" />
-        ) : isGuest ? (
-          <Cloud className="size-3.5 shrink-0 text-muted-foreground" />
-        ) : (
-          <>
-            <Cloud className="size-3.5 shrink-0 text-primary" />
-            <CheckCircle2 className="size-3 shrink-0 text-money-income" />
-          </>
-        )}
-        <span className="truncate">{label}</span>
+      <div className="flex items-center gap-2">
+        {/* Sync Status Badge (PRD Section 8 / Section A) */}
+        <div
+          className={cn(
+            "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+            isBrowserOffline
+              ? "bg-secondary text-money-expense-text"
+              : isSyncing
+                ? "bg-secondary text-primary"
+                : isSyncError
+                  ? "bg-secondary text-destructive"
+                  : isGuest
+                    ? "bg-secondary text-muted-foreground"
+                    : "bg-secondary text-muted-foreground",
+          )}
+          title={`Sync status: ${label}`}
+          aria-label={`Sync status: ${label}`}
+          data-testid="header-sync-badge"
+        >
+          {isBrowserOffline ? (
+            <CloudOff className="size-3.5 shrink-0 text-money-expense-text" />
+          ) : isSyncing ? (
+            <RefreshCw className="size-3.5 shrink-0 animate-spin text-primary" />
+          ) : isSyncError ? (
+            <RefreshCw className="size-3.5 shrink-0 text-destructive" />
+          ) : isGuest ? (
+            <Cloud className="size-3.5 shrink-0 text-muted-foreground" />
+          ) : (
+            <>
+              <Cloud className="size-3.5 shrink-0 text-primary" />
+              <CheckCircle2 className="size-3 shrink-0 text-money-income" />
+            </>
+          )}
+          <span className="truncate">{label}</span>
+        </div>
+        <ThemeToggle />
       </div>
     </header>
   );

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { MailCheck, ArrowLeft, Loader2, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { mapAuthErrorMessage } from "@/lib/auth/errors";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function CheckEmailClient() {
   const searchParams = useSearchParams();
@@ -67,7 +68,12 @@ export function CheckEmailClient() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-start sm:justify-center p-4 sm:p-6 bg-gradient-to-b from-secondary/40 via-background to-background text-foreground pt-8 sm:pt-6">
+    <main className="relative flex min-h-screen flex-col items-center justify-start sm:justify-center p-4 sm:p-6 bg-gradient-to-b from-secondary/40 via-background to-background text-foreground pt-8 sm:pt-6">
+      {/* Theme toggle in top right corner outside card */}
+      <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
+        <ThemeToggle />
+      </div>
+
       {/* Small Back to home link above the card */}
       <div className="w-full max-w-[440px] mb-3 flex items-center justify-start">
         <Link

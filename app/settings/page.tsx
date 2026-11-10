@@ -8,7 +8,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 import { db } from "@/lib/db/dexie";
-import { signOut, signOutAllDevices } from "@/lib/sync";
+import { signOut, signOutAllDevices, stopSync, clearLocalSession } from "@/lib/sync";
 import { useProfile } from "@/lib/repo/hooks";
 import { updateProfile, createProfile } from "@/lib/repo";
 import { getCurrentUserId } from "@/lib/repo/user";
@@ -280,42 +280,42 @@ export default function SettingsPage() {
     }
 
     setIsDeletingAccount(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20_000);
+
     try {
       const res = await fetch("/api/account/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ confirm: "DELETE" }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         throw new Error("Failed to delete account");
       }
 
-      // Clear local Dexie database
-      await Promise.all([
-        db.entries.clear(),
-        db.loans.clear(),
-        db.loan_payments.clear(),
-        db.categories.clear(),
-        db.recurring_rules.clear(),
-        db.profiles.clear(),
-        db.outbox.clear(),
-        db.meta.clear(),
-      ]);
+      // 1. Stop the sync engine / timers so nothing writes to Dexie or calls the server.
+      stopSync();
 
-      // Sign out auth client locally & clear storage
-      const supabase = createClient();
-      await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+      // 2. Run the SAME local clean-up that sign-out uses (clears cookies, caches, Dexie tables, moneymap_* storage, and user id).
+      // 3. Do NOT call supabase.auth.signOut after deletion; auth keys are removed from localStorage by clearLocalSession.
+      await clearLocalSession(db);
 
+      // 4. Full page navigation: window.location.replace("/?deleted=1")
       if (typeof window !== "undefined") {
-        localStorage.clear();
-        sessionStorage.clear();
+        window.location.replace("/?deleted=1");
       }
-      router.replace("/");
-    } catch (err) {
-      console.error("Delete account error:", err);
-      toast.error("Failed to delete account. Please try again.");
+    } catch (err: unknown) {
+      clearTimeout(timeoutId);
       setIsDeletingAccount(false);
+      if (err instanceof DOMException && err.name === "AbortError") {
+        toast.error("This is taking too long. Check your connection and try again.");
+      } else {
+        toast.error("Couldn't delete your account. Please try again.");
+      }
     }
   };
 

@@ -33,6 +33,119 @@ let retryAttempt = 0;
 let backoffTimer: ReturnType<typeof setTimeout> | null = null;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let isInitialized = false;
+let activeCleanupSync: (() => void) | null = null;
+
+export function stopSync(): void {
+  if (activeCleanupSync) {
+    try {
+      activeCleanupSync();
+    } catch {}
+    activeCleanupSync = null;
+  }
+  isInitialized = false;
+}
+
+function withTimeout<T>(promise: Promise<T>, ms = 3000): Promise<T | void> {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  const timeoutPromise = new Promise<void>((resolve) => {
+    timeoutId = setTimeout(resolve, ms);
+  });
+  return Promise.race([
+    promise.then((res) => {
+      clearTimeout(timeoutId);
+      return res;
+    }),
+    timeoutPromise,
+  ]).catch((err) => {
+    clearTimeout(timeoutId);
+    console.warn("Operation timed out or failed:", err);
+  });
+}
+
+/**
+ * Shared local session clean-up function.
+ * Clears cookies, service worker page caches, every Dexie table, moneymap_* storage, and active user ID.
+ * Each step is wrapped with a 3-second timeout so it never freezes.
+ */
+export async function clearLocalSession(
+  database: MoneyMapDatabase = db,
+): Promise<void> {
+  // 1. Clear mock, session and app cookies
+  if (typeof document !== "undefined") {
+    const cookiesToClear = [
+      "moneymap_guest",
+      "mm_guest",
+      "moneymap_mock_user",
+      "moneymap_has_session",
+      "moneymap_is_admin",
+    ];
+    for (const name of cookiesToClear) {
+      document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+    }
+    // Also clear any sb-* cookies
+    document.cookie.split(";").forEach((cookie) => {
+      const eqPos = cookie.indexOf("=");
+      const name = eqPos > -1 ? cookie.slice(0, eqPos).trim() : cookie.trim();
+      if (name.startsWith("sb-")) {
+        document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+      }
+    });
+  }
+
+  // 2. Clear moneymap_* storage and Supabase auth keys from localStorage & sessionStorage
+  if (typeof window !== "undefined") {
+    try {
+      const localKeysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith("moneymap") || key.startsWith("sb-") || key.includes("supabase"))) {
+          localKeysToRemove.push(key);
+        }
+      }
+      localKeysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch {}
+
+    try {
+      const sessionKeysToRemove: string[] = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && (key.startsWith("moneymap") || key.startsWith("sb-") || key.includes("supabase"))) {
+          sessionKeysToRemove.push(key);
+        }
+      }
+      sessionKeysToRemove.forEach((k) => sessionStorage.removeItem(k));
+    } catch {}
+  }
+
+  // 3. Clear service worker HTML caches (wrapped in 3s timeout)
+  if (typeof caches !== "undefined") {
+    await withTimeout(
+      Promise.all([
+        caches.delete("pages-html-cache"),
+        caches.delete("pages-rsc-cache"),
+      ]),
+      3000,
+    );
+  }
+
+  // 4. Clear every Dexie table (wrapped in 3s timeout)
+  await withTimeout(
+    Promise.all([
+      database.entries.clear(),
+      database.categories.clear(),
+      database.loans.clear(),
+      database.loan_payments.clear(),
+      database.recurring_rules.clear(),
+      database.profiles.clear(),
+      database.outbox.clear(),
+      database.meta.clear(),
+    ]),
+    3000,
+  );
+
+  // 5. Reset active user ID
+  setCurrentUserId(null);
+}
 
 // Subscribers for status updates
 const statusListeners = new Set<(status: SyncState) => void>();
@@ -436,14 +549,19 @@ export function initSync(database: MoneyMapDatabase = db): () => void {
     }
   });
 
-  return () => {
+  const cleanup = () => {
     window.removeEventListener("online", handleOnline);
     window.removeEventListener("offline", handleOffline);
     document.removeEventListener("visibilitychange", handleVisibilityChange);
     clearInterval(intervalId);
     authListener?.subscription.unsubscribe();
     isInitialized = false;
+    if (activeCleanupSync === cleanup) {
+      activeCleanupSync = null;
+    }
   };
+  activeCleanupSync = cleanup;
+  return cleanup;
 }
 
 /**
@@ -457,7 +575,7 @@ export async function signOut(
   // 1. Run one last push if online
   if (typeof navigator !== "undefined" && navigator.onLine) {
     try {
-      await push(database, fetchFn);
+      await withTimeout(push(database, fetchFn), 3000);
     } catch (e) {
       console.warn("Final push on sign out warning:", e);
     }
@@ -466,53 +584,15 @@ export async function signOut(
   // 2. Sign out of Supabase auth
   try {
     const supabase = createBrowserSupabaseClient();
-    await supabase.auth.signOut();
+    await withTimeout(supabase.auth.signOut(), 3000);
   } catch (e) {
     console.error("Supabase signOut error:", e);
   }
 
-  // 3. Clear mock and session cookies and storage
-  if (typeof document !== "undefined") {
-    document.cookie =
-      "moneymap_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
-    document.cookie =
-      "mm_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
-    document.cookie =
-      "moneymap_mock_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
-    document.cookie =
-      "moneymap_has_session=0; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
-    try {
-      localStorage.removeItem("moneymap_guest");
-      sessionStorage.removeItem("moneymap_guest");
-    } catch {}
-  }
+  // 3. Clear local session
+  await clearLocalSession(database);
 
-  // Clear service worker HTML caches so signed-out visitors always see landing page
-  if (typeof caches !== "undefined") {
-    try {
-      await Promise.all([
-        caches.delete("pages-html-cache"),
-        caches.delete("pages-rsc-cache"),
-      ]);
-    } catch {}
-  }
-
-  // 4. Clear every Dexie table
-  await Promise.all([
-    database.entries.clear(),
-    database.categories.clear(),
-    database.loans.clear(),
-    database.loan_payments.clear(),
-    database.recurring_rules.clear(),
-    database.profiles.clear(),
-    database.outbox.clear(),
-    database.meta.clear(),
-  ]);
-
-  // 5. Reset active user ID
-  setCurrentUserId(null);
-
-  // 6. Full page navigation to "/" so landing page renders cleanly
+  // 4. Full page navigation to "/" so landing page renders cleanly
   if (router) {
     router.push("/");
   }
@@ -529,55 +609,22 @@ export async function signOutAllDevices(
   database: MoneyMapDatabase = db,
   router?: { push: (url: string) => void },
 ): Promise<void> {
-  try {
-    await push(database);
-  } catch (e) {
-    console.error("Push error before global sign out:", e);
+  if (typeof navigator !== "undefined" && navigator.onLine) {
+    try {
+      await withTimeout(push(database), 3000);
+    } catch (e) {
+      console.error("Push error before global sign out:", e);
+    }
   }
 
   try {
     const supabase = createBrowserSupabaseClient();
-    await supabase.auth.signOut({ scope: "global" });
+    await withTimeout(supabase.auth.signOut({ scope: "global" }), 3000);
   } catch (e) {
     console.error("Supabase global signOut error:", e);
   }
 
-  if (typeof document !== "undefined") {
-    document.cookie =
-      "moneymap_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
-    document.cookie =
-      "mm_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
-    document.cookie =
-      "moneymap_mock_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
-    document.cookie =
-      "moneymap_has_session=0; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
-    try {
-      localStorage.removeItem("moneymap_guest");
-      sessionStorage.removeItem("moneymap_guest");
-    } catch {}
-  }
-
-  if (typeof caches !== "undefined") {
-    try {
-      await Promise.all([
-        caches.delete("pages-html-cache"),
-        caches.delete("pages-rsc-cache"),
-      ]);
-    } catch {}
-  }
-
-  await Promise.all([
-    database.entries.clear(),
-    database.categories.clear(),
-    database.loans.clear(),
-    database.loan_payments.clear(),
-    database.recurring_rules.clear(),
-    database.profiles.clear(),
-    database.outbox.clear(),
-    database.meta.clear(),
-  ]);
-
-  setCurrentUserId(null);
+  await clearLocalSession(database);
 
   if (router) {
     router.push("/");

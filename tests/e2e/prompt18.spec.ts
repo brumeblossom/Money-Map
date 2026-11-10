@@ -371,8 +371,8 @@ test.describe("Prompt 18: Settings and Account Management", () => {
     // Confirm deletion
     await confirmBtn.click();
 
-    // Verify redirected to /welcome
-    await expect(page).toHaveURL(/\/welcome/);
+    // Verify redirected to landing page /
+    await page.waitForURL((url) => url.pathname === "/");
 
     // Verify local Dexie is cleared
     const localEntriesCount = await page.evaluate(async () => {

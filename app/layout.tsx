@@ -1,17 +1,17 @@
 import * as React from "react";
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { AppShell } from "@/components/app-shell";
 import { PwaManager } from "@/components/pwa-manager";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Analytics } from "@vercel/analytics/react";
 
-const plusJakartaSans = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+const plusJakartaSans = localFont({
+  src: "./fonts/PlusJakartaSans-latin-wght-normal.woff2",
   display: "swap",
   variable: "--font-plus-jakarta-sans",
+  weight: "200 800",
 });
 
 export const metadata: Metadata = {

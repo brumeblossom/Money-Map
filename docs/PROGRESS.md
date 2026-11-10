@@ -1458,6 +1458,21 @@ The following environment variables can now be safely removed from Vercel projec
   - Production build: Succeeded (`next build --webpack`).
   - Playwright E2E: 14/14 tests passing across phone (390px) and desktop (1280px) viewports in `tests/e2e/theme-and-delete.spec.ts`.
 
+### Prompt 19b: Fix Production Build & Self-Host Font
+
+- **Self-host Plus Jakarta Sans (`app/fonts/`)**:
+  - Replaced `next/font/google` with `next/font/local` in `app/layout.tsx`.
+  - Added `PlusJakartaSans-latin-wght-normal.woff2` (27 KB variable font, Latin subset, normal style, weights 200–800) and its license `OFL.txt` in `app/fonts/`.
+  - Preserved identical CSS variable `--font-plus-jakarta-sans`, `display: "swap"`, and font rendering styling.
+  - Reason: Google Font network download during `next build` caused Vercel builds to fail (`TypeError: null is not an object (evaluating '/\\.(woff|woff2|eot|ttf|otf)$/.exec(googleFontFileUrl)[1]')`). Local font guarantees reproducible, zero-network builds.
+- **Audited CSP & Production Headers**:
+  - Confirmed 0 Content-Security-Policy violations across all key routes (`/`, `/welcome`, Home, Records, Insights, Settings, Admin), theme toggle, self-hosted font, and PDF exports.
+- **Verification**:
+  - Build: `rm -rf .next && bun run build` passed with exit code 0.
+  - ESLint: 0 errors.
+  - TypeScript typecheck: 0 errors.
+  - Vitest: 228/228 tests passed across 23 test suites.
+
 ## Known issues
 
 - None.

@@ -204,3 +204,65 @@
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+
+/* Landing Page Animations & Scoped Tokens */
+@keyframes landing-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes landing-bob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes landing-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes landing-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-landing-phone {
+  animation: landing-float 6s ease-in-out infinite;
+}
+
+.animate-landing-card-1 {
+  animation: landing-in-left 0.8s 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both, landing-bob 5s 1.1s ease-in-out infinite;
+}
+
+.animate-landing-card-2 {
+  animation: landing-in-right 0.8s 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both, landing-bob 5.5s 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-landing-phone,
+  .animate-landing-card-1,
+  .animate-landing-card-2 {
+    animation: none !important;
+  }
+}
+

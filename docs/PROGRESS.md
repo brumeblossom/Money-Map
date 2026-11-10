@@ -1473,13 +1473,46 @@ The following environment variables can now be safely removed from Vercel projec
   - TypeScript typecheck: 0 errors.
   - Vitest: 228/228 tests passed across 23 test suites.
 
+### Prompt 17h: Rebuild Landing Page to Approved Design
+
+- **Approved Design Reference**:
+  - HTML & CSS source of truth preserved at `docs/design/landing-preview/money-map-landing-preview.html`.
+  - Photos 1 to 5 copied to `public/images/landing/photo-1.jpg` ... `photo-5.jpg`.
+- **Rebuilt `components/landing-page-view.tsx` & Design Tokens**:
+  - **Images**: Rendered with `next/image` (`loading="lazy"`, `object-fit: cover`, exact `object-position` coordinates and alt texts). Photos 1 to 4 in "What you need to know" 2x2 collage, photo 5 in Benefits. No borders or dotted lines around images; 0 layout shift during loading.
+  - **Tokens & Colors**:
+    - `--alt` mapped to existing `landing-alt` token (`#F3F1FA` light / `#17161F` dark).
+    - `--soft`/`--soft-fg` mapped to `secondary` / `secondary-foreground`.
+    - `--footer` mapped to sidebar background token (`#2A1F66` light / `#171138` dark).
+    - `--footer-muted` mapped to sidebar muted token (`#BDB6E3` light / `#A9A2D6` dark).
+    - Money colors mapped to existing semantic tokens (`text-money-income`, `text-money-expense-text`, `text-money-giving-text`, `text-money-lent-text` and tints).
+  - **Sections (Order, Wording, Layout & Behavior)**:
+    1. **Header (sticky)**: Logo + mark, desktop nav links (Features, Benefits, FAQs with smooth scrolling and `scroll-mt-20`), `ThemeToggle`, Sign in (desktop only), and Get started (visible on both phone and desktop, 40px height on phones).
+    2. **Hero**: "Free to use · Works offline" pill, "Know where your" / "money goes." (Violet), 3-line subtext on desktop, buttons stacked 220x48px on phones, floating phone mockup with realistic frame, side buttons, dynamic island, status bar, synced header, month summary card, 2x2 tiles, due card, bottom tab bar with FAB, home bar. Real client time/date after mount with 0 hydration flash. Animated cards (+₦250,000 Salary, Ada paid back ₦27,500) with smooth slide-in and gentle bob; phones show Salary card only. Soft round glow behind phone; respects `prefers-reduced-motion`.
+    3. **Why Money Map (`#why`, `bg-landing-alt`)**: Text copy, Get started button, staggered 2x2 photo collage.
+    4. **Three Feature Blocks (`#features`)**: Record in seconds, See your habits, Never forget money you lent.
+    5. **Benefits (`#benefits`, `bg-landing-alt`)**: Photo 5, "Made for real life" (single line), 4 benefit items with semantic SVGs.
+    6. **FAQ (`#faq`)**: Card container with CTA ("Start mapping your money today.", Get started button, contact email mailto) on the left, and 6 questions/answers on the right as an accessible accordion with rotating 28px square `+`/`×` toggle.
+    7. **Footer**: Dark violet (`#2A1F66` light / `#171138` dark), brand description, Product links, Account links (including "Try without an account" setting guest cookies), Help mailto links, bottom copyright line and legal links. Responsive 2x2 column layout on phones.
+  - Removed old purple CTA band and old thin footer.
+  - Maintained `AccountDeletedToast`, all existing data-testids, 0 horizontal scroll at 360px–430px.
+- **Verification**:
+  - `bun run lint`: 0 errors.
+  - `bun run typecheck`: 0 errors.
+  - `bun run test`: 228/228 unit tests passed across 23 test suites.
+  - `bun run build`: Production build succeeded with exit code 0.
+  - Playwright E2E:
+    - `tests/e2e/prompt17h-landing.spec.ts`: 12/12 passed (mobile 390px and desktop 1280px).
+    - `tests/e2e/prompt17b-landing.spec.ts`: 12/12 passed.
+  - Lighthouse mobile audit on `/`: **Performance 100**, **Accessibility 100**.
+
 ## Known issues
 
 - None.
 
 ## Next prompt
 
-"Landing page redesign" (to be agreed), then Prompt 20: launch
+"Navigation fixes" (Chinedum will describe), then Prompt 20: launch
 
 
 

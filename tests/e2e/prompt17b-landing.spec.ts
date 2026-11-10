@@ -48,7 +48,7 @@ test.describe("Prompt 17b: Landing Page & Redesigned Auth Flow", () => {
     ).toBeVisible();
     await expect(page.getByTestId("landing-get-started-cta")).toBeVisible();
     await expect(page.getByText("© 2026 Money Map")).toBeVisible();
-    const feedbackLink = page.getByRole("link", { name: "Send feedback" });
+    const feedbackLink = page.getByRole("link", { name: "Send feedback" }).first();
     await expect(feedbackLink).toBeVisible();
     await expect(feedbackLink).toHaveAttribute("href", "mailto:workwithbrume@gmail.com");
   });

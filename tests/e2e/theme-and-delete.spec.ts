@@ -16,14 +16,16 @@ test.describe("Part A: Light / Dark Theme Switch", () => {
     const isPhone = (viewport?.width ?? 0) < 640;
     const getStartedHeader = page.getByTestId("landing-get-started-header");
 
+    // Get started is present on both phone and desktop (Prompt 17h)
+    await expect(getStartedHeader).toBeVisible();
+    await expect(page.getByTestId("landing-logo")).toBeVisible();
+
     if (isPhone) {
-      // On phones: Get started button is removed from header
-      await expect(getStartedHeader).toBeHidden();
-      await expect(page.getByTestId("landing-logo")).toBeVisible();
+      // On phones: Sign in is hidden from header
+      await expect(page.getByTestId("landing-signin-header")).toBeHidden();
     } else {
       // On desktop: switch, Sign in, Get started
       await expect(page.getByTestId("landing-signin-header")).toBeVisible();
-      await expect(getStartedHeader).toBeVisible();
     }
   });
 
@@ -87,6 +89,7 @@ test.describe("Part A: Light / Dark Theme Switch", () => {
     // Go to Settings and verify Appearance choice matches immediately
     await page.goto("/settings");
     await page.waitForLoadState("domcontentloaded");
+    await page.waitForLoadState("networkidle");
     await expect(page.locator("header").getByTestId("theme-toggle-btn")).toBeVisible({
       timeout: 15_000,
     });
@@ -137,6 +140,7 @@ test.describe("Part B: Delete Account Fix (Mocked API)", () => {
 
     await page.goto("/settings");
     await page.waitForLoadState("domcontentloaded");
+    await page.waitForLoadState("networkidle");
 
     // Open delete account modal
     await page.getByTestId("settings-delete-account-btn").click();
@@ -179,6 +183,7 @@ test.describe("Part B: Delete Account Fix (Mocked API)", () => {
 
     await page.goto("/settings");
     await page.waitForLoadState("domcontentloaded");
+    await page.waitForLoadState("networkidle");
 
     await page.getByTestId("settings-delete-account-btn").click();
     await page.getByTestId("delete-confirm-input").fill("DELETE");
@@ -208,6 +213,7 @@ test.describe("Part B: Delete Account Fix (Mocked API)", () => {
 
     await page.goto("/settings");
     await page.waitForLoadState("domcontentloaded");
+    await page.waitForLoadState("networkidle");
 
     await page.getByTestId("settings-delete-account-btn").click();
     await page.getByTestId("delete-confirm-input").fill("DELETE");

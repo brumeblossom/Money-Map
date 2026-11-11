@@ -20,6 +20,7 @@ import { RecordPaymentModal } from "@/components/record-payment-modal";
 import { EditLoanModal } from "@/components/edit-loan-modal";
 import { buildSingleLoanReport } from "@/lib/report/builder";
 import { downloadReportPdf } from "@/lib/report/pdf-export";
+import { useReturnTo, getBackLinkText } from "@/lib/navigation";
 import {
   db,
   getLoan,
@@ -52,6 +53,9 @@ export interface LoanDetailViewProps {
 
 export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
   const router = useRouter();
+  const defaultUrl = "/records?tab=lent";
+  const returnTo = useReturnTo(defaultUrl);
+  const backLabel = getBackLinkText(returnTo);
 
   const loan = useLiveQuery(() => getLoan(id, db), [id]);
   const payments = useLoanPayments(id) ?? [];
@@ -110,9 +114,9 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
         <p className="text-sm text-muted-foreground">
           This loan may have been deleted or does not exist.
         </p>
-        <Link href="/records?tab=lent">
+        <Link href={returnTo} replace>
           <Button variant="outline" className="mt-2 rounded-xl">
-            <ArrowLeft className="mr-2 size-4" /> Back to Money I lent
+            <ArrowLeft className="mr-2 size-4" /> Back to {backLabel}
           </Button>
         </Link>
       </div>
@@ -142,7 +146,7 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
     try {
       await softDeleteLoan(loan.id);
       setShowDeleteLoanConfirm(false);
-      router.push("/records?tab=lent");
+      router.replace(returnTo);
 
       toast("Loan deleted", {
         duration: 5000,
@@ -193,15 +197,11 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
           type="button"
           data-testid="loan-back-button"
           onClick={() => {
-            if (typeof window !== "undefined" && window.history.length > 1) {
-              router.back();
-            } else {
-              router.push("/records?tab=lent");
-            }
+            router.replace(returnTo);
           }}
           className="inline-flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
         >
-          <ArrowLeft className="mr-1.5 size-4" /> Money I lent
+          <ArrowLeft className="mr-1.5 size-4" /> {backLabel}
         </button>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

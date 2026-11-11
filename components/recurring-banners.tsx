@@ -14,6 +14,7 @@ import { createEntry, advanceRecurringRule } from "@/lib/repo";
 import type { RecurringRuleRow } from "@/lib/db/dexie";
 import { getRecurringBannerMessage } from "@/lib/calc/recurring";
 import { getDueLoans } from "@/lib/calc/reminders";
+import { useCurrentUrl, createReturnUrl } from "@/lib/navigation";
 
 export interface RecurringBannersProps {
   today?: string;
@@ -26,6 +27,7 @@ export function RecurringBanners({
   currency = "NGN",
   onEditRule,
 }: RecurringBannersProps) {
+  const currentUrl = useCurrentUrl();
   const rules = useRecurringRules();
   const categories = useCategories();
   const loans = useLoans();
@@ -141,7 +143,7 @@ export function RecurringBanners({
       {dueLoans.map((item) => (
         <Link
           key={item.loanId}
-          href={item.href}
+          href={createReturnUrl(item.href, currentUrl)}
           data-testid={`due-loan-${item.loanId}`}
           className="flex items-start gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/5 hover:bg-amber-500/10 p-4 sm:p-5 shadow-xs transition-colors cursor-pointer group"
         >

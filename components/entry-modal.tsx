@@ -13,11 +13,13 @@ import {
 } from "@/components/ui/drawer";
 import { EntryForm } from "@/components/entry-form";
 import { useProfile } from "@/lib/repo/hooks";
+import type { EntryRow, LoanRow } from "@/lib/db/dexie";
 
 export interface EntryModalProps {
   action: string;
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChange?: (open: boolean) => void;
+  onClose?: () => void;
   currency?: string;
   initialValues?: {
     amount_minor?: number;
@@ -28,6 +30,7 @@ export interface EntryModalProps {
     repeats?: "No" | "Weekly" | "Monthly";
   };
   recurringRuleIdToAdvance?: string;
+  onSaveSuccess?: (entry: EntryRow | LoanRow) => void;
 }
 
 function subscribeToMediaQuery(callback: () => void) {
@@ -48,9 +51,11 @@ export function EntryModal({
   action,
   open,
   onOpenChange,
+  onClose,
   currency = "NGN",
   initialValues,
   recurringRuleIdToAdvance,
+  onSaveSuccess,
 }: EntryModalProps) {
   const profile = useProfile();
   const effectiveCurrency = profile?.currency || currency || "NGN";
@@ -61,13 +66,20 @@ export function EntryModal({
     getServerSnapshot,
   );
 
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      onOpenChange?.(false);
+      onClose?.();
+    }
+  };
+
   const handleClose = () => {
-    onOpenChange(false);
+    handleOpenChange(false);
   };
 
   if (isDesktop) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
           showCloseButton={false}
           className="w-[480px] max-w-[480px] sm:max-w-[480px] max-h-[min(640px,80vh)] h-[min(640px,80vh)] p-0 overflow-hidden rounded-2xl flex flex-col border border-border bg-background shadow-2xl"
@@ -79,6 +91,7 @@ export function EntryModal({
             initialValues={initialValues}
             recurringRuleIdToAdvance={recurringRuleIdToAdvance}
             onClose={handleClose}
+            onSaveSuccess={onSaveSuccess}
             currency={effectiveCurrency}
           />
         </DialogContent>
@@ -87,7 +100,7 @@ export function EntryModal({
   }
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange} handleOnly={true}>
+    <Drawer open={open} onOpenChange={handleOpenChange} handleOnly={true}>
       <DrawerContent className="data-[vaul-drawer-direction=bottom]:max-h-[90dvh] max-h-[90dvh] h-[90dvh] rounded-t-3xl p-0 overflow-hidden flex flex-col border-t border-border bg-background">
         <DrawerTitle className="sr-only">Entry form</DrawerTitle>
         <EntryForm
@@ -96,6 +109,7 @@ export function EntryModal({
           initialValues={initialValues}
           recurringRuleIdToAdvance={recurringRuleIdToAdvance}
           onClose={handleClose}
+          onSaveSuccess={onSaveSuccess}
           currency={effectiveCurrency}
         />
       </DrawerContent>

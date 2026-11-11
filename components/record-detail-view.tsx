@@ -25,6 +25,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { buildSingleEntryReport } from "@/lib/report/builder";
 import { downloadReportPdf } from "@/lib/report/pdf-export";
+import { useReturnTo, useCurrentUrl, getBackLinkText, createReturnUrl } from "@/lib/navigation";
 
 export interface RecordDetailViewProps {
   id: string;
@@ -75,6 +76,12 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
     }
   };
 
+  const tab = entry ? (entry.kind === "expense" ? "expenses" : entry.kind) : "expenses";
+  const defaultUrl = `/records?tab=${tab}`;
+  const returnTo = useReturnTo(defaultUrl);
+  const backLabel = getBackLinkText(returnTo);
+  const currentUrl = useCurrentUrl();
+
   if (entry === undefined) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -90,23 +97,21 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
         <p className="text-sm text-muted-foreground">
           This entry may have been deleted or does not exist.
         </p>
-        <Link href="/records">
+        <Link href={returnTo} replace>
           <Button variant="outline" className="mt-4 rounded-xl">
-            Back to Records
+            Back to {backLabel}
           </Button>
         </Link>
       </div>
     );
   }
 
-  const tab = entry.kind === "expense" ? "expenses" : entry.kind;
-
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
       await softDeleteEntry(entry.id);
       setShowDeleteConfirm(false);
-      router.push(`/records?tab=${tab}`);
+      router.replace(returnTo);
 
       toast("Entry deleted", {
         duration: 5000,
@@ -142,17 +147,14 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
       <div className="flex items-center justify-between">
         <button
           type="button"
+          data-testid="record-detail-back-btn"
           onClick={() => {
-            if (typeof window !== "undefined" && window.history.length > 1) {
-              router.back();
-            } else {
-              router.push(`/records?tab=${tab}`);
-            }
+            router.replace(returnTo);
           }}
           className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
         >
           <ArrowLeft className="size-4" />
-          <span>Records</span>
+          <span>{backLabel}</span>
         </button>
         <div className="flex items-center gap-2">
           {/* Desktop: medium button on the right of the header */}
@@ -168,7 +170,7 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
             <span>{isDownloadingPdf ? "Generating..." : "Download PDF"}</span>
           </Button>
 
-          <Link href={`/records/${entry.id}/edit`}>
+          <Link href={createReturnUrl(`/records/${entry.id}/edit`, currentUrl)}>
             <Button
               variant="outline"
               size="sm"

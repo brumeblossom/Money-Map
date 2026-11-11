@@ -32,6 +32,7 @@ import { DateField } from "@/components/date-field";
 import { EntryModal } from "@/components/entry-modal";
 import { ExportModal } from "@/components/export-modal";
 import { cn } from "@/lib/utils";
+import { useCurrentUrl, createReturnUrl } from "@/lib/navigation";
 
 const CategoryDonutChart = dynamic(
   () =>
@@ -84,6 +85,7 @@ const emptySubscribe = () => () => {};
 export function InsightsView() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const currentUrl = useCurrentUrl();
 
   const periodParam = searchParams?.get("period") ?? null;
   const startParam = searchParams?.get("start") ?? null;
@@ -523,7 +525,12 @@ export function InsightsView() {
                 </span>
               )}
               <Link
-                href="/insights/habits"
+                href={createReturnUrl(
+                  selectedPreset !== "thisMonth"
+                    ? `/insights/habits?period=${selectedPreset}`
+                    : "/insights/habits",
+                  currentUrl,
+                )}
                 data-testid="see-habits-link"
                 className="inline-flex items-center gap-1 text-xs font-semibold text-primary transition-colors hover:underline"
               >
@@ -745,7 +752,7 @@ export function InsightsView() {
                 return (
                   <Link
                     key={loan.id}
-                    href={`/lent/${loan.id}`}
+                    href={createReturnUrl(`/lent/${loan.id}`, currentUrl)}
                     data-testid={`active-loan-${loan.id}`}
                     className="group block py-3.5 transition-colors first:pt-3 last:pb-1"
                   >

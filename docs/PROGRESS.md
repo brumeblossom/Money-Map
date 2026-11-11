@@ -1506,13 +1506,71 @@ The following environment variables can now be safely removed from Vercel projec
     - `tests/e2e/prompt17b-landing.spec.ts`: 12/12 passed.
   - Lighthouse mobile audit on `/`: **Performance 100**, **Accessibility 100**.
 
+### Prompt 17i: Back Navigation Fix Across App
+
+- **The Navigation Rule**:
+  - The back arrow, Cancel, and Save always return the user to the screen they came from, with that screen exactly as they left it (same tab, period, filters, month, and scroll position).
+  - Never return to a form that was just saved or closed, never to a deleted item, never outside the app. The phone's and browser's Back button behave identically.
+  - One shared helper `lib/navigation.ts` (`useReturnTo`, `createReturnUrl`, `getBackLinkText`, `sanitizeInternalUrl`, `useCurrentUrl`) handles passing, parsing, and validating `from` query params safely (internal routes starting with `/` only, rejecting `//` and external URLs).
+  - After Save, Cancel, and Delete, `router.replace` is used instead of `router.push` to prevent history loops.
+  - Back-link text dynamically names where it goes: `"Records"`, `"Entry"`, `"Home"`, `"Money I lent"`, `"Insights"`, `"Settings"`.
+  - Records list and Settings preserve scroll position in `sessionStorage` and restore on return.
+  - Direct links without a `from` param fall back to predictable defaults:
+    - Entry detail/edit: `/records?tab=${entry.kind}`
+    - Loan detail: `/records?tab=lent`
+    - New entry forms: `/`
+    - Category habit detail: `/insights/habits`
+    - Settings subpages: `/settings`
+    - Export: `/records`
+
+- **Navigation Audit Table**:
+  | Screen | Action | Where it goes |
+  | --- | --- | --- |
+  | Records list (`/records`) | Row click (Entry) | `/records/${id}?from=${currentUrl}` (carries tab, period, search, filter) |
+  | Records list (`/records`) | Pencil button (Edit entry) | `/records/${id}/edit?from=${currentUrl}` (carries tab, period, search, filter) |
+  | Records list (`/records?tab=lent`) | Row click (Loan) | `/lent/${id}?from=${currentUrl}` |
+  | Records list (`/records`) | Tab change / scroll | URL keeps state; scroll position saved in `sessionStorage` and restored per tab |
+  | Entry edit form (`/records/[id]/edit`) | Back arrow | `returnTo` (`from` param or default `/records?tab=${entry.kind}`) via `router.replace` |
+  | Entry edit form (`/records/[id]/edit`) | Cancel button | `returnTo` (`from` param or default `/records?tab=${entry.kind}`) via `router.replace` |
+  | Entry edit form (`/records/[id]/edit`) | Save success | `returnTo` (`from` param or default `/records?tab=${entry.kind}`) via `router.replace` |
+  | Entry detail (`/records/[id]`) | Back link ("Records", etc.) | `returnTo` (`from` param or default `/records?tab=${entry.kind}`) via `router.replace` |
+  | Entry detail (`/records/[id]`) | Edit button | `/records/${id}/edit?from=${currentUrl}` (detail URL passed as `from`) |
+  | Entry detail (`/records/[id]`) | Delete confirmed | `returnTo` (`from` param or default `/records?tab=${entry.kind}`) via `router.replace` |
+  | Loan detail (`/lent/[id]`) | Back link ("Money I lent", "Home") | `returnTo` (`from` param or default `/records?tab=lent`) via `router.replace` |
+  | Loan detail (`/lent/[id]`) | Delete confirmed | `returnTo` (`from` param or default `/records?tab=lent`) via `router.replace` |
+  | Loan detail (`/lent/[id]`) | Edit loan / Record repayment modals | Closes modal in-place; stays on loan detail screen |
+  | Home (`/`) | Action cards (Income, Expense, Giving, Lent) | Modal over Home; URL `/new/${action}?from=${currentHomeUrl}` |
+  | Home action modal (`/new/[action]`) | Cancel / Drawer dismiss | `router.replace(returnTo)` (returns to Home with same month) |
+  | Home action modal (`/new/[action]`) | Save success | `router.replace("/?month=" + savedEntryMonth)` (shows saved entry's month) |
+  | Home due loan banner | Due loan click | `/lent/${id}?from=${currentUrl}` |
+  | Records add buttons / FAB | Tap add button | Modal/form with `from=${currentUrl}`; Cancel/Save returns to opener |
+  | Insights (`/insights`) | "See habits" link | `/insights/habits?from=${currentUrl}` |
+  | Insights (`/insights`) | Active loan click | `/lent/${id}?from=${currentUrl}` |
+  | Habits list (`/insights/habits`) | Back link ("Insights") | `returnTo` (`from` param or default `/insights`) via `Link` |
+  | Habits list (`/insights/habits`) | Category row click | `/insights/habits/${id}?from=${currentUrl}` (preserves habits period/filters) |
+  | Category habit detail (`/insights/habits/[categoryId]`) | Back link ("Habits") | `returnTo` (`from` param or default `/insights/habits`) via `Link` |
+  | Settings (`/settings`) | Categories "See all" | `/settings/categories?from=/settings` |
+  | Settings (`/settings`) | Repeating entries "See all" | `/settings/repeating?from=/settings` |
+  | Settings (`/settings`) | Scroll position | Scroll position saved in `sessionStorage` and restored when returning |
+  | Categories settings (`/settings/categories`) | Back link ("Settings") | `returnTo` (`from` param or default `/settings`) via `Link` |
+  | Repeating entries (`/settings/repeating`) | Back link ("Settings") | `returnTo` (`from` param or default `/settings`) via `Link` |
+  | Export page (`/export`) | Back link ("Records", "Insights") | `returnTo` (`from` param or default `/records`) via `Link` |
+  | Direct link (no `from`) | Back on any screen | Safely falls back to default destination per screen without throwing or looping |
+
+- **Verification**:
+  - `bun run lint`: 0 errors.
+  - `bun run typecheck`: 0 errors.
+  - `bun run test`: 233/233 unit tests passed across 24 test suites (`tests/unit/navigation.test.ts` added).
+  - `bun run build`: Production build succeeded with exit code 0.
+  - Playwright E2E: 12/12 tests passed across phone (390px) and desktop (1280px) in `tests/e2e/back-navigation.spec.ts` covering flows 1, 2, 3, 4, 5, 7, and 10.
+
 ## Known issues
 
 - None.
 
 ## Next prompt
 
-"Navigation fixes" (Chinedum will describe), then Prompt 20: launch
+Prompt 20: launch
 
 
 

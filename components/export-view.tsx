@@ -11,6 +11,7 @@ import { buildPeriodReport } from "@/lib/report/builder";
 import { downloadReportPdf, preloadPdfRenderer } from "@/lib/report/pdf-export";
 import { Button } from "@/components/ui/button";
 import { DateField } from "@/components/date-field";
+import { useReturnTo, getBackLinkText } from "@/lib/navigation";
 
 if (typeof window !== "undefined") {
   (window as unknown as { __preloadPdfRenderer?: () => Promise<void> }).__preloadPdfRenderer = preloadPdfRenderer;
@@ -74,6 +75,10 @@ function computePresetRange(preset: PresetOption, referenceDate = new Date()): {
 }
 
 export function ExportView() {
+  const defaultUrl = "/records";
+  const returnTo = useReturnTo(defaultUrl);
+  const backLabel = getBackLinkText(returnTo);
+
   const [preset, setPreset] = React.useState<PresetOption>("this_month");
   const initialRange = React.useMemo(() => computePresetRange("this_month"), []);
   const [customStart, setCustomStart] = React.useState(initialRange.start);
@@ -182,11 +187,13 @@ export function ExportView() {
       {/* Header */}
       <div className="space-y-1">
         <Link
-          href="/records"
+          href={returnTo}
+          replace
+          data-testid="export-back-btn"
           className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground mb-1"
         >
           <ArrowLeft className="size-3.5" />
-          <span>Back to Records</span>
+          <span>{backLabel}</span>
         </Link>
         <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
           Export PDF

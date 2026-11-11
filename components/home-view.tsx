@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -18,12 +18,13 @@ import { RecurringBanners } from "@/components/recurring-banners";
 import { useEntries, useLoans, useLoanPayments, useProfile } from "@/lib/repo/hooks";
 import { seedDefaultCategories } from "@/lib/repo/seed";
 import { claimGuestData, updateProfile, createProfile } from "@/lib/repo";
-import { db, type RecurringRuleRow } from "@/lib/db/dexie";
+import { db, type RecurringRuleRow, type EntryRow, type LoanRow } from "@/lib/db/dexie";
 import { createClient } from "@/lib/supabase/client";
 import { extractFirstName } from "@/lib/auth/user-name";
 import { toast } from "sonner";
 import { getMonthPeriod, periodTotals, owedToMe } from "@/lib/calc";
 import { formatMoney, formatMonthYear } from "@/lib/format";
+import { useReturnTo, createReturnUrl } from "@/lib/navigation";
 
 function getPrevMonth(ym: string): string {
   const [y, m] = ym.split("-").map(Number);
@@ -217,30 +218,52 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
     return owedToMe(loans ?? [], loanPayments ?? []);
   }, [loans, loanPayments]);
 
-  const [overrideClosed, setOverrideClosed] = React.useState(false);
-  const [prevActiveAction, setPrevActiveAction] = React.useState(activeAction);
-
-  if (activeAction !== prevActiveAction) {
-    setPrevActiveAction(activeAction);
-    setOverrideClosed(false);
-  }
+  const pathname = usePathname();
+  const [closedPathname, setClosedPathname] = React.useState<string | null>(null);
 
   const [editingRecurringRule, setEditingRecurringRule] =
     React.useState<RecurringRuleRow | null>(null);
 
-  const isModalOpen = !overrideClosed && !!activeAction;
+  const isModalOpen = Boolean(
+    activeAction &&
+      pathname?.startsWith("/new/") &&
+      closedPathname !== pathname,
+  );
+
+  const currentHomeUrl = monthParam ? `/?month=${monthParam}` : "/";
+  const returnTo = useReturnTo(currentHomeUrl);
 
   const handleActionClick = (actionKey: string) => {
-    setOverrideClosed(false);
-    router.push(`/new/${actionKey}`);
+    setClosedPathname(null);
+    router.push(createReturnUrl(`/new/${actionKey}`, currentHomeUrl));
   };
 
   const handleModalClose = (open: boolean) => {
     if (!open) {
-      setOverrideClosed(true);
+      setClosedPathname(pathname);
       if (typeof window !== "undefined" && window.location.pathname.startsWith("/new/")) {
-        window.history.replaceState(null, "", "/");
+        router.replace(returnTo);
       }
+    }
+  };
+
+  const handleSaveSuccess = (savedEntry: EntryRow | LoanRow) => {
+    setClosedPathname(pathname);
+    if (returnTo && !returnTo.startsWith("/?") && returnTo !== "/") {
+      router.replace(returnTo);
+      return;
+    }
+    const entryDate =
+      "occurred_on" in savedEntry
+        ? savedEntry.occurred_on
+        : "started_on" in savedEntry
+          ? savedEntry.started_on
+          : today;
+    const entryMonthStr = typeof entryDate === "string" ? entryDate.slice(0, 7) : currentMonthStr;
+    if (entryMonthStr !== currentMonthStr) {
+      router.replace(`/?month=${entryMonthStr}`);
+    } else {
+      router.replace("/");
     }
   };
 
@@ -491,6 +514,7 @@ export function HomeView({ activeAction, currency = "NGN" }: HomeViewProps) {
           action={currentAction}
           open={isModalOpen}
           onOpenChange={handleModalClose}
+          onSaveSuccess={handleSaveSuccess}
           currency={effectiveCurrency}
         />
       )}

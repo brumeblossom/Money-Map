@@ -60,6 +60,29 @@ export default function SettingsPage() {
 
   // Check auth session for email & guest status
   React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleScroll = () => {
+      sessionStorage.setItem("moneymap_settings_scroll", String(window.scrollY));
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = sessionStorage.getItem("moneymap_settings_scroll");
+    if (!saved) return;
+    const y = parseInt(saved, 10);
+    if (!isNaN(y)) {
+      const timer = setTimeout(() => {
+        window.scrollTo(0, y);
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  // Check auth session for email & guest status
+  React.useEffect(() => {
     async function checkAuth() {
       try {
         if (typeof document !== "undefined") {
@@ -406,7 +429,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-base font-semibold text-foreground">Repeating entries</h3>
                 <Link
-                  href="/settings/repeating"
+                  href="/settings/repeating?from=%2Fsettings"
                   data-testid="settings-repeating-entries-link"
                   className="text-xs font-semibold text-primary hover:underline shrink-0"
                 >

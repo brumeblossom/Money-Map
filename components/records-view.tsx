@@ -37,6 +37,7 @@ import { Input } from "@/components/ui/input";
 import { LentListView } from "@/components/lent-list-view";
 import { EntryModal } from "@/components/entry-modal";
 import { ExportModal } from "@/components/export-modal";
+import { useCurrentUrl, createReturnUrl } from "@/lib/navigation";
 
 export type RecordsTab = "income" | "expenses" | "giving" | "lent";
 
@@ -114,6 +115,7 @@ function parsePeriod(raw: string | null): PeriodPreset {
 export function RecordsView() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const currentUrl = useCurrentUrl();
 
   const tabParam = searchParams?.get("tab") ?? null;
 
@@ -518,6 +520,52 @@ export function RecordsView() {
 
   // Parent scroll container ref for virtualizer
   const parentRef = React.useRef<HTMLDivElement>(null);
+
+  // Scroll restoration: track and restore scroll position
+  const saveScroll = React.useCallback(() => {
+    if (typeof window === "undefined") return;
+    const listScroll = parentRef.current ? parentRef.current.scrollTop : 0;
+    const winScroll = window.scrollY;
+    sessionStorage.setItem(
+      `moneymap_records_scroll_${activeTab}`,
+      JSON.stringify({ listScroll, winScroll })
+    );
+  }, [activeTab]);
+
+  React.useEffect(() => {
+    const el = parentRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      saveScroll();
+    };
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      el.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [saveScroll, activeTab]);
+
+  // Restore scroll position when items are available
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = sessionStorage.getItem(`moneymap_records_scroll_${activeTab}`);
+    if (!raw) return;
+    try {
+      const { listScroll, winScroll } = JSON.parse(raw);
+      const timer = setTimeout(() => {
+        if (parentRef.current && typeof listScroll === "number") {
+          parentRef.current.scrollTop = listScroll;
+        }
+        if (typeof winScroll === "number") {
+          window.scrollTo(0, winScroll);
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    } catch {
+      // Ignore parse errors
+    }
+  }, [activeTab, flattenedItems.length]);
 
   const rowVirtualizer = useVirtualizer({
     count: flattenedItems.length,
@@ -968,13 +1016,18 @@ export function RecordsView() {
                           setIsSelectionMode(true);
                         }}
                         onSetSwiped={(open) => setSwipedEntryId(open ? entry.id : null)}
-                        onEdit={() => router.push(`/records/${entry.id}/edit`)}
+                        currentUrl={currentUrl}
+                        onEdit={() => {
+                          saveScroll();
+                          router.push(createReturnUrl(`/records/${entry.id}/edit`, currentUrl));
+                        }}
                         onDelete={() => setEntryToDelete(entry)}
                         onClick={() => {
                           if (isSelectionMode) {
                             toggleSelect(entry.id);
                           } else {
-                            router.push(`/records/${entry.id}`);
+                            saveScroll();
+                            router.push(createReturnUrl(`/records/${entry.id}`, currentUrl));
                           }
                         }}
                       />
@@ -1096,6 +1149,7 @@ const RecordRowItem = React.memo(function RecordRowItem({
   onEdit,
   onDelete,
   onClick,
+  currentUrl,
 }: {
   entry: EntryRow;
   categoryName: string;
@@ -1109,6 +1163,7 @@ const RecordRowItem = React.memo(function RecordRowItem({
   onEdit: () => void;
   onDelete: () => void;
   onClick: () => void;
+  currentUrl?: string;
 }) {
   const isIncome = entry.kind === "income";
   const isExpense = entry.kind === "expense";
@@ -1284,7 +1339,7 @@ const RecordRowItem = React.memo(function RecordRowItem({
 
         {/* Clickable Link to View Detail */}
         <Link
-          href={`/records/${entry.id}`}
+          href={currentUrl ? createReturnUrl(`/records/${entry.id}`, currentUrl) : `/records/${entry.id}`}
           onClick={handleRowClick}
           className="flex min-w-0 flex-1 items-center justify-between cursor-pointer"
         >

@@ -282,7 +282,7 @@ export function CategoriesSettings({ initialScope = "income", limit }: Categorie
           <h3 className="text-base font-semibold text-foreground">Categories</h3>
           {limit && (
             <Link
-              href={`/settings/categories?group=${activeScope}`}
+              href={`/settings/categories?group=${activeScope}&from=%2Fsettings`}
               data-testid="categories-see-all-link"
               className="text-xs font-semibold text-primary hover:underline shrink-0"
             >

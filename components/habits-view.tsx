@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { DateField } from "@/components/date-field";
 import { EntryModal } from "@/components/entry-modal";
 import { cn } from "@/lib/utils";
+import { useReturnTo, useCurrentUrl, getBackLinkText, createReturnUrl } from "@/lib/navigation";
 
 const PERIOD_PRESETS: Array<{ id: PeriodPreset; label: string }> = [
   { id: "thisWeek", label: "This week" },
@@ -151,6 +152,10 @@ export function HabitBadge({ label }: { label: HabitLabel }) {
 export function HabitsView() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const currentUrl = useCurrentUrl();
+  const defaultUrl = "/insights";
+  const returnTo = useReturnTo(defaultUrl);
+  const backLabel = getBackLinkText(returnTo);
 
   // Query params
   const periodParam = searchParams.get("period");
@@ -181,9 +186,11 @@ export function HabitsView() {
     return getPeriodPreset("thisMonth", today);
   }, [today]);
 
+  const isIsoDate = (s: string | null) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
+
   const [customRange, setCustomRange] = React.useState<{ start: string; end: string }>(() => ({
-    start: fromParam || defaultPresetPeriod.start,
-    end: toParam || defaultPresetPeriod.end,
+    start: (isIsoDate(fromParam) ? fromParam : null) || defaultPresetPeriod.start,
+    end: (isIsoDate(toParam) ? toParam : null) || defaultPresetPeriod.end,
   }));
 
   const activePeriod = React.useMemo(() => {
@@ -248,10 +255,11 @@ export function HabitsView() {
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2">
           <Link
-            href="/insights"
+            href={returnTo}
+            replace
             data-testid="habits-back-button"
             className="inline-flex size-9 items-center justify-center rounded-xl border border-border/60 bg-muted/30 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            aria-label="Back to Dashboard"
+            aria-label={`Back to ${backLabel}`}
           >
             <ArrowLeft className="size-4" />
           </Link>
@@ -459,7 +467,7 @@ export function HabitsView() {
               return (
                 <Link
                   key={cat.categoryId}
-                  href={href}
+                  href={createReturnUrl(href, currentUrl)}
                   data-testid={`habit-category-card-${cat.categoryId}`}
                   className="group flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-4 shadow-xs transition-all hover:border-primary/40 hover:shadow-sm sm:p-5"
                 >

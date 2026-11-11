@@ -25,6 +25,7 @@ import { formatMoney, formatDate } from "@/lib/format";
 import { DateField } from "@/components/date-field";
 import { HabitBadge } from "@/components/habits-view";
 import { cn } from "@/lib/utils";
+import { useReturnTo, getBackLinkText } from "@/lib/navigation";
 
 const CategoryTrendChart = dynamic(
   () =>
@@ -82,6 +83,9 @@ export function CategoryHabitDetailView({ categoryId }: { categoryId: string }) 
   }
 
   const selectedPreset = internalPreset ?? parsePeriodParam(periodParam);
+  const defaultUrl = selectedPreset !== "thisMonth" ? `/insights/habits?period=${selectedPreset}` : "/insights/habits";
+  const returnTo = useReturnTo(defaultUrl);
+  const backLabel = getBackLinkText(returnTo);
 
   const today = React.useMemo(() => {
     const now = new Date();
@@ -97,9 +101,11 @@ export function CategoryHabitDetailView({ categoryId }: { categoryId: string }) 
     return getPeriodPreset("thisMonth", today);
   }, [today]);
 
+  const isIsoDate = (s: string | null) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
+
   const [customRange, setCustomRange] = React.useState<{ start: string; end: string }>(() => ({
-    start: fromParam || defaultPresetPeriod.start,
-    end: toParam || defaultPresetPeriod.end,
+    start: (isIsoDate(fromParam) ? fromParam : null) || defaultPresetPeriod.start,
+    end: (isIsoDate(toParam) ? toParam : null) || defaultPresetPeriod.end,
   }));
 
   const activePeriod = React.useMemo(() => {
@@ -157,11 +163,12 @@ export function CategoryHabitDetailView({ categoryId }: { categoryId: string }) 
           This category may have been deleted or does not exist.
         </p>
         <Link
-          href="/insights/habits"
+          href={returnTo}
+          replace
           className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-xs"
         >
           <ArrowLeft className="size-4" />
-          Back to Habits
+          Back to {backLabel}
         </Link>
       </div>
     );
@@ -177,10 +184,11 @@ export function CategoryHabitDetailView({ categoryId }: { categoryId: string }) 
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2">
           <Link
-            href="/insights/habits"
+            href={returnTo}
+            replace
             data-testid="category-report-back-button"
             className="inline-flex size-9 items-center justify-center rounded-xl border border-border/60 bg-muted/30 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            aria-label="Back to Habits"
+            aria-label={`Back to ${backLabel}`}
           >
             <ArrowLeft className="size-4" />
           </Link>

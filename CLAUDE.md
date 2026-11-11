@@ -28,5 +28,7 @@ The full spec is `docs/PRD.md`.
 
 12. Use design tokens only, never hard-coded colours.
 
+13. Back, Cancel and Save return the user to the screen they came from (use lib/navigation).
+
 Read docs/PROGRESS.md before starting any task and update it when finishing.
 

@@ -10,6 +10,7 @@ import {
   type CategoryScope,
   type EntryKind,
   type EntryRow,
+  type LoanRow,
   type RepeatPlan,
   type InterestKind,
 } from "@/lib/db/dexie";
@@ -41,6 +42,7 @@ import { AmountField } from "@/components/amount-field";
 import { DateField } from "@/components/date-field";
 import { CategoryPicker, OTHER_CATEGORY_VALUE } from "@/components/category-picker";
 import { Button } from "@/components/ui/button";
+import { useReturnTo } from "@/lib/navigation";
 import { formatMonthYear } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 
@@ -58,7 +60,7 @@ export interface EntryFormProps {
   recurringRuleIdToAdvance?: string;
   onClose?: () => void;
   currency?: string;
-  onSaveSuccess?: (entry: EntryRow) => void;
+  onSaveSuccess?: (item: EntryRow | LoanRow) => void;
 }
 
 export function EntryForm({
@@ -71,15 +73,16 @@ export function EntryForm({
   onSaveSuccess,
 }: EntryFormProps) {
   const router = useRouter();
+  const returnTo = useReturnTo("/");
   const action = propAction || (initialEntry ? initialEntry.kind : "expense");
 
   const handleClose = React.useCallback(() => {
     if (onClose) {
       onClose();
     } else {
-      router.push("/");
+      router.replace(returnTo);
     }
-  }, [onClose, router]);
+  }, [onClose, router, returnTo]);
 
   const isValidAction =
     action === "income" || action === "expense" || action === "giving" || action === "lent";
@@ -97,7 +100,7 @@ export function EntryForm({
   }
 
   if (action === "lent") {
-    return <LentEntryForm onClose={handleClose} currency={currency} />;
+    return <LentEntryForm onClose={handleClose} onSaveSuccess={onSaveSuccess} currency={currency} />;
   }
 
   return (
@@ -138,7 +141,7 @@ function StandardEntryForm({
   recurringRuleIdToAdvance?: string;
   onClose: () => void;
   currency: string;
-  onSaveSuccess?: (entry: EntryRow) => void;
+  onSaveSuccess?: (item: EntryRow | LoanRow) => void;
 }) {
   const kind: EntryKind = action;
   const scope: CategoryScope = action;
@@ -302,8 +305,11 @@ function StandardEntryForm({
           });
         }
 
-        onSaveSuccess?.(updatedEntry);
-        onClose();
+        if (onSaveSuccess) {
+          onSaveSuccess(updatedEntry);
+        } else {
+          onClose();
+        }
 
         const currentMonthStr = new Date().toISOString().slice(0, 7);
         const entryMonthStr = date.slice(0, 7);
@@ -361,8 +367,11 @@ function StandardEntryForm({
           await advanceRecurringRule(recurringRuleIdToAdvance);
         }
 
-        onSaveSuccess?.(newEntry);
-        onClose();
+        if (onSaveSuccess) {
+          onSaveSuccess(newEntry);
+        } else {
+          onClose();
+        }
 
         const currentMonthStr = new Date().toISOString().slice(0, 7);
         const entryMonthStr = date.slice(0, 7);
@@ -532,7 +541,7 @@ function StandardEntryForm({
       </div>
 
       {/* Sticky Bottom Footer */}
-      <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border/50 bg-background/95 px-4 py-3.5 backdrop-blur-xs pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:px-6">
+      <div className="relative z-10 flex shrink-0 items-center justify-end gap-3 border-t border-border/50 bg-background/95 px-4 py-3.5 backdrop-blur-xs pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:px-6">
         <Button
           type="button"
           variant="outline"
@@ -566,9 +575,11 @@ function StandardEntryForm({
 function LentEntryForm({
   onClose,
   currency,
+  onSaveSuccess,
 }: {
   onClose: () => void;
   currency: string;
+  onSaveSuccess?: (item: EntryRow | LoanRow) => void;
 }) {
   const scope: CategoryScope = "lent";
   const today = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
@@ -725,7 +736,11 @@ function LentEntryForm({
       });
 
       console.log("LOAN CREATED SUCCESSFULLY! ID:", newLoan.id);
-      onClose();
+      if (onSaveSuccess) {
+        onSaveSuccess(newLoan);
+      } else {
+        onClose();
+      }
 
       toast("Saved", {
         duration: 5000,
@@ -980,7 +995,7 @@ function LentEntryForm({
       </div>
 
       {/* Sticky Bottom Footer */}
-      <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border/50 bg-background/95 px-4 py-3.5 backdrop-blur-xs pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:px-6">
+      <div className="relative z-10 flex shrink-0 items-center justify-end gap-3 border-t border-border/50 bg-background/95 px-4 py-3.5 backdrop-blur-xs pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:px-6">
         <Button
           type="button"
           variant="outline"

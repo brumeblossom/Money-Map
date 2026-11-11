@@ -8,6 +8,7 @@ import { ArrowLeft } from "lucide-react";
 import { db } from "@/lib/db/dexie";
 import { EntryForm } from "@/components/entry-form";
 import { Button } from "@/components/ui/button";
+import { useReturnTo, getBackLinkText } from "@/lib/navigation";
 
 export interface EditRecordViewProps {
   id: string;
@@ -27,6 +28,11 @@ export function EditRecordView({ id }: EditRecordViewProps) {
 
   const currency = profile?.currency || "NGN";
 
+  const tab = entry ? (entry.kind === "expense" ? "expenses" : entry.kind) : "expenses";
+  const defaultUrl = `/records?tab=${tab}`;
+  const returnTo = useReturnTo(defaultUrl);
+  const backLabel = getBackLinkText(returnTo);
+
   if (entry === undefined) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -42,9 +48,9 @@ export function EditRecordView({ id }: EditRecordViewProps) {
         <p className="text-sm text-muted-foreground">
           This entry may have been deleted or does not exist.
         </p>
-        <Link href="/records">
+        <Link href={returnTo} replace>
           <Button variant="outline" className="mt-4 rounded-xl">
-            Back to Records
+            Back to {backLabel}
           </Button>
         </Link>
       </div>
@@ -55,11 +61,13 @@ export function EditRecordView({ id }: EditRecordViewProps) {
     <div className="space-y-4 pb-16">
       <div className="flex items-center gap-2">
         <Link
-          href={`/records/${entry.id}`}
+          href={returnTo}
+          replace
+          data-testid="edit-record-back-btn"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="size-4" />
-          <span>Back to detail</span>
+          <span>{backLabel}</span>
         </Link>
       </div>
 
@@ -68,8 +76,8 @@ export function EditRecordView({ id }: EditRecordViewProps) {
           key={entry.id}
           action={entry.kind}
           initialEntry={entry}
-          onClose={() => router.push(`/records/${entry.id}`)}
-          onSaveSuccess={() => router.push(`/records/${entry.id}`)}
+          onClose={() => router.replace(returnTo)}
+          onSaveSuccess={() => router.replace(returnTo)}
           currency={currency}
         />
       </div>

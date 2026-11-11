@@ -20,6 +20,7 @@ import {
 import { formatMoney, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useCurrentUrl, createReturnUrl } from "@/lib/navigation";
 
 export interface LentListViewProps {
   currency?: string;
@@ -44,6 +45,7 @@ export function LentListView({
   searchQuery = "",
   categoryId = "all",
 }: LentListViewProps) {
+  const currentUrl = useCurrentUrl();
   const rawLoans = useLoans();
   const rawPayments = useLoanPayments();
   const loans = React.useMemo(() => rawLoans ?? [], [rawLoans]);
@@ -156,7 +158,7 @@ export function LentListView({
         data-testid="loan-row"
         className="group relative rounded-2xl border border-border/60 bg-card p-4.5 shadow-xs transition-all hover:border-border hover:shadow-sm sm:p-5"
       >
-        <Link href={`/lent/${loan.id}`} className="block">
+        <Link href={createReturnUrl(`/lent/${loan.id}`, currentUrl)} className="block">
           <div className="flex flex-col gap-3">
             {/* Top row: Borrower, Status badge, Balance left */}
             <div className="flex items-start justify-between gap-2">

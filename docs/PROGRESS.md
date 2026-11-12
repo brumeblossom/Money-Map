@@ -1564,13 +1564,34 @@ The following environment variables can now be safely removed from Vercel projec
   - `bun run build`: Production build succeeded with exit code 0.
   - Playwright E2E: 12/12 tests passed across phone (390px) and desktop (1280px) in `tests/e2e/back-navigation.spec.ts` covering flows 1, 2, 3, 4, 5, 7, and 10.
 
+### Prompt 20: v1 Launch
+
+- **Launch Status**:
+  - v1 launched on 12-11-2026 at https://money-map-tau.vercel.app
+- **Database & Schema Parity**:
+  - Supabase migrations verified on remote project `jiktrplyuneakhhoayde`: both `20261020220000_initial_schema.sql` and `20261029143000_admin_analytics.sql` are applied.
+  - Schema parity confirmed: `supabase gen types typescript --linked` matches `lib/db/database.types.ts` with 0 diffs.
+- **Production Smoke Test (https://money-map-tau.vercel.app)**:
+  - **Landing Page**: Brand hero, 3 feature blocks ("Record in seconds", "See your habits", "Never forget money you lent"), sticky header, responsive footer, and theme toggle switch working across light and dark modes.
+  - **Guest Mode**: "Try without an account" transitions to Home (`/`), records Income (₦50,000) and Expense (₦15,000) entries into local Dexie, and immediately updates live month summary totals (₦50,000 in, ₦15,000 out, ₦35,000 left over).
+  - **Back Navigation**: Verified return-to state preservation from Records list to detail/edit view and back.
+  - **PDF Export**: Verified `/export` loads and generates transaction PDF reports.
+  - **Offline-First Functionality**: Verified entries save locally to Dexie with "Saved" toast feedback even when the browser is disconnected from the network.
+  - **Auth Integration**: Verified `/welcome?mode=signup` form validation (invalid email check, password fields, first name) and Google sign-in availability.
+  - **Admin Security**: Confirmed `/admin` route renders standard 404 page for unauthenticated and non-admin visitors.
+- **Open Items (Post-Launch Recommendations)**:
+  1. Buy and connect a custom domain (e.g. `moneymap.app`) in Vercel.
+  2. Create a separate, free Supabase staging project for preview branch deploys.
+  3. Replace draft PWA icons with final branded 192px and 512px maskable vector assets.
+  4. Plan v2 roadmap items from PRD section 11 (Money I borrowed, monthly category budgets, receipt attachments, savings goals, bank feeds).
+
 ## Known issues
 
 - None.
 
 ## Next prompt
 
-Prompt 20: launch
+v1 launched! Project in maintenance and v2 planning.
 
 
 

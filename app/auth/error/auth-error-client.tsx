@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AlertCircle, ArrowLeft } from "lucide-react";
-import { BrandLogo } from "@/components/brand-logo";
 import { getAuthErrorPageMessage } from "@/lib/auth/errors";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -34,8 +33,6 @@ export function AuthErrorClient() {
 
       {/* Centred Card */}
       <div className="w-full max-w-[440px] rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-xs text-center space-y-6">
-        <BrandLogo size="md" className="mx-auto" />
-
         {/* Error Icon */}
         <div className="space-y-3">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 text-destructive shadow-xs">

@@ -12,7 +12,6 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
-import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PasswordRulesChecklist } from "@/components/password-rules-checklist";
 import { createClient } from "@/lib/supabase/client";
@@ -441,19 +440,16 @@ function WelcomeContent() {
 
       {/* Centred Card */}
       <div className="w-full max-w-[440px] rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-xs">
-        {/* Inside: Logo, title, subtitle */}
-        <div className="text-center space-y-3 mb-6">
-          <BrandLogo size="md" className="mx-auto" />
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-              {title}
-            </h1>
-            {subtitle && (
-              <p className="text-sm font-medium text-muted-foreground">
-                {subtitle}
-              </p>
-            )}
-          </div>
+        {/* Inside: title, subtitle */}
+        <div className="text-center space-y-1 mb-6">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            {title}
+          </h1>
+          {subtitle && (
+            <p className="text-sm font-medium text-muted-foreground">
+              {subtitle}
+            </p>
+          )}
         </div>
 
         {/* VIEW 1: SIGN IN */}

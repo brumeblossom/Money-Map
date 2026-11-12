@@ -93,6 +93,11 @@ describe("/admin Page & Dashboard View", () => {
   });
 
   describe("AdminDashboardView display and interactions", () => {
+    it("does not render any BrandLogo image inside the admin dashboard content", () => {
+      render(<AdminDashboardView initialData={mockData} />);
+      expect(screen.queryByAltText("Moneyrails")).toBeNull();
+    });
+
     it("renders all required metric cards with correct values", () => {
       render(<AdminDashboardView initialData={mockData} />);
 

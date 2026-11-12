@@ -70,19 +70,34 @@ test.describe("Moneyrails Branding & Logo (Prompt 21)", () => {
     }
   });
 
-  test("3. Welcome card has full logo (not a link)", async ({ page }) => {
+  test("3. Auth cards (sign-in, sign-up, forgot, reset, check-email) have no logo inside the card", async ({
+    page,
+  }) => {
+    // Sign-in card
     await page.goto("/welcome?mode=signin");
-
-    // Welcome card logo
-    const logoImg = page.locator('main img[alt="Moneyrails"]').first();
-    await expect(logoImg).toBeVisible();
-
-    // Subtitle updated
+    await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+    await expect(page.locator('main img[alt="Moneyrails"]')).toHaveCount(0);
     await expect(page.getByText("Sign in to your Moneyrails account")).toBeVisible();
 
-    // Ensure it is NOT a link
-    const linkParent = page.locator('main a img[alt="Moneyrails"]');
-    expect(await linkParent.count()).toBe(0);
+    // Sign-up card
+    await page.goto("/welcome?mode=signup");
+    await expect(page.getByRole("heading", { name: "Create your account" })).toBeVisible();
+    await expect(page.locator('main img[alt="Moneyrails"]')).toHaveCount(0);
+
+    // Forgot password card
+    await page.goto("/welcome?mode=forgot");
+    await expect(page.getByRole("heading", { name: "Reset your password" })).toBeVisible();
+    await expect(page.locator('main img[alt="Moneyrails"]')).toHaveCount(0);
+
+    // Set new password card
+    await page.goto("/welcome?mode=reset");
+    await expect(page.getByRole("heading", { name: "Set a new password" })).toBeVisible();
+    await expect(page.locator('main img[alt="Moneyrails"]')).toHaveCount(0);
+
+    // Auth check-email card
+    await page.goto("/auth/check-email");
+    await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
+    await expect(page.locator('main img[alt="Moneyrails"]')).toHaveCount(0);
   });
 
   test("4. Guest entry persists across page reloads (Dexie db name intact)", async ({

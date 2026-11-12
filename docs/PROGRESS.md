@@ -1624,6 +1624,11 @@ The following environment variables can now be safely removed from Vercel projec
     - Default URL updated to `https://moneyrails.vercel.app`.
   - **Middleware**: Whitelisted `/brand/` and `/opengraph-image` in `middleware.ts` to allow static public asset delivery.
 
+- **Logo Adjustments (Prompt 21b)**:
+  - Removed the Moneyrails logo from the sign-in, sign-up, check-email, forgot/set-password cards and admin page content on purpose (pages were too busy).
+  - Headings now start directly at the top of auth cards without empty top gaps.
+  - The desktop sidebar logo (at 1280px), mobile app header icon mark, landing page header and footer, and PDF export logos are preserved exactly as configured.
+
 - **Internal IDs Preserved (Zero Data Loss / Session Disruption)**:
   - Dexie database name remains `"moneymap"` in `lib/db/dexie.ts`.
   - Cookie names remain unchanged: `moneymap_guest`, `mm_guest`, `moneymap_has_session`, `moneymap_mock_user`, `moneymap_is_admin`.

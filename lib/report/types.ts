@@ -2,7 +2,7 @@ export type ReportKind = "period" | "single_entry" | "single_loan";
 
 export interface PeriodReportSnapshot {
   type: "period";
-  title: "Money Map";
+  title: "Moneyrails";
   userName: string;
   currency: string;
   periodStart: string; // YYYY-MM-DD
@@ -44,7 +44,7 @@ export interface PeriodReportSnapshot {
 
 export interface SingleEntryReportSnapshot {
   type: "single_entry";
-  title: "Money Map";
+  title: "Moneyrails";
   userName: string;
   currency: string;
   action: "Income" | "Expenses" | "Giving";
@@ -60,7 +60,7 @@ export interface SingleEntryReportSnapshot {
 
 export interface SingleLoanReportSnapshot {
   type: "single_loan";
-  title: "Money Map";
+  title: "Moneyrails";
   userName: string;
   currency: string;
   borrower: string;

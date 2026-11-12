@@ -21,12 +21,12 @@ test.describe("Prompt 17h: New Landing Page", () => {
     await expect(page.getByTestId("landing-signin-hero")).toBeVisible();
     await expect(page.getByTestId("landing-phone-mockup")).toBeVisible();
 
-    // c) Why Money Map
+    // c) Why Moneyrails
     const whySection = page.locator("section#why");
     await expect(whySection).toBeVisible();
     await expect(
       whySection.getByRole("heading", {
-        name: "What you need to know about Money Map",
+        name: "What you need to know about Moneyrails",
       })
     ).toBeVisible();
     await expect(page.getByTestId("landing-get-started-why")).toBeVisible();
@@ -69,7 +69,7 @@ test.describe("Prompt 17h: New Landing Page", () => {
     // g) Footer
     const footer = page.locator("footer");
     await expect(footer).toBeVisible();
-    await expect(footer.getByText("© 2026 Money Map")).toBeVisible();
+    await expect(footer.getByText("© 2026 Moneyrails")).toBeVisible();
     await expect(page.getByTestId("landing-try-guest")).toBeVisible();
   });
 

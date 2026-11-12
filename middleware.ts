@@ -80,8 +80,10 @@ export async function middleware(request: NextRequest) {
     path.startsWith("/api") ||
     path.startsWith("/admin") ||
     path.startsWith("/auth/") ||
+    path.startsWith("/brand/") ||
     path.startsWith("/icons/") ||
     path.startsWith("/images/") ||
+    path.startsWith("/opengraph-image") ||
     path.startsWith("/s/") ||
     path.includes("manifest") ||
     path === "/sw.js" ||
@@ -137,6 +139,6 @@ export const config = {
      * - sw.js
      * - any file with an extension (e.g. .css, .js, .png, etc.)
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|icons|images|manifest|sw\\.js|.*\\.[a-zA-Z0-9]+$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|brand|icons|images|manifest|sw\\.js|opengraph-image|.*\\.[a-zA-Z0-9]+$).*)",
   ],
 };

@@ -79,7 +79,7 @@ test.describe("Prompt 17f: Landing Page Polish & Password Auth / Sign-Out", () =
 
     // Title and elements
     await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
-    await expect(page.getByText("Sign in to your Money Map")).toBeVisible();
+    await expect(page.getByText("Sign in to your Moneyrails account")).toBeVisible();
     await expect(page.getByTestId("welcome-google")).toBeVisible();
     await expect(page.getByTestId("welcome-email-input")).toBeVisible();
     await expect(page.getByTestId("welcome-password-input")).toBeVisible();

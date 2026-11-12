@@ -56,7 +56,7 @@ export function getTitleFromPathname(pathname: string): string {
   if (pathname.startsWith("/s/")) {
     return "Shared report";
   }
-  return "Money Map";
+  return "Moneyrails";
 }
 
 export function AppHeader({
@@ -178,7 +178,7 @@ export function AppHeader({
       )}
     >
       <div className="flex items-center gap-2.5">
-        <BrandLogoMark size="sm" className="lg:hidden" />
+        <BrandLogoMark size={28} className="lg:hidden" />
         <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
           {displayTitle}
         </h1>

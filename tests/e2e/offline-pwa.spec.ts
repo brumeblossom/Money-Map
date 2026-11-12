@@ -18,8 +18,8 @@ test.describe("Offline App Shell & PWA (Prompt 11)", () => {
     expect(res.status()).toBe(200);
     const manifest = await res.json();
 
-    expect(manifest.name).toBe("Money Map");
-    expect(manifest.short_name).toBe("Money Map");
+    expect(manifest.name).toBe("Moneyrails");
+    expect(manifest.short_name).toBe("Moneyrails");
     expect(manifest.display).toBe("standalone");
     expect(manifest.start_url).toBe("/");
     expect(manifest.theme_color).toBe("#059669");
@@ -42,7 +42,7 @@ test.describe("Offline App Shell & PWA (Prompt 11)", () => {
     await expect(appleCapable).toHaveAttribute("content", "yes");
 
     const appleTitle = page.locator('meta[name="apple-mobile-web-app-title"]').first();
-    await expect(appleTitle).toHaveAttribute("content", "Money Map");
+    await expect(appleTitle).toHaveAttribute("content", "Moneyrails");
   });
 
   test("Settings > Add to Home Screen shows help without intrusive popups", async ({ page }) => {
@@ -79,7 +79,7 @@ test.describe("Offline App Shell & PWA (Prompt 11)", () => {
   }) => {
     // 1. Visit pages while online so they are cached by browser / service worker
     await page.goto("/");
-    await expect(page.getByText("Money Map").first()).toBeVisible();
+    await expect(page.getByText("Moneyrails").first()).toBeVisible();
 
     // Ensure service worker is registered and controlling the page
     await page.waitForFunction(async () => {
@@ -104,7 +104,7 @@ test.describe("Offline App Shell & PWA (Prompt 11)", () => {
 
     // 3. Reload Home offline
     await page.goto("/");
-    await expect(page.getByText("Money Map").first()).toBeVisible();
+    await expect(page.getByText("Moneyrails").first()).toBeVisible();
 
     // 4. Open form offline and save an entry
     await page.goto("/new/income");

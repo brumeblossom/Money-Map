@@ -1,77 +1,143 @@
 import * as React from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
+
+export type BrandLogoSize = "sm" | "sidebar" | "md" | "lg";
+export type BrandLogoSurface = "auto" | "light" | "dark";
 
 export interface BrandLogoProps {
   className?: string;
-  size?: "sm" | "md" | "lg" | "xl";
-  showText?: boolean;
-  textClassName?: string;
+  size?: BrandLogoSize | number;
+  surface?: BrandLogoSurface;
+  priority?: boolean;
 }
 
-export function BrandLogoMark({
-  className,
-  size = "md",
-  variant = "default",
-}: {
-  className?: string;
-  size?: "sm" | "md" | "lg" | "xl";
-  variant?: "default" | "sidebar";
-}) {
-  const sizeClasses = {
-    sm: "size-6 rounded-[7px] text-xs",
-    md: "size-8 rounded-[9px] text-sm",
-    lg: "size-10 rounded-[11px] text-base",
-    xl: "size-16 rounded-[18px] text-3xl",
-  };
-
-  const isSidebar = variant === "sidebar";
-
-  return (
-    <div
-      data-testid="brand-logo-mark"
-      className={cn(
-        "flex items-center justify-center font-extrabold select-none shadow-xs shrink-0",
-        isSidebar
-          ? "bg-white text-[#2A1F66]"
-          : "bg-primary text-primary-foreground",
-        sizeClasses[size],
-        className,
-      )}
-      style={{ fontFamily: "inherit" }}
-      aria-hidden="true"
-    >
-      <span className="leading-none tracking-tighter">M</span>
-    </div>
-  );
-}
+const LOGO_HEIGHTS: Record<BrandLogoSize, number> = {
+  sm: 28,
+  sidebar: 30,
+  md: 36,
+  lg: 40,
+};
 
 export function BrandLogo({
   className,
   size = "md",
-  showText = true,
-  textClassName,
+  surface = "auto",
+  priority = false,
 }: BrandLogoProps) {
-  const textSizes = {
-    sm: "text-sm",
-    md: "text-base",
-    lg: "text-lg",
-    xl: "text-3xl sm:text-4xl",
+  const height = typeof size === "number" ? size : (LOGO_HEIGHTS[size] ?? 36);
+  // Full logo aspect ratio is 1200x250 (4.8 : 1)
+  const width = Math.round(height * 4.8);
+
+  const imgStyle = {
+    height: `${height}px`,
+    width: "auto",
   };
 
+  // surface="dark": Always show white-text logo (for dark surfaces like desktop sidebar and footer)
+  if (surface === "dark") {
+    return (
+      <div
+        data-testid="brand-logo"
+        className={cn("inline-flex items-center shrink-0", className)}
+      >
+        <Image
+          src="/brand/logo-on-dark.png"
+          alt="Moneyrails"
+          width={width}
+          height={height}
+          style={imgStyle}
+          priority={priority}
+          className="h-auto w-auto max-h-full max-w-full select-none"
+        />
+      </div>
+    );
+  }
+
+  // surface="light": Always show dark-text logo
+  if (surface === "light") {
+    return (
+      <div
+        data-testid="brand-logo"
+        className={cn("inline-flex items-center shrink-0", className)}
+      >
+        <Image
+          src="/brand/logo-on-light.png"
+          alt="Moneyrails"
+          width={width}
+          height={height}
+          style={imgStyle}
+          priority={priority}
+          className="h-auto w-auto max-h-full max-w-full select-none"
+        />
+      </div>
+    );
+  }
+
+  // surface="auto": CSS-driven instant theme switching without hydration flash
   return (
-    <div className={cn("flex items-center gap-2.5", className)}>
-      <BrandLogoMark size={size} />
-      {showText && (
-        <span
-          className={cn(
-            "font-extrabold tracking-tight text-foreground select-none",
-            textSizes[size],
-            textClassName,
-          )}
-        >
-          Money Map
-        </span>
-      )}
+    <div
+      data-testid="brand-logo"
+      className={cn("inline-flex items-center shrink-0", className)}
+    >
+      <Image
+        src="/brand/logo-on-light.png"
+        alt="Moneyrails"
+        width={width}
+        height={height}
+        style={imgStyle}
+        priority={priority}
+        className="dark:hidden block h-auto w-auto max-h-full max-w-full select-none"
+      />
+      <Image
+        src="/brand/logo-on-dark.png"
+        alt="Moneyrails"
+        width={width}
+        height={height}
+        style={imgStyle}
+        priority={priority}
+        className="hidden dark:block h-auto w-auto max-h-full max-w-full select-none"
+      />
+    </div>
+  );
+}
+
+export type BrandLogoMarkSize = "sm" | "md" | "lg" | "xl";
+
+export interface BrandLogoMarkProps {
+  className?: string;
+  size?: BrandLogoMarkSize | number;
+  priority?: boolean;
+}
+
+const MARK_SIZES: Record<BrandLogoMarkSize, number> = {
+  sm: 24,
+  md: 28,
+  lg: 36,
+  xl: 48,
+};
+
+export function BrandLogoMark({
+  className,
+  size = "md",
+  priority = false,
+}: BrandLogoMarkProps) {
+  const dimension = typeof size === "number" ? size : (MARK_SIZES[size] ?? 28);
+
+  return (
+    <div
+      data-testid="brand-logo-mark"
+      className={cn("inline-flex items-center justify-center shrink-0 select-none", className)}
+      style={{ width: `${dimension}px`, height: `${dimension}px` }}
+    >
+      <Image
+        src="/brand/icon-mark.png"
+        alt="Moneyrails"
+        width={dimension}
+        height={dimension}
+        priority={priority}
+        className="h-full w-full object-contain select-none"
+      />
     </div>
   );
 }

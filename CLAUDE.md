@@ -1,4 +1,4 @@
-# Money Map: rules for the coding agent
+# Moneyrails: rules for the coding agent
 
 The full spec is `docs/PRD.md`.
 

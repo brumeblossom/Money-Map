@@ -1,4 +1,4 @@
-# Money Map: PRD v1
+# Moneyrails: PRD v1
 
 2026-10-20 · Chinedum
 

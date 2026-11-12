@@ -455,7 +455,7 @@ export default function SettingsPage() {
           <div>
             <h3 className="text-base font-semibold text-foreground">Theme</h3>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Choose how Money Map looks to you.
+              Choose how Moneyrails looks to you.
             </p>
 
             <div className="mt-3 flex items-center gap-1.5 rounded-xl bg-muted p-1 sm:w-80">
@@ -607,11 +607,11 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Footer row: Money Map v1 on left, Send feedback on right */}
+      {/* Footer row: Moneyrails v1 on left, Send feedback on right */}
       <div className="flex items-center justify-between px-1 text-xs text-muted-foreground pt-4">
-        <span data-testid="app-version">Money Map v1</span>
+        <span data-testid="app-version">Moneyrails v1</span>
         <a
-          href="mailto:workwithbrume@gmail.com?subject=Money%20Map%20feedback"
+          href="mailto:workwithbrume@gmail.com?subject=Moneyrails%20feedback"
           data-testid="send-feedback-link"
           className="inline-flex items-center gap-1.5 text-primary hover:underline font-medium cursor-pointer"
         >
@@ -670,7 +670,7 @@ export default function SettingsPage() {
               Sign out of all devices?
             </h3>
             <p className="text-sm text-muted-foreground">
-              This will sign you out of Money Map on every phone, tablet, and computer you&apos;ve signed in on.
+              This will sign you out of Moneyrails on every phone, tablet, and computer you&apos;ve signed in on.
             </p>
 
             <div className="flex items-center justify-end gap-3 pt-2">
@@ -709,7 +709,7 @@ export default function SettingsPage() {
                 Delete account?
               </h3>
               <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                This action is irreversible. All your transactions, loans, categories, recurring entries, and settings will be permanently deleted from Money Map servers and this device.
+                This action is irreversible. All your transactions, loans, categories, recurring entries, and settings will be permanently deleted from Moneyrails servers and this device.
               </p>
             </div>
 

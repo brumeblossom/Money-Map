@@ -7,7 +7,7 @@ export function getReportPdfFileName(snapshot: ReportSnapshot): string {
   if (snapshot.type === "single_entry") {
     const action = snapshot.action;
     const dateStr = snapshot.displayDate;
-    return `MoneyMap_${action}_${dateStr}.pdf`;
+    return `moneyrails-report-${action}-${dateStr}.pdf`;
   }
 
   if (snapshot.type === "single_loan") {
@@ -16,13 +16,13 @@ export function getReportPdfFileName(snapshot: ReportSnapshot): string {
         ? `${snapshot.borrower.replace(/[^a-zA-Z0-9_-]/g, "_")}_`
         : "";
     const dateStr = snapshot.expectedBackBy;
-    return `MoneyMap_Loan_${borrower}${dateStr}.pdf`;
+    return `moneyrails-report-loan-${borrower}${dateStr}.pdf`;
   }
 
   // Period report
   const startStr = formatDate(snapshot.periodStart);
   const endStr = formatDate(snapshot.periodEnd);
-  return `MoneyMap_${startStr}_to_${endStr}.pdf`;
+  return `moneyrails-report-${startStr}-to-${endStr}.pdf`;
 }
 
 export async function preloadPdfRenderer(): Promise<void> {

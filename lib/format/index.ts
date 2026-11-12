@@ -1,5 +1,5 @@
 /**
- * Formatting and parsing helpers for Money Map.
+ * Formatting and parsing helpers for Moneyrails.
  *
  * PRD Rules:
  * - Rule 2: Money is stored as integers in minor units in amount_minor.

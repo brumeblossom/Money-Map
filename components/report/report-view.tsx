@@ -15,7 +15,7 @@ export function ReportView({ snapshot }: ReportViewProps) {
         <header className="mb-6 flex items-start justify-between border-b border-border/70 pb-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Money Map
+              Moneyrails
             </h1>
             <p className="mt-1 text-xs text-muted-foreground">
               {snapshot.displayDate}
@@ -83,7 +83,7 @@ export function ReportView({ snapshot }: ReportViewProps) {
         </div>
 
         <footer className="mt-12 border-t border-border/60 pt-6 text-center text-xs text-muted-foreground">
-          Made with Money Map
+          Made with Moneyrails
         </footer>
       </div>
     );
@@ -95,7 +95,7 @@ export function ReportView({ snapshot }: ReportViewProps) {
         <header className="mb-6 flex items-start justify-between border-b border-border/70 pb-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Money Map
+              Moneyrails
             </h1>
             <p className="mt-1 text-xs text-muted-foreground">
               Loan {!snapshot.hideDetails ? `to ${snapshot.borrower}` : ""}
@@ -191,7 +191,7 @@ export function ReportView({ snapshot }: ReportViewProps) {
         )}
 
         <footer className="mt-12 border-t border-border/60 pt-6 text-center text-xs text-muted-foreground">
-          Made with Money Map
+          Made with Moneyrails
         </footer>
       </div>
     );
@@ -204,7 +204,7 @@ export function ReportView({ snapshot }: ReportViewProps) {
       <header className="mb-6 flex items-start justify-between border-b border-border/70 pb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Money Map
+            Moneyrails
           </h1>
           <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
             {snapshot.periodLabel}
@@ -371,7 +371,7 @@ export function ReportView({ snapshot }: ReportViewProps) {
 
       {/* Footer */}
       <footer className="mt-12 border-t border-border/60 pt-6 text-center text-xs text-muted-foreground">
-        Made with Money Map
+        Made with Moneyrails
       </footer>
     </div>
   );

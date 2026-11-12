@@ -10,7 +10,7 @@ import {
   Settings,
   Shield,
 } from "lucide-react";
-import { BrandLogoMark } from "@/components/brand-logo";
+import { BrandLogo } from "@/components/brand-logo";
 import { useProfile } from "@/lib/repo/hooks";
 import { cn } from "cn";
 
@@ -118,11 +118,8 @@ export function AppSidebar({ className }: { className?: string }) {
       )}
     >
       {/* Top Logo */}
-      <div className="flex h-14 items-center gap-2.5 border-b border-sidebar-border px-5">
-        <BrandLogoMark size="md" variant="sidebar" />
-        <span className="text-base font-extrabold tracking-tight text-sidebar-foreground">
-          Money Map
-        </span>
+      <div className="flex h-14 items-center border-b border-sidebar-border px-5">
+        <BrandLogo surface="dark" size="sidebar" />
       </div>
 
       {/* Navigation */}

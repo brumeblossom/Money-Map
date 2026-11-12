@@ -71,7 +71,7 @@ export function InstallPwaCard({ embedded = false }: { embedded?: boolean } = {}
             </h3>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Open Money Map in its own app window and use it when you have no internet.
+            Open Moneyrails in its own app window and use it when you have no internet.
           </p>
         </div>
       </div>
@@ -80,7 +80,7 @@ export function InstallPwaCard({ embedded = false }: { embedded?: boolean } = {}
         {installed ? (
           <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="size-4" />
-            <span>Money Map is installed on this device</span>
+            <span>Moneyrails is installed on this device</span>
           </div>
         ) : isIos ? (
           <div className="space-y-3" data-testid="ios-install-steps">

@@ -54,22 +54,6 @@ const styles = StyleSheet.create({
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
-  },
-  logoMark: {
-    width: 20,
-    height: 20,
-    borderRadius: 5,
-    backgroundColor: "#5B3FD1",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logoText: {
-    color: "#ffffff",
-    fontFamily: "NotoSans",
-    fontWeight: "bold",
-    fontSize: 12,
-    lineHeight: 1,
   },
   title: {
     fontSize: 18,
@@ -263,10 +247,7 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
             <View style={styles.headerTop}>
               <View>
                 <View style={styles.logoContainer}>
-                  <View style={styles.logoMark}>
-                    <Text style={styles.logoText}>M</Text>
-                  </View>
-                  <Text style={styles.title}>Money Map</Text>
+                  <Text style={styles.title}>Moneyrails</Text>
                 </View>
                 <Text style={styles.subtitle}>{snapshot.displayDate}</Text>
               </View>
@@ -315,7 +296,7 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
           </View>
 
           <View style={styles.footer} fixed>
-            <Text>Made with Money Map</Text>
+            <Text>Made with Moneyrails</Text>
             <Text
               render={({ pageNumber, totalPages }) =>
                 `Page ${pageNumber} of ${totalPages}`
@@ -335,10 +316,7 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
             <View style={styles.headerTop}>
               <View>
                 <View style={styles.logoContainer}>
-                  <View style={styles.logoMark}>
-                    <Text style={styles.logoText}>M</Text>
-                  </View>
-                  <Text style={styles.title}>Money Map</Text>
+                  <Text style={styles.title}>Moneyrails</Text>
                 </View>
                 <Text style={styles.subtitle}>Loan to {snapshot.borrower}</Text>
               </View>
@@ -418,7 +396,7 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
           )}
 
           <View style={styles.footer} fixed>
-            <Text>Made with Money Map</Text>
+            <Text>Made with Moneyrails</Text>
             <Text
               render={({ pageNumber, totalPages }) =>
                 `Page ${pageNumber} of ${totalPages}`
@@ -439,10 +417,7 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
           <View style={styles.headerTop}>
             <View>
               <View style={styles.logoContainer}>
-                <View style={styles.logoMark}>
-                  <Text style={styles.logoText}>M</Text>
-                </View>
-                <Text style={styles.title}>Money Map</Text>
+                <Text style={styles.title}>Moneyrails report</Text>
               </View>
               <Text style={styles.subtitle}>{snapshot.periodLabel}</Text>
             </View>
@@ -576,7 +551,7 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
 
         {/* Running Footer on Every Page */}
         <View style={styles.footer} fixed>
-          <Text>Made with Money Map</Text>
+          <Text>Made with Moneyrails</Text>
           <Text
             render={({ pageNumber, totalPages }) =>
               `Page ${pageNumber} of ${totalPages}`

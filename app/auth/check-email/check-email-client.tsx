@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { MailCheck, ArrowLeft, Loader2, RefreshCw } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 import { createClient } from "@/lib/supabase/client";
 import { mapAuthErrorMessage } from "@/lib/auth/errors";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -88,6 +89,8 @@ export function CheckEmailClient() {
 
       {/* Centred Card */}
       <div className="w-full max-w-[440px] rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-xs text-center space-y-6">
+        <BrandLogo size="md" className="mx-auto" />
+
         {/* Mail Icon in a soft violet circle */}
         <div className="space-y-3">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-primary shadow-xs">

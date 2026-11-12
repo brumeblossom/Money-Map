@@ -1585,13 +1585,79 @@ The following environment variables can now be safely removed from Vercel projec
   3. Replace draft PWA icons with final branded 192px and 512px maskable vector assets.
   4. Plan v2 roadmap items from PRD section 11 (Money I borrowed, monthly category budgets, receipt attachments, savings goals, bank feeds).
 
+### Prompt 21: Rebrand to Moneyrails & New Logo (13-11-2026)
+
+- **Branding & Assets**:
+  - Renamed the application from "Money Map" to "Moneyrails" (capital M only).
+  - Copied brand assets from `docs/design/moneyrails-brand/` to `public/brand/`:
+    - `public/brand/logo-on-light.png`: dark text full logo for light surfaces.
+    - `public/brand/logo-on-dark.png`: white text full logo for dark/violet surfaces.
+    - `public/brand/icon-mark.png`: standalone brand icon mark.
+  - Replaced app icons and favicons in `public/` and `app/`:
+    - `app/favicon.ico` and `public/favicon.ico`
+    - `public/favicon.png` (32x32)
+    - `public/icons/apple-touch-icon.png` (180x180)
+    - `public/icons/icon-192x192.png` and `public/icons/icon-512x512.png`
+    - `public/icons/icon-maskable-192x192.png` and `public/icons/icon-maskable-512x512.png`
+
+- **Brand Logo Component (`components/brand-logo.tsx`)**:
+  - Implemented `BrandLogo` rendering the full logo image (1200x250 aspect ratio) using `next/image` with sizes `sm` (28px height), `sidebar` (30px height), `md` (36px height), `lg` (40px height), `alt="Moneyrails"`.
+  - Added support for `surface="auto" | "light" | "dark"`. With `surface="auto"`, both light and dark logos are pre-rendered with CSS dark-mode classes (`dark:hidden` / `hidden dark:block`), preventing theme-switch hydration flash. With `surface="dark"`, white text logo is forced regardless of active theme.
+  - Implemented `BrandLogoMark` using `icon-mark.png` for compact header placement (28px on mobile).
+  - Completely removed the old violet "M" square across the app and PDF templates.
+
+- **Logo & Name Placement Across App**:
+  - **Landing Header**: Responsive `BrandLogo` (36px on desktop, 28px on phone), linked to `#top`, `aria-label="Moneyrails home"`.
+  - **Landing Footer**: `BrandLogo` with `surface="dark"` (40px), linked to `#top`, `aria-label="Moneyrails home"`.
+  - **Desktop App Sidebar**: `BrandLogo` with `surface="dark"` (30px), plain branding (not a link).
+  - **Mobile App Header**: `BrandLogoMark` (28px) placed next to page title.
+  - **Auth Cards (`/welcome`, `/auth/check-email`, `/auth/error`)**: Full `BrandLogo` centered at the top of cards (not a link).
+  - **Admin Dashboard Header**: `BrandLogo` added above analytics title.
+  - **Report & PDF Export (`components/report/pdf-document.tsx`, `lib/report/pdf-export.ts`)**:
+    - Report title updated to "Moneyrails report" (period) and "Moneyrails" (single entry/loan).
+    - Footer updated to "Made with Moneyrails".
+    - PDF export filenames updated to `moneyrails-report-<period>.pdf`.
+  - **Metadata, Layout & Manifest**:
+    - `app/layout.tsx`: Title template `"%s | Moneyrails"`, default `"Moneyrails · Know where your money goes"`, OpenGraph/Twitter titles and site name updated to "Moneyrails".
+    - `app/opengraph-image.tsx`: Redesigned on light background (`#F7F6FC`) with `logo-on-light.png` and "Know where your money goes".
+    - `app/manifest.ts` & `public/manifest.json`: `name: "Moneyrails"`, `short_name: "Moneyrails"`.
+    - Default URL updated to `https://moneyrails.vercel.app`.
+  - **Middleware**: Whitelisted `/brand/` and `/opengraph-image` in `middleware.ts` to allow static public asset delivery.
+
+- **Internal IDs Preserved (Zero Data Loss / Session Disruption)**:
+  - Dexie database name remains `"moneymap"` in `lib/db/dexie.ts`.
+  - Cookie names remain unchanged: `moneymap_guest`, `mm_guest`, `moneymap_has_session`, `moneymap_mock_user`, `moneymap_is_admin`.
+  - Local/session storage keys remain unchanged: `moneymap_pending_first_name`, `moneymap_records_tab`, `moneymap_records_scroll_*`, `moneymap_settings_scroll`.
+  - Supabase database schema, tables, and columns untouched.
+  - Environment variable names untouched.
+  - Package name and test IDs untouched.
+
+- **Grep Audit for "Money Map"**:
+  - All application code in `app/`, `components/`, `lib/`, `tests/` updated.
+  - The only remaining matches in repository are:
+    1. Historical design prototype: `docs/design/landing-preview/money-map-landing-preview.html`
+    2. Historical PROGRESS logs: entries prior to Prompt 21 in `docs/PROGRESS.md`
+    3. Remote Supabase metadata/comments: `supabase/migrations/20261020220000_initial_schema.sql`, `supabase/tests/*.sql`, `supabase/.temp/linked-project.json`
+
+- **Verification**:
+  - `bun run lint`: 0 errors.
+  - `bun run typecheck`: 0 errors.
+  - `bun run test`: 24 test suites, 233/233 unit tests passed (including `pdf.test.ts`).
+  - `bun run build`: All 31 routes built successfully with zero errors.
+  - Playwright E2E:
+    - `tests/e2e/branding.spec.ts`: 10/10 passed on 390px phone and 1280px desktop.
+    - `tests/e2e/prompt17h-landing.spec.ts`: 12/12 passed.
+    - `tests/e2e/prompt17b-landing.spec.ts` & `tests/e2e/prompt17f.spec.ts`: 28/28 passed.
+    - Guest data survival test verified: adding entry, refreshing page, entry persists in Dexie.
+
 ## Known issues
 
 - None.
 
 ## Next prompt
 
-v1 launched! Project in maintenance and v2 planning.
+Ready for next task.
+
 
 
 

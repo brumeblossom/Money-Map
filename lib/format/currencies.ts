@@ -6,7 +6,7 @@ export interface CurrencyOption {
 
 /**
  * Common and comprehensive ISO 4217 currency list.
- * NGN is the default for Money Map.
+ * NGN is the default for Moneyrails.
  */
 export const ISO_CURRENCIES: CurrencyOption[] = [
   // Primary regional & major global currencies first

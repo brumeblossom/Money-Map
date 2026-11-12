@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Money Map",
-    short_name: "Money Map",
+    name: "Moneyrails",
+    short_name: "Moneyrails",
     description: "Clear, private, offline-first personal finance.",
     start_url: "/",
     display: "standalone",

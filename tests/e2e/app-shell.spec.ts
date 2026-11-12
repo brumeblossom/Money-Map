@@ -5,7 +5,7 @@ import { setGuestCookie } from "./test-helpers";
 
 const PRD_ROUTES = [
   { path: "/", title: "Home" },
-  { path: "/welcome?intent=signin", title: "Money Map" },
+  { path: "/welcome?intent=signin", title: "Moneyrails" },
   { path: "/auth/check-email", title: "Check your email" },
   { path: "/auth/callback", title: "Signing you in..." },
   { path: "/new/income", title: "Entry form" },

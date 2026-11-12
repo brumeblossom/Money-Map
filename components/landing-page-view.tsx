@@ -3,7 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { BrandLogoMark } from "@/components/brand-logo";
+import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AccountDeletedToast } from "@/components/account-deleted-toast";
 
@@ -76,10 +76,11 @@ export function LandingPageView() {
             href="#top"
             onClick={handleScrollTo("top")}
             data-testid="landing-logo"
-            className="flex items-center gap-2.5 font-extrabold text-[18px] text-foreground tracking-tight no-underline select-none"
+            aria-label="Moneyrails home"
+            className="flex items-center no-underline select-none"
           >
-            <BrandLogoMark size="md" />
-            <span>Money Map</span>
+            <BrandLogo size="md" className="hidden sm:inline-flex" priority />
+            <BrandLogo size="sm" className="sm:hidden inline-flex" priority />
           </a>
 
           {/* Desktop Nav Links (1024px and up) */}
@@ -189,7 +190,7 @@ export function LandingPageView() {
             <div
               data-testid="landing-phone-mockup"
               className="lg:col-span-5 relative grid place-items-center py-6 select-none"
-              aria-label="Money Map app preview"
+              aria-label="Moneyrails app preview"
             >
               {/* Soft round glow (NO lines, dots, or patterns behind) */}
               <div
@@ -570,7 +571,7 @@ export function LandingPageView() {
           </div>
         </section>
 
-        {/* c) "Why Money Map" Section */}
+        {/* c) "Why Moneyrails" Section */}
         <section
           id="why"
           className="scroll-mt-20 py-16 sm:py-24 bg-landing-alt border-y border-border"
@@ -579,14 +580,14 @@ export function LandingPageView() {
             {/* Copy */}
             <div className="flex flex-col gap-5 text-center lg:text-left items-center lg:items-start min-w-0">
               <span className="text-[12px] font-bold tracking-[0.12em] uppercase text-primary">
-                Why Money Map
+                Why Moneyrails
               </span>
               <h2 className="text-[28px] sm:text-[34px] lg:text-[40px] font-extrabold tracking-tight text-foreground leading-[1.15] text-balance">
                 What you need to know about{" "}
-                <span className="text-primary">Money Map</span>
+                <span className="text-primary">Moneyrails</span>
               </h2>
               <p className="text-[16px] text-muted-foreground leading-relaxed">
-                <b className="text-foreground font-bold">Money Map</b> is a
+                <b className="text-foreground font-bold">Moneyrails</b> is a
                 simple money diary for your phone and laptop. Record what comes
                 in, what goes out, what you give and who owes you, in seconds.
                 Then see exactly where your money went each month.
@@ -769,7 +770,7 @@ export function LandingPageView() {
                   Made for <span className="text-primary">real life</span>
                 </h2>
                 <p className="text-[16px] text-muted-foreground leading-relaxed">
-                  Small amounts add up. Money Map makes it easy
+                  Small amounts add up. Moneyrails makes it easy
                   <br className="hidden md:inline" /> to write them down the
                   moment they happen.
                 </p>
@@ -931,7 +932,7 @@ export function LandingPageView() {
                   className="group border border-border rounded-[14px] bg-white dark:bg-[#121118] open:border-primary/40 transition-colors"
                 >
                   <summary className="list-none [&::-webkit-details-marker]:hidden cursor-pointer flex justify-between items-center gap-4 px-5 py-4 font-semibold text-[15px] text-foreground select-none">
-                    <span>Is Money Map free?</span>
+                    <span>Is Moneyrails free?</span>
                     <span className="shrink-0 size-7 rounded-lg bg-secondary text-primary flex items-center justify-center transition-transform duration-200 group-open:rotate-45">
                       <svg
                         className="size-3.5 block"
@@ -946,7 +947,7 @@ export function LandingPageView() {
                     </span>
                   </summary>
                   <p className="px-5 pb-4.5 pt-0 text-muted-foreground text-[14px] leading-relaxed">
-                    Yes. Money Map is free to use. You don&apos;t need a card to
+                    Yes. Moneyrails is free to use. You don&apos;t need a card to
                     sign up.
                   </p>
                 </details>
@@ -994,7 +995,7 @@ export function LandingPageView() {
                   </summary>
                   <p className="px-5 pb-4.5 pt-0 text-muted-foreground text-[14px] leading-relaxed">
                     Yes. Only you can see your records when you&apos;re signed in.
-                    Money Map never asks for your bank details or connects to
+                    Moneyrails never asks for your bank details or connects to
                     your bank, and we don&apos;t sell your data.
                   </p>
                 </details>
@@ -1041,7 +1042,7 @@ export function LandingPageView() {
                   </summary>
                   <p className="px-5 pb-4.5 pt-0 text-muted-foreground text-[14px] leading-relaxed">
                     Yes. Sign in with the same account on both and your records
-                    match everywhere. On your phone you can also add Money Map to
+                    match everywhere. On your phone you can also add Moneyrails to
                     your Home Screen like an app.
                   </p>
                 </details>
@@ -1084,10 +1085,10 @@ export function LandingPageView() {
               <a
                 href="#top"
                 onClick={handleScrollTo("top")}
-                className="flex items-center gap-2.5 font-extrabold text-[18px] text-white tracking-tight no-underline select-none"
+                aria-label="Moneyrails home"
+                className="flex items-center no-underline select-none"
               >
-                <BrandLogoMark size="md" variant="sidebar" />
-                <span>Money Map</span>
+                <BrandLogo surface="dark" size="lg" />
               </a>
               <p className="text-[14px] text-[#BDB6E3] dark:text-[#A9A2D6] leading-relaxed">
                 A simple way to record your income, expenses, giving and money
@@ -1109,7 +1110,7 @@ export function LandingPageView() {
                   onClick={handleScrollTo("why")}
                   className="hover:text-white transition-colors no-underline py-0.5"
                 >
-                  Why Money Map
+                  Why Moneyrails
                 </a>
                 <a
                   href="#features"
@@ -1194,7 +1195,7 @@ export function LandingPageView() {
 
           {/* Bottom strip */}
           <div className="mt-14 border-t border-white/14 py-5.5 flex justify-between items-center gap-4 text-xs sm:text-[13px] text-[#BDB6E3] dark:text-[#A9A2D6]">
-            <span>© 2026 Money Map</span>
+            <span>© 2026 Moneyrails</span>
             <nav className="flex gap-4 sm:gap-6" aria-label="Footer legal">
               <a
                 href="mailto:workwithbrume@gmail.com"

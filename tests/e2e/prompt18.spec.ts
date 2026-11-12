@@ -402,7 +402,7 @@ test.describe("Prompt 18: Settings and Account Management", () => {
     await setGuestCookie(context);
     await page.goto("/settings");
 
-    await expect(page.getByTestId("app-version")).toContainText("Money Map v");
+    await expect(page.getByTestId("app-version")).toContainText("Moneyrails v");
     const feedbackLink = page.getByTestId("send-feedback-link");
     await expect(feedbackLink).toBeVisible();
     await expect(feedbackLink).toHaveAttribute(

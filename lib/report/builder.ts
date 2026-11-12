@@ -218,7 +218,7 @@ export function buildPeriodReport({
 
   return {
     type: "period",
-    title: "Money Map",
+    title: "Moneyrails",
     userName: userName?.trim() || "",
     currency,
     periodStart,
@@ -269,7 +269,7 @@ export function buildSingleEntryReport({
 
   return {
     type: "single_entry",
-    title: "Money Map",
+    title: "Moneyrails",
     userName: userName?.trim() || "",
     currency,
     action: actionLabel,
@@ -358,7 +358,7 @@ export function buildSingleLoanReport({
 
   return {
     type: "single_loan",
-    title: "Money Map",
+    title: "Moneyrails",
     userName: userName?.trim() || "",
     currency,
     borrower: hideDetails ? "Hidden" : loan.counterparty,

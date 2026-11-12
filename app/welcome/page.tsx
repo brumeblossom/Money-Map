@@ -12,7 +12,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
-import { BrandLogoMark } from "@/components/brand-logo";
+import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PasswordRulesChecklist } from "@/components/password-rules-checklist";
 import { createClient } from "@/lib/supabase/client";
@@ -404,7 +404,7 @@ function WelcomeContent() {
 
   // Card headers and subtitles per view mode
   let title = "Welcome back";
-  let subtitle = "Sign in to your Money Map";
+  let subtitle = "Sign in to your Moneyrails account";
 
   if (viewMode === "signup") {
     title = "Create your account";
@@ -441,9 +441,9 @@ function WelcomeContent() {
 
       {/* Centred Card */}
       <div className="w-full max-w-[440px] rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-xs">
-        {/* Inside: Logo mark, title, subtitle */}
+        {/* Inside: Logo, title, subtitle */}
         <div className="text-center space-y-3 mb-6">
-          <BrandLogoMark size="lg" className="mx-auto shadow-sm" />
+          <BrandLogo size="md" className="mx-auto" />
           <div className="space-y-1">
             <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               {title}

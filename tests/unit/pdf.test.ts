@@ -9,7 +9,7 @@ describe("PDF Report Font & Formatting (F12, F13)", () => {
   it("renders PDF containing ₦ (U+20A6) and no user name", async () => {
     const mockSnapshot: ReportSnapshot = {
       type: "period",
-      title: "Money Map",
+      title: "Moneyrails",
       userName: "Secret User Name",
       currency: "NGN",
       periodLabel: "01-10-2026 to 31-10-2026",
@@ -66,7 +66,7 @@ describe("PDF Report Font & Formatting (F12, F13)", () => {
     // Verify user name is removed as per Rule 13
     expect(text).not.toContain("Secret User Name");
     // Verify basic content
-    expect(text).toContain("Money Map");
+    expect(text).toContain("Moneyrails");
     expect(text).toContain("01-10-2026 to 31-10-2026");
   }, 30000);
 });

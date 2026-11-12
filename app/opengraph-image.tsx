@@ -1,6 +1,8 @@
 import { ImageResponse } from "next/og";
+import fs from "node:fs";
+import path from "node:path";
 
-export const alt = "Money Map — Know where your money goes";
+export const alt = "Moneyrails · Know where your money goes";
 export const size = {
   width: 1200,
   height: 630,
@@ -8,6 +10,10 @@ export const size = {
 export const contentType = "image/png";
 
 export default async function Image() {
+  const logoPath = path.join(process.cwd(), "public", "brand", "logo-on-light.png");
+  const logoData = fs.readFileSync(logoPath);
+  const logoBase64 = `data:image/png;base64,${logoData.toString("base64")}`;
+
   return new ImageResponse(
     (
       <div
@@ -18,81 +24,21 @@ export default async function Image() {
           flexDirection: "column",
           alignItems: "flex-start",
           justifyContent: "space-between",
-          backgroundColor: "#2A1F66",
+          backgroundColor: "#F7F6FC",
           padding: "80px",
           fontFamily: "sans-serif",
         }}
       >
-        {/* Brand Logo & Name */}
-        <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-          <div
+        {/* Brand Logo */}
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <img
+            src={logoBase64}
+            alt="Moneyrails"
             style={{
-              width: "64px",
               height: "64px",
-              borderRadius: "16px",
-              backgroundColor: "#5B3FD1",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+              width: "auto",
             }}
-          >
-            {/* Logo Mark: 4 pill segments */}
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                width: "36px",
-                height: "36px",
-                gap: "4px",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <div
-                style={{
-                  width: "14px",
-                  height: "14px",
-                  borderRadius: "5px",
-                  backgroundColor: "#FFFFFF",
-                }}
-              />
-              <div
-                style={{
-                  width: "14px",
-                  height: "14px",
-                  borderRadius: "5px",
-                  backgroundColor: "rgba(255,255,255,0.7)",
-                }}
-              />
-              <div
-                style={{
-                  width: "14px",
-                  height: "14px",
-                  borderRadius: "5px",
-                  backgroundColor: "rgba(255,255,255,0.7)",
-                }}
-              />
-              <div
-                style={{
-                  width: "14px",
-                  height: "14px",
-                  borderRadius: "5px",
-                  backgroundColor: "#ECE8FC",
-                }}
-              />
-            </div>
-          </div>
-          <span
-            style={{
-              fontSize: "36px",
-              fontWeight: 800,
-              color: "#FFFFFF",
-              letterSpacing: "-0.02em",
-            }}
-          >
-            Money Map
-          </span>
+          />
         </div>
 
         {/* Headline & Description */}
@@ -101,7 +47,7 @@ export default async function Image() {
             style={{
               fontSize: "64px",
               fontWeight: 800,
-              color: "#FFFFFF",
+              color: "#17191C",
               letterSpacing: "-0.03em",
               lineHeight: 1.1,
               margin: 0,
@@ -113,7 +59,7 @@ export default async function Image() {
             style={{
               fontSize: "28px",
               fontWeight: 400,
-              color: "#ECE8FC",
+              color: "#5E636B",
               lineHeight: 1.4,
               margin: 0,
             }}
@@ -124,7 +70,7 @@ export default async function Image() {
         </div>
 
         {/* Feature Highlights */}
-        <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
           <div
             style={{
               display: "flex",
@@ -132,8 +78,8 @@ export default async function Image() {
               gap: "10px",
               padding: "10px 20px",
               borderRadius: "9999px",
-              backgroundColor: "rgba(255,255,255,0.1)",
-              color: "#FFFFFF",
+              backgroundColor: "#ECE8FC",
+              color: "#5B3FD1",
               fontSize: "18px",
               fontWeight: 600,
             }}
@@ -147,8 +93,8 @@ export default async function Image() {
               gap: "10px",
               padding: "10px 20px",
               borderRadius: "9999px",
-              backgroundColor: "rgba(255,255,255,0.1)",
-              color: "#FFFFFF",
+              backgroundColor: "#ECE8FC",
+              color: "#5B3FD1",
               fontSize: "18px",
               fontWeight: 600,
             }}
@@ -162,8 +108,8 @@ export default async function Image() {
               gap: "10px",
               padding: "10px 20px",
               borderRadius: "9999px",
-              backgroundColor: "rgba(255,255,255,0.1)",
-              color: "#FFFFFF",
+              backgroundColor: "#ECE8FC",
+              color: "#5B3FD1",
               fontSize: "18px",
               fontWeight: 600,
             }}

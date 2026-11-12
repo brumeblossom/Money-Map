@@ -47,7 +47,7 @@ test.describe("Prompt 17b: Landing Page & Redesigned Auth Flow", () => {
       page.getByRole("heading", { name: "Start mapping your money today." })
     ).toBeVisible();
     await expect(page.getByTestId("landing-get-started-cta")).toBeVisible();
-    await expect(page.getByText("© 2026 Money Map")).toBeVisible();
+    await expect(page.getByText("© 2026 Moneyrails")).toBeVisible();
     const feedbackLink = page.getByRole("link", { name: "Send feedback" }).first();
     await expect(feedbackLink).toBeVisible();
     await expect(feedbackLink).toHaveAttribute("href", "mailto:workwithbrume@gmail.com");
@@ -138,7 +138,7 @@ test.describe("Prompt 17b: Landing Page & Redesigned Auth Flow", () => {
     await expect(
       page.getByRole("heading", { name: "Start mapping your money today." })
     ).toBeVisible();
-    await expect(page.getByText("© 2026 Money Map")).toBeVisible();
+    await expect(page.getByText("© 2026 Moneyrails")).toBeVisible();
   });
 
   test("Desktop viewport (1280px) verifies desktop landing page layout", async ({

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
+import { BrandLogo } from "@/components/brand-logo";
 import { formatDate } from "@/lib/format";
 import type { AdminAnalytics } from "@/lib/admin/types";
 import { cn } from "@/lib/utils";
@@ -99,6 +100,9 @@ export function AdminDashboardView({ initialData }: AdminDashboardViewProps) {
       {/* Header */}
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
+          <div className="mb-2">
+            <BrandLogo size="sm" />
+          </div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
               Admin Analytics

@@ -176,11 +176,11 @@ export function buildReminderEmailHtml({
     <html>
       <head>
         <meta charset="utf-8">
-        <title>Money Map Reminders</title>
+        <title>Moneyrails Reminders</title>
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f2937; line-height: 1.5; padding: 20px;">
         <div style="max-width: 560px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px;">
-          <h1 style="font-size: 20px; font-weight: 700; color: #111827; margin-top: 0;">Money Map Daily Reminders</h1>
+          <h1 style="font-size: 20px; font-weight: 700; color: #111827; margin-top: 0;">Moneyrails Daily Reminders</h1>
           <p style="font-size: 14px; color: #6b7280; margin-bottom: 20px;">
             Here are your reminders for <strong>${dateFormatted}</strong>:
           </p>
@@ -210,7 +210,7 @@ export function buildReminderEmailHtml({
           }
 
           <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af;">
-            <p style="margin: 0;">This email was sent to ${userEmail} because "Email me a daily reminder" is enabled in your Money Map settings.</p>
+            <p style="margin: 0;">This email was sent to ${userEmail} because "Email me a daily reminder" is enabled in your Moneyrails settings.</p>
           </div>
         </div>
       </body>

@@ -219,7 +219,7 @@ test.describe("Prompt 16: PDF export and share links (US-8.1, US-8.2)", () => {
     await parser.destroy();
 
     // Assert title, no user name (Rule 13), Naira symbol (Rule 12), and DD-MM-YYYY dates
-    expect(pdfText).toContain("Money Map");
+    expect(pdfText).toContain("Moneyrails");
     expect(pdfText).not.toContain("Adaeze Okafor");
     expect(pdfText).toContain("₦");
     expect(pdfText).toContain("01-10-2026");

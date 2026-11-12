@@ -15,10 +15,10 @@ const plusJakartaSans = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://moneymap.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://moneyrails.vercel.app"),
   title: {
-    default: "Money Map — Know where your money goes",
-    template: "%s | Money Map",
+    default: "Moneyrails · Know where your money goes",
+    template: "%s | Moneyrails",
   },
   description:
     "Record your income, expenses, giving and money you've lent in seconds. See clear monthly totals and spending habits on your phone or laptop.",
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Money Map",
+    title: "Moneyrails",
   },
   other: {
     "apple-mobile-web-app-capable": "yes",
@@ -37,15 +37,15 @@ export const metadata: Metadata = {
     apple: "/icons/apple-touch-icon.png",
   },
   openGraph: {
-    title: "Money Map — Know where your money goes",
+    title: "Moneyrails · Know where your money goes",
     description:
       "Record your income, expenses, giving and money you've lent in seconds. See clear monthly totals and spending habits on your phone or laptop.",
     type: "website",
-    siteName: "Money Map",
+    siteName: "Moneyrails",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Money Map — Know where your money goes",
+    title: "Moneyrails · Know where your money goes",
     description:
       "Record your income, expenses, giving and money you've lent in seconds. See clear monthly totals and spending habits on your phone or laptop.",
   },

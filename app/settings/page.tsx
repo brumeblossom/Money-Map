@@ -607,9 +607,25 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Footer row: Moneyrails v1 on left, Send feedback on right */}
-      <div className="flex items-center justify-between px-1 text-xs text-muted-foreground pt-4">
-        <span data-testid="app-version">Moneyrails v1</span>
+      {/* Footer row: Moneyrails v1 & legal links on left, Send feedback on right */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1 text-xs text-muted-foreground pt-4 border-t border-border">
+        <div className="flex items-center gap-4 flex-wrap">
+          <span data-testid="app-version">Moneyrails v1</span>
+          <Link
+            href="/privacy"
+            prefetch={false}
+            className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
+          >
+            Privacy policy
+          </Link>
+          <Link
+            href="/terms"
+            prefetch={false}
+            className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
+          >
+            Terms of use
+          </Link>
+        </div>
         <a
           href="mailto:workwithbrume@gmail.com?subject=Moneyrails%20feedback"
           data-testid="send-feedback-link"

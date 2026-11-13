@@ -19,6 +19,8 @@ declare const self: ServiceWorkerGlobalScope;
 const precacheList: (PrecacheEntry | string)[] = [
   ...(self.__SW_MANIFEST || []),
   { url: "/offline", revision: "1" },
+  { url: "/privacy", revision: "1" },
+  { url: "/terms", revision: "1" },
 ];
 
 const serwist = new Serwist({

@@ -79,7 +79,9 @@ export function AppShell({
     isLandingOnRoot ||
     pathname.startsWith("/s/") ||
     pathname === "/welcome" ||
-    pathname.startsWith("/auth/");
+    pathname.startsWith("/auth/") ||
+    pathname === "/privacy" ||
+    pathname === "/terms";
 
   if (isNoChromeRoute) {
     return (

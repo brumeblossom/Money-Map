@@ -1629,6 +1629,14 @@ The following environment variables can now be safely removed from Vercel projec
   - Headings now start directly at the top of auth cards without empty top gaps.
   - The desktop sidebar logo (at 1280px), mobile app header icon mark, landing page header and footer, and PDF export logos are preserved exactly as configured.
 
+- **Privacy & Terms Pages (Prompt 21c)**:
+  - Added public `/privacy` ("Privacy policy") and `/terms` ("Terms of use") pages required for Google OAuth verification and app publishing.
+  - Formatted with small top header (`BrandLogo` linking to `/` and `ThemeToggle`), a max-width 720px readable text column, "Last updated: 13-11-2026" (DD-MM-YYYY), and "Back to home" links.
+  - Updated `middleware.ts` so `/privacy` and `/terms` are public and never redirected to `/welcome` or Home, regardless of signed-out, guest, or signed-in state.
+  - Added routes to `components/app-shell.tsx` `isNoChromeRoute` to ensure clean document presentation, and included in `app/sw.ts` offline precaching.
+  - Added "Privacy" and "Terms" links to the landing page footer, sign-up card ("By creating an account you agree to our Terms and Privacy policy"), and Settings footer.
+  - Verification: `tests/e2e/legal.spec.ts` 16/16 tests passing across 390px and 1280px viewports with zero horizontal scroll at 360px and verified dark/light mode readability.
+
 - **Internal IDs Preserved (Zero Data Loss / Session Disruption)**:
   - Dexie database name remains `"moneymap"` in `lib/db/dexie.ts`.
   - Cookie names remain unchanged: `moneymap_guest`, `mm_guest`, `moneymap_has_session`, `moneymap_mock_user`, `moneymap_is_admin`.

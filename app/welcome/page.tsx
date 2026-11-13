@@ -819,6 +819,26 @@ function WelcomeContent() {
                   <span>Create account</span>
                 )}
               </button>
+
+              {/* Terms and Privacy agreement */}
+              <p className="text-[11px] sm:text-xs text-center text-muted-foreground pt-1 leading-normal">
+                By creating an account you agree to our{" "}
+                <Link
+                  href="/terms"
+                  prefetch={false}
+                  className="font-medium text-foreground underline underline-offset-2 hover:text-primary transition-colors"
+                >
+                  Terms
+                </Link>{" "}
+                and{" "}
+                <Link
+                  href="/privacy"
+                  prefetch={false}
+                  className="font-medium text-foreground underline underline-offset-2 hover:text-primary transition-colors"
+                >
+                  Privacy policy
+                </Link>
+              </p>
             </form>
 
             {/* Try without an account */}

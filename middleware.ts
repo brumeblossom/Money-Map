@@ -85,6 +85,8 @@ export async function middleware(request: NextRequest) {
     path.startsWith("/images/") ||
     path.startsWith("/opengraph-image") ||
     path.startsWith("/s/") ||
+    path === "/privacy" ||
+    path === "/terms" ||
     path.includes("manifest") ||
     path === "/sw.js" ||
     path === "/favicon.ico" ||

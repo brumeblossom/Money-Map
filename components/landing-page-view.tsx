@@ -1195,8 +1195,22 @@ export function LandingPageView() {
 
           {/* Bottom strip */}
           <div className="mt-14 border-t border-white/14 py-5.5 flex justify-between items-center gap-4 text-xs sm:text-[13px] text-[#BDB6E3] dark:text-[#A9A2D6]">
-            <span>© 2026 Moneyrails</span>
-            <nav className="flex gap-4 sm:gap-6" aria-label="Footer legal">
+            <span className="shrink-0">© 2026 Moneyrails</span>
+            <nav className="flex gap-3.5 sm:gap-6 flex-wrap justify-end" aria-label="Footer legal">
+              <Link
+                href="/privacy"
+                prefetch={false}
+                className="hover:text-white transition-colors no-underline"
+              >
+                Privacy
+              </Link>
+              <Link
+                href="/terms"
+                prefetch={false}
+                className="hover:text-white transition-colors no-underline"
+              >
+                Terms
+              </Link>
               <a
                 href="mailto:workwithbrume@gmail.com"
                 className="hover:text-white transition-colors no-underline"

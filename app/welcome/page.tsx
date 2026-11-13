@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PasswordRulesChecklist } from "@/components/password-rules-checklist";
+import { useReturnTo } from "@/lib/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   isPasswordValid,
@@ -190,8 +191,8 @@ function WelcomeContent() {
       document.cookie =
         "moneymap_has_session=1; path=/; max-age=2592000; SameSite=Lax";
 
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-      window.location.href = "/";
+      // Replace /welcome in history so Back from Home does not reopen auth
+      window.location.replace("/");
     } catch (err) {
       setGeneralError(mapAuthErrorMessage(err));
       setIsLoading(false);
@@ -336,8 +337,8 @@ function WelcomeContent() {
       document.cookie =
         "moneymap_has_session=1; path=/; max-age=2592000; SameSite=Lax";
 
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-      window.location.href = "/";
+      // Replace /welcome in history so Back from Home does not reopen auth
+      window.location.replace("/");
     } catch (err) {
       setGeneralError(mapAuthErrorMessage(err));
       setIsLoading(false);
@@ -393,12 +394,14 @@ function WelcomeContent() {
     }
   };
 
+  const returnTo = useReturnTo("/?view=landing");
+
   const handleTryWithoutAccount = () => {
     document.cookie = "moneymap_guest=true; path=/; max-age=2592000; SameSite=Lax";
     document.cookie = "mm_guest=1; path=/; max-age=2592000; SameSite=Lax";
     document.cookie = "moneymap_has_session=1; path=/; max-age=2592000; SameSite=Lax";
-    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-    window.location.href = "/";
+    // Replace the /welcome history entry with Home so Back returns to landing
+    window.location.replace("/");
   };
 
   // Card headers and subtitles per view mode
@@ -429,7 +432,7 @@ function WelcomeContent() {
       {/* Small Back to home link above the card */}
       <div className="w-full max-w-[440px] mb-3 flex items-center justify-start">
         <Link
-          href="/"
+          href={returnTo}
           data-testid="welcome-back-home"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
         >

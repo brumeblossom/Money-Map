@@ -51,7 +51,14 @@ export function LandingPageView() {
       }
     };
 
+  const prepareLandingNavigation = () => {
+    try {
+      window.history.replaceState({ view: "landing" }, "", "/?view=landing");
+    } catch {}
+  };
+
   const handleTryWithoutAccount = () => {
+    prepareLandingNavigation();
     document.cookie =
       "moneymap_guest=true; path=/; max-age=2592000; SameSite=Lax";
     document.cookie = "mm_guest=1; path=/; max-age=2592000; SameSite=Lax";
@@ -119,6 +126,7 @@ export function LandingPageView() {
             <Link
               href="/welcome"
               prefetch={false}
+              onClick={prepareLandingNavigation}
               data-testid="landing-signin-header"
               className="hidden sm:inline-flex px-2.5 py-2 text-[14px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer no-underline"
             >
@@ -129,6 +137,7 @@ export function LandingPageView() {
             <Link
               href="/welcome?mode=signup"
               prefetch={false}
+              onClick={prepareLandingNavigation}
               data-testid="landing-get-started-header"
               className="inline-flex items-center justify-center h-10 sm:h-11 px-4 sm:px-5 rounded-xl font-bold text-[14px] bg-primary text-primary-foreground hover:bg-primary-hover shadow-xs transition-colors cursor-pointer no-underline whitespace-nowrap"
             >
@@ -170,6 +179,7 @@ export function LandingPageView() {
                 <Link
                   href="/welcome?mode=signup"
                   prefetch={false}
+                  onClick={prepareLandingNavigation}
                   data-testid="landing-get-started-hero"
                   className="w-[220px] sm:w-auto h-12 sm:h-[52px] px-5 sm:px-7 rounded-xl font-bold text-[15px] bg-primary text-primary-foreground hover:bg-primary-hover transition-colors shadow-xs inline-flex items-center justify-center no-underline whitespace-nowrap cursor-pointer"
                 >
@@ -178,6 +188,7 @@ export function LandingPageView() {
                 <Link
                   href="/welcome"
                   prefetch={false}
+                  onClick={prepareLandingNavigation}
                   data-testid="landing-signin-hero"
                   className="w-[220px] sm:w-auto h-12 sm:h-[52px] px-5 sm:px-7 rounded-xl font-bold text-[15px] border border-border bg-card dark:bg-[#1B1A23] hover:bg-landing-alt text-foreground transition-colors inline-flex items-center justify-center no-underline whitespace-nowrap cursor-pointer"
                 >
@@ -601,6 +612,7 @@ export function LandingPageView() {
               <Link
                 href="/welcome?mode=signup"
                 prefetch={false}
+                onClick={prepareLandingNavigation}
                 data-testid="landing-get-started-why"
                 className="inline-flex items-center justify-center h-[52px] px-7 rounded-xl font-bold text-[15px] bg-primary text-primary-foreground hover:bg-primary-hover transition-colors shadow-xs no-underline cursor-pointer self-center lg:self-start mt-1"
               >
@@ -907,6 +919,7 @@ export function LandingPageView() {
                   <Link
                     href="/welcome?mode=signup"
                     prefetch={false}
+                    onClick={prepareLandingNavigation}
                     data-testid="landing-get-started-cta"
                     className="inline-flex items-center justify-center h-12 sm:h-[52px] px-7 rounded-xl font-bold text-[15px] bg-primary text-primary-foreground hover:bg-primary-hover transition-colors shadow-xs no-underline cursor-pointer mt-1.5"
                   >
@@ -1148,6 +1161,7 @@ export function LandingPageView() {
                 <Link
                   href="/welcome?mode=signup"
                   prefetch={false}
+                  onClick={prepareLandingNavigation}
                   className="hover:text-white transition-colors no-underline py-0.5"
                 >
                   Get started
@@ -1155,6 +1169,7 @@ export function LandingPageView() {
                 <Link
                   href="/welcome"
                   prefetch={false}
+                  onClick={prepareLandingNavigation}
                   className="hover:text-white transition-colors no-underline py-0.5"
                 >
                   Sign in

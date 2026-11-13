@@ -1,17 +1,37 @@
 import * as React from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { LandingPageView } from "@/components/landing-page-view";
+import {
+  SESSION_HEADER_NAME,
+  hasSessionFromCookies,
+} from "@/lib/session-cookies";
 
-export default async function HomePage() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("moneymap_has_session")?.value;
-  const isGuest =
-    cookieStore.get("moneymap_guest")?.value === "true" ||
-    cookieStore.get("mm_guest")?.value === "1";
-  const mockUser = cookieStore.get("moneymap_mock_user")?.value;
-  const hasSbAuth = cookieStore.getAll().some((c) => c.name.includes("-auth-token"));
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ view?: string }>;
+}) {
+  const params = searchParams ? await searchParams : {};
 
-  const hasSession = sessionCookie === "1" || isGuest || Boolean(mockUser) || hasSbAuth;
+  // If explicit landing view requested (e.g. from Back button), render Landing
+  if (params.view === "landing") {
+    return <LandingPageView />;
+  }
+
+  // 1. Prefer middleware's verified request header
+  const reqHeaders = await headers();
+  const sessionHeader = reqHeaders.get(SESSION_HEADER_NAME);
+
+  let hasSession = false;
+  if (sessionHeader === "1") {
+    hasSession = true;
+  } else if (sessionHeader === "0") {
+    hasSession = false;
+  } else {
+    // 2. Fallback: single source of truth helper on cookies (never counts -code-verifier)
+    const cookieStore = await cookies();
+    hasSession = hasSessionFromCookies(cookieStore.getAll());
+  }
 
   if (!hasSession) {
     return <LandingPageView />;

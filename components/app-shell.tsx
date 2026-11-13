@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "cn";
 import dynamic from "next/dynamic";
+import { getClientSessionState } from "@/lib/session-cookies";
 
 const AppSidebar = dynamic(() => import("@/components/app-sidebar").then((m) => m.AppSidebar), {
   ssr: false,
@@ -20,15 +21,7 @@ const Toaster = dynamic(() => import("@/components/ui/sonner").then((m) => m.Toa
 
 function getSessionSnapshot(initial: boolean): boolean {
   if (typeof document === "undefined") return initial;
-  const isGuest =
-    document.cookie.includes("moneymap_guest=true") ||
-    document.cookie.includes("mm_guest=1");
-  const hasMock = document.cookie.includes("moneymap_mock_user=");
-  const hasSessionCookie = document.cookie.includes("moneymap_has_session=1");
-  const hasSb = document.cookie
-    .split(";")
-    .some((c) => c.trim().startsWith("sb-") && c.includes("-auth-token="));
-  return isGuest || hasMock || hasSessionCookie || hasSb;
+  return getClientSessionState(document.cookie).hasSession;
 }
 
 function subscribeToSession(callback: () => void) {
@@ -45,6 +38,9 @@ export function AppShell({
   initialHasSession?: boolean;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const isViewLanding = searchParams?.get("view") === "landing";
+
   const hasSession = React.useSyncExternalStore(
     subscribeToSession,
     () => getSessionSnapshot(initialHasSession),
@@ -53,7 +49,7 @@ export function AppShell({
 
   React.useEffect(() => {
     // Only init sync and default categories if signed in or guest
-    if (!hasSession && pathname === "/") {
+    if ((!hasSession || isViewLanding) && pathname === "/") {
       return;
     }
     let cleanupSync: (() => void) | undefined;
@@ -71,10 +67,10 @@ export function AppShell({
     return () => {
       cleanupSync?.();
     };
-  }, [hasSession, pathname]);
+  }, [hasSession, pathname, isViewLanding]);
 
   // Routes that do not render the main app shell chrome (PRD section 2)
-  const isLandingOnRoot = pathname === "/" && !hasSession;
+  const isLandingOnRoot = pathname === "/" && (!hasSession || isViewLanding);
   const isNoChromeRoute =
     isLandingOnRoot ||
     pathname.startsWith("/s/") ||

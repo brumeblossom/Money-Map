@@ -1,6 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_MAX_AGE } from "@/lib/supabase/client";
+import {
+  SESSION_HEADER_NAME,
+  GUEST_HEADER_NAME,
+  USER_HEADER_NAME,
+  hasSupabaseSessionCookie,
+} from "@/lib/session-cookies";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -39,6 +45,7 @@ export async function middleware(request: NextRequest) {
   // Refresh auth session
   const {
     data: { user: authUser },
+    error: authUserError,
   } = await supabase.auth.getUser();
 
   const mockUserCookie = request.cookies.get("moneymap_mock_user")?.value;
@@ -48,10 +55,28 @@ export async function middleware(request: NextRequest) {
     request.cookies.get("moneymap_guest")?.value === "true" ||
     request.cookies.get("mm_guest")?.value === "1";
   const path = request.nextUrl.pathname;
-  const isSignInIntent = request.nextUrl.searchParams.get("intent") === "signin";
-  const hasSession = Boolean(user || isGuest);
+  const isSignInIntent =
+    request.nextUrl.searchParams.get("intent") === "signin" ||
+    request.nextUrl.searchParams.has("mode");
 
-  // Set session hint cookie for server components and AppShell
+  // Verified session check using single source of truth helper:
+  // Never counts PKCE -code-verifier as a session
+  const hasSbSession = hasSupabaseSessionCookie(request.cookies.getAll());
+  const hasUserSession = Boolean(user) || (hasSbSession && !authUserError);
+  const hasSession = Boolean(hasUserSession || isGuest);
+
+  // Deliver verified session status directly to server components via request headers
+  request.headers.set(SESSION_HEADER_NAME, hasSession ? "1" : "0");
+  request.headers.set(GUEST_HEADER_NAME, isGuest ? "1" : "0");
+  request.headers.set(USER_HEADER_NAME, hasUserSession ? "1" : "0");
+
+  response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
+
+  // Set session hint cookie for browser
   response.cookies.set("moneymap_has_session", hasSession ? "1" : "0", {
     path: "/",
     sameSite: "lax",

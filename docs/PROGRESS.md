@@ -1663,6 +1663,26 @@ The following environment variables can now be safely removed from Vercel projec
     - `tests/e2e/prompt17b-landing.spec.ts` & `tests/e2e/prompt17f.spec.ts`: 28/28 passed.
     - Guest data survival test verified: adding entry, refreshing page, entry persists in Dexie.
 
+- **Back Navigation to Landing & Session Cookie Truth (Prompt 21d)**:
+  - **Bug Fixed**:
+    - Discovered root cause of signed-out visitors backing out of Google OAuth seeing broken Home screen ("Welcome, guest" with ₦0.00 and no sidebar/header):
+    - Supabase PKCE flow creates `sb-<ref>-auth-token-code-verifier` upon starting OAuth. Previously, `app/page.tsx` checked `cookieStore.getAll().some((c) => c.name.includes("-auth-token"))`, incorrectly treating the verifier cookie as an active user session, while `components/app-shell.tsx` checked for `-auth-token=` (which did not match), causing `AppShell` to hide navigation chrome.
+  - **Single Source of Truth (`lib/session-cookies.ts`)**:
+    - Centralized session token parsing with `isSupabaseSessionCookieName()` which strictly accepts `sb-<ref>-auth-token` and chunked `.0/.1...` cookies, but explicitly rejects `-code-verifier` and `-code-challenge`.
+    - `hasSupabaseSessionCookie()` and `hasSessionFromCookies()` provide consistent server/middleware evaluation.
+    - `getClientSessionState(document.cookie)` provides matching client-side evaluation.
+    - `middleware.ts` sets verified request headers `x-moneyrails-has-session`, `x-moneyrails-is-guest`, `x-moneyrails-user-session`, which `app/page.tsx` reads directly with high confidence.
+  - **Back Navigation Rules (a–d)**:
+    - **Rule a**: Landing -> `/welcome` -> browser Back returns cleanly to landing page (URL `/?view=landing` -> `/`).
+    - **Rule b**: `/welcome` -> Continue with Google -> browser Back from Google -> `/welcome`; Back again -> landing page (never broken Home). Leftover code verifiers never break subsequent attempts.
+    - **Rule c**: Landing or `/welcome` -> "Try without an account" -> guest Home -> browser Back returns cleanly to landing page (URL `/?view=landing`), NOT `/welcome` and NOT a reload of guest Home. Guest's saved Dexie entries remain intact; tapping "Try without an account" again on landing returns straight to guest Home with their entries.
+    - **Rule d**: After real sign-in, sign-up, password reset, or entering guest mode from `/welcome`, navigation uses `window.location.replace("/")` or `router.replace` so auth screens and OAuth intermediaries do not exist in the back stack.
+    - Replaced hardcoded `/welcome` links on landing with pre-navigation history state hook (`prepareLandingNavigation`) to ensure seamless browser Back navigation.
+  - **Verification**:
+    - Unit tests: `tests/unit/session-cookies.test.ts` (13/13 passed) verifying strict rejection of code-verifier, chunked auth token support, and cookie parsing.
+    - Playwright E2E: `tests/e2e/session-navigation.spec.ts` (8/8 passed) verifying rules across 390px mobile phone and 1280px desktop viewports.
+    - Regression tests: `tests/e2e/branding.spec.ts` and `tests/e2e/legal.spec.ts` (26/26 passed), Vitest unit test suite (25/25 files, 247/247 passed), `bun run lint` (0 errors), `bun run typecheck` (0 errors), and production build `bun run build` (33/33 routes).
+
 ## Known issues
 
 - None.

@@ -22,6 +22,8 @@ const ROUTE_TITLES: Record<string, string> = {
   "/insights/habits": "Habits",
   "/export": "Export",
   "/settings": "Settings",
+  "/settings/categories": "Categories",
+  "/settings/repeating": "Repeating entries",
   "/admin": "Admin",
   "/welcome": "Welcome",
   "/auth/check-email": "Check your email",
@@ -52,6 +54,12 @@ export function getTitleFromPathname(pathname: string): string {
   }
   if (pathname.startsWith("/insights/habits/")) {
     return "Category report";
+  }
+  if (pathname.startsWith("/settings/categories")) {
+    return "Categories";
+  }
+  if (pathname.startsWith("/settings/repeating")) {
+    return "Repeating entries";
   }
   if (pathname.startsWith("/s/")) {
     return "Shared report";

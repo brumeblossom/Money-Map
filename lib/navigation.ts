@@ -102,3 +102,42 @@ export function useCurrentUrl(): string {
   const search = searchParams?.toString();
   return search ? `${pathname}?${search}` : pathname;
 }
+
+/**
+ * Resolves the destination URL for Back/Cancel/Save/Delete on entry detail and edit views.
+ * If fromUrl was not passed or was passed as just "/records", derives the tab from entryKind:
+ * income -> /records?tab=income, giving -> /records?tab=giving, expense -> /records?tab=expenses.
+ */
+export function resolveReturnUrl(fromUrl: string | null | undefined, entryKind?: string | null): string {
+  const sanitized = sanitizeInternalUrl(fromUrl);
+  const defaultTab =
+    entryKind === "expense"
+      ? "expenses"
+      : entryKind === "giving"
+        ? "giving"
+        : entryKind === "income"
+          ? "income"
+          : "income";
+  const fallbackUrl = `/records?tab=${defaultTab}`;
+
+  if (!sanitized) {
+    return fallbackUrl;
+  }
+
+  // If sanitized is just "/records" or "/records/" without query parameters
+  if (sanitized === "/records" || sanitized === "/records/") {
+    return fallbackUrl;
+  }
+
+  // If sanitized starts with "/records?", ensure it has a tab query parameter
+  if (sanitized.startsWith("/records?")) {
+    const [, search] = sanitized.split("?");
+    const params = new URLSearchParams(search);
+    if (!params.has("tab")) {
+      params.set("tab", defaultTab);
+      return `/records?${params.toString()}`;
+    }
+  }
+
+  return sanitized;
+}

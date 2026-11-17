@@ -6,9 +6,40 @@ import {
   View,
   StyleSheet,
   Font,
+  Image,
 } from "@react-pdf/renderer";
 import type { ReportSnapshot } from "@/lib/report/types";
 import { formatMoney } from "@/lib/format";
+
+function isNodeEnv(): boolean {
+  return typeof process !== "undefined" && Boolean(process.versions?.node);
+}
+
+function getFontPath(filename: string): string {
+  if (isNodeEnv()) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const path = require("path");
+      return path.join(process.cwd(), "public/fonts", filename);
+    } catch {
+      return `/fonts/${filename}`;
+    }
+  }
+  return `/fonts/${filename}`;
+}
+
+function getBrandIconPath(): string {
+  if (isNodeEnv()) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const path = require("path");
+      return path.join(process.cwd(), "public/brand/icon-mark.png");
+    } catch {
+      return "/brand/icon-mark.png";
+    }
+  }
+  return "/brand/icon-mark.png";
+}
 
 let fontsRegistered = false;
 export function registerFonts() {
@@ -16,10 +47,11 @@ export function registerFonts() {
   fontsRegistered = true;
   try {
     Font.register({
-      family: "NotoSans",
+      family: "Plus Jakarta Sans",
       fonts: [
-        { src: "/fonts/NotoSans-Regular.ttf", fontWeight: "normal" },
-        { src: "/fonts/NotoSans-Bold.ttf", fontWeight: "bold" },
+        { src: getFontPath("PlusJakartaSans-Regular.ttf"), fontWeight: "normal" },
+        { src: getFontPath("PlusJakartaSans-SemiBold.ttf"), fontWeight: 600 },
+        { src: getFontPath("PlusJakartaSans-Bold.ttf"), fontWeight: "bold" },
       ],
     });
   } catch (err) {
@@ -35,7 +67,7 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
     paddingHorizontal: 36,
     fontSize: 9,
-    fontFamily: "NotoSans",
+    fontFamily: "Plus Jakarta Sans",
     color: "#17191C",
     backgroundColor: "#ffffff",
   },
@@ -49,7 +81,12 @@ const styles = StyleSheet.create({
   headerTop: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
+  },
+  headerIcon: {
+    width: 36,
+    height: 36,
+    objectFit: "contain",
   },
   logoContainer: {
     flexDirection: "row",
@@ -57,7 +94,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontFamily: "NotoSans",
+    fontFamily: "Plus Jakarta Sans",
     fontWeight: "bold",
     color: "#17191C",
     letterSpacing: -0.5,
@@ -83,7 +120,7 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 7.5,
-    fontFamily: "NotoSans",
+    fontFamily: "Plus Jakarta Sans",
     fontWeight: "bold",
     color: "#5E636B",
     textTransform: "uppercase",
@@ -91,7 +128,7 @@ const styles = StyleSheet.create({
   },
   totalValue: {
     fontSize: 12,
-    fontFamily: "NotoSans",
+    fontFamily: "Plus Jakarta Sans",
     fontWeight: "bold",
     color: "#17191C",
   },
@@ -103,7 +140,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 12,
-    fontFamily: "NotoSans",
+    fontFamily: "Plus Jakarta Sans",
     fontWeight: "bold",
     color: "#0f172a",
     marginBottom: 8,
@@ -132,7 +169,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   th: {
-    fontFamily: "NotoSans",
+    fontFamily: "Plus Jakarta Sans",
     fontWeight: "bold",
     fontSize: 8,
     color: "#475569",
@@ -168,7 +205,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   categoryName: {
-    fontFamily: "NotoSans",
+    fontFamily: "Plus Jakarta Sans",
     fontWeight: "bold",
     fontSize: 8,
     color: "#334155",
@@ -189,7 +226,7 @@ const styles = StyleSheet.create({
   },
   singleAmount: {
     fontSize: 26,
-    fontFamily: "NotoSans",
+    fontFamily: "Plus Jakarta Sans",
     fontWeight: "bold",
     color: "#0f172a",
     marginVertical: 4,
@@ -210,7 +247,7 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     color: "#64748b",
-    fontFamily: "NotoSans",
+    fontFamily: "Plus Jakarta Sans",
     fontWeight: "bold",
     fontSize: 9,
   },
@@ -251,6 +288,7 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
                 </View>
                 <Text style={styles.subtitle}>{snapshot.displayDate}</Text>
               </View>
+              <Image src={getBrandIconPath()} style={styles.headerIcon} />
             </View>
           </View>
 
@@ -320,6 +358,7 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
                 </View>
                 <Text style={styles.subtitle}>Loan to {snapshot.borrower}</Text>
               </View>
+              <Image src={getBrandIconPath()} style={styles.headerIcon} />
             </View>
           </View>
 
@@ -370,21 +409,21 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
 
           {snapshot.payments.length > 0 && (
             <View style={{ marginTop: 16 }}>
-              <Text style={styles.sectionTitle}>Repayments</Text>
+              <Text style={styles.sectionTitle} minPresenceAhead={90}>Repayments</Text>
               <View style={styles.table}>
-                <View style={[styles.tableRow, styles.tableHeaderRow]}>
+                <View style={[styles.tableRow, styles.tableHeaderRow]} fixed>
                   <Text style={[styles.th, { width: "30%" }]}>Date</Text>
                   <Text style={[styles.th, { width: "40%" }]}>Note</Text>
                   <Text style={[styles.th, { width: "30%", textAlign: "right" }]}>Amount</Text>
                 </View>
                 {snapshot.payments.map((p) => (
-                  <View key={p.id} style={styles.tableRow}>
+                  <View key={p.id} style={styles.tableRow} wrap={false}>
                     <Text style={[styles.td, { width: "30%" }]}>{p.date}</Text>
                     <Text style={[styles.td, { width: "40%" }]}>{p.note || "—"}</Text>
                     <Text
                       style={[
                         styles.td,
-                        { width: "30%", textAlign: "right", fontFamily: "NotoSans", fontWeight: "bold" },
+                        { width: "30%", textAlign: "right", fontFamily: "Plus Jakarta Sans", fontWeight: "bold" },
                       ]}
                     >
                       +{formatMoney(p.amount, snapshot.currency)}
@@ -421,6 +460,7 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
               </View>
               <Text style={styles.subtitle}>{snapshot.periodLabel}</Text>
             </View>
+            <Image src={getBrandIconPath()} style={styles.headerIcon} />
           </View>
         </View>
 
@@ -461,10 +501,10 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
         {/* Category Breakdown */}
         {snapshot.categories.length > 0 && (
           <View style={{ marginBottom: 12 }}>
-            <Text style={styles.sectionTitle}>Category Breakdown</Text>
+            <Text style={styles.sectionTitle} minPresenceAhead={60}>Category Breakdown</Text>
             <View style={styles.categoriesGrid}>
               {snapshot.categories.map((c, i) => (
-                <View key={i} style={styles.categoryBadge}>
+                <View key={i} style={styles.categoryBadge} wrap={false}>
                   <Text style={styles.categoryName}>{c.name}:</Text>
                   <Text style={styles.categoryAmount}>
                     {formatMoney(c.amount, snapshot.currency)} ({c.percentage}%)
@@ -478,9 +518,9 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
         {/* Entries Table */}
         {snapshot.entries.length > 0 && (
           <View>
-            <Text style={styles.sectionTitle}>Entries</Text>
+            <Text style={styles.sectionTitle} minPresenceAhead={90}>Entries</Text>
             <View style={styles.table}>
-              <View style={[styles.tableRow, styles.tableHeaderRow]}>
+              <View style={[styles.tableRow, styles.tableHeaderRow]} fixed>
                 <Text style={[styles.th, styles.colDate]}>Date</Text>
                 <Text style={[styles.th, styles.colAction]}>Action</Text>
                 <Text style={[styles.th, styles.colCategory]}>Category</Text>
@@ -500,8 +540,8 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
                       styles.td,
                       styles.colAmount,
                       entry.action === "Income"
-                        ? { color: "#1F8A63", fontFamily: "NotoSans", fontWeight: "bold" }
-                        : { color: "#C2412D", fontFamily: "NotoSans", fontWeight: "bold" },
+                        ? { color: "#1F8A63", fontFamily: "Plus Jakarta Sans", fontWeight: "bold" }
+                        : { color: "#C2412D", fontFamily: "Plus Jakarta Sans", fontWeight: "bold" },
                     ]}
                   >
                     {formatMoney(entry.amount, snapshot.currency)}
@@ -515,9 +555,9 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
         {/* Loans Table */}
         {snapshot.loans.length > 0 && (
           <View style={{ marginTop: 10 }}>
-            <Text style={styles.sectionTitle}>Money I Lent</Text>
+            <Text style={styles.sectionTitle} minPresenceAhead={90}>Money I Lent</Text>
             <View style={styles.table}>
-              <View style={[styles.tableRow, styles.tableHeaderRow]}>
+              <View style={[styles.tableRow, styles.tableHeaderRow]} fixed>
                 <Text style={[styles.th, styles.colBorrower]}>Borrower</Text>
                 <Text style={[styles.th, styles.colLent]}>Amount Lent</Text>
                 <Text style={[styles.th, styles.colReceived]}>Received</Text>
@@ -537,7 +577,7 @@ export function ReportPdfDocument({ snapshot }: ReportPdfProps) {
                     style={[
                       styles.td,
                       styles.colBalance,
-                      { fontFamily: "NotoSans", fontWeight: "bold" },
+                      { fontFamily: "Plus Jakarta Sans", fontWeight: "bold" },
                     ]}
                   >
                     {formatMoney(loan.balance, snapshot.currency)}

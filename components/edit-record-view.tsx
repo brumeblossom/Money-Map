@@ -2,13 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { ArrowLeft } from "lucide-react";
 import { db } from "@/lib/db/dexie";
 import { EntryForm } from "@/components/entry-form";
 import { Button } from "@/components/ui/button";
-import { useReturnTo, getBackLinkText } from "@/lib/navigation";
+import { getBackLinkText, resolveReturnUrl } from "@/lib/navigation";
 
 export interface EditRecordViewProps {
   id: string;
@@ -16,6 +16,8 @@ export interface EditRecordViewProps {
 
 export function EditRecordView({ id }: EditRecordViewProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromParam = searchParams?.get("from");
 
   const entry = useLiveQuery(async () => {
     return await db.entries.get(id);
@@ -28,10 +30,12 @@ export function EditRecordView({ id }: EditRecordViewProps) {
 
   const currency = profile?.currency || "NGN";
 
-  const tab = entry ? (entry.kind === "expense" ? "expenses" : entry.kind) : "expenses";
-  const defaultUrl = `/records?tab=${tab}`;
-  const returnTo = useReturnTo(defaultUrl);
-  const backLabel = getBackLinkText(returnTo);
+  const getResolvedReturnTo = React.useCallback(() => {
+    return resolveReturnUrl(fromParam, entry?.kind);
+  }, [fromParam, entry?.kind]);
+
+  const resolvedReturnTo = getResolvedReturnTo();
+  const backLabel = getBackLinkText(resolvedReturnTo);
 
   if (entry === undefined) {
     return (
@@ -48,7 +52,7 @@ export function EditRecordView({ id }: EditRecordViewProps) {
         <p className="text-sm text-muted-foreground">
           This entry may have been deleted or does not exist.
         </p>
-        <Link href={returnTo} replace>
+        <Link href={getResolvedReturnTo()} replace>
           <Button variant="outline" className="mt-4 rounded-xl">
             Back to {backLabel}
           </Button>
@@ -60,15 +64,15 @@ export function EditRecordView({ id }: EditRecordViewProps) {
   return (
     <div className="space-y-4 pb-16">
       <div className="flex items-center gap-2">
-        <Link
-          href={returnTo}
-          replace
+        <button
+          type="button"
+          onClick={() => router.replace(getResolvedReturnTo())}
           data-testid="edit-record-back-btn"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
         >
           <ArrowLeft className="size-4" />
           <span>{backLabel}</span>
-        </Link>
+        </button>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-xs">
@@ -76,8 +80,8 @@ export function EditRecordView({ id }: EditRecordViewProps) {
           key={entry.id}
           action={entry.kind}
           initialEntry={entry}
-          onClose={() => router.replace(returnTo)}
-          onSaveSuccess={() => router.replace(returnTo)}
+          onClose={() => router.replace(getResolvedReturnTo())}
+          onSaveSuccess={() => router.replace(getResolvedReturnTo())}
           currency={currency}
         />
       </div>

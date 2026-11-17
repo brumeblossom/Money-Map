@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   ArrowLeft,
@@ -25,7 +25,12 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { buildSingleEntryReport } from "@/lib/report/builder";
 import { downloadReportPdf } from "@/lib/report/pdf-export";
-import { useReturnTo, useCurrentUrl, getBackLinkText, createReturnUrl } from "@/lib/navigation";
+import {
+  useCurrentUrl,
+  getBackLinkText,
+  createReturnUrl,
+  resolveReturnUrl,
+} from "@/lib/navigation";
 
 export interface RecordDetailViewProps {
   id: string;
@@ -76,11 +81,16 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
     }
   };
 
-  const tab = entry ? (entry.kind === "expense" ? "expenses" : entry.kind) : "expenses";
-  const defaultUrl = `/records?tab=${tab}`;
-  const returnTo = useReturnTo(defaultUrl);
-  const backLabel = getBackLinkText(returnTo);
+  const searchParams = useSearchParams();
+  const fromParam = searchParams?.get("from");
   const currentUrl = useCurrentUrl();
+
+  const getResolvedReturnTo = React.useCallback(() => {
+    return resolveReturnUrl(fromParam, entry?.kind);
+  }, [fromParam, entry?.kind]);
+
+  const resolvedReturnTo = getResolvedReturnTo();
+  const backLabel = getBackLinkText(resolvedReturnTo);
 
   if (entry === undefined) {
     return (
@@ -97,7 +107,7 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
         <p className="text-sm text-muted-foreground">
           This entry may have been deleted or does not exist.
         </p>
-        <Link href={returnTo} replace>
+        <Link href={getResolvedReturnTo()} replace>
           <Button variant="outline" className="mt-4 rounded-xl">
             Back to {backLabel}
           </Button>
@@ -111,7 +121,7 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
     try {
       await softDeleteEntry(entry.id);
       setShowDeleteConfirm(false);
-      router.replace(returnTo);
+      router.replace(getResolvedReturnTo());
 
       toast("Entry deleted", {
         duration: 5000,
@@ -149,7 +159,7 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
           type="button"
           data-testid="record-detail-back-btn"
           onClick={() => {
-            router.replace(returnTo);
+            router.replace(getResolvedReturnTo());
           }}
           className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
         >

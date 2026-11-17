@@ -309,7 +309,7 @@ test.describe("Back Navigation Across the App (Prompt 17i)", () => {
     await page.goto("/settings/repeating");
     const repeatingBack = page.getByTestId("repeating-back-btn");
     await expect(repeatingBack).toBeVisible();
-    await expect(repeatingBack).toContainText("Settings");
+    await expect(repeatingBack).toHaveAttribute("aria-label", "Back to Settings");
     await repeatingBack.click();
     await expect(page).toHaveURL(/\/settings/);
 
@@ -317,8 +317,47 @@ test.describe("Back Navigation Across the App (Prompt 17i)", () => {
     await page.goto("/settings/categories");
     const categoriesBack = page.getByTestId("categories-back-btn");
     await expect(categoriesBack).toBeVisible();
-    await expect(categoriesBack).toContainText("Settings");
+    await expect(categoriesBack).toHaveAttribute("aria-label", "Back to Settings");
     await categoriesBack.click();
     await expect(page).toHaveURL(/\/settings/);
+  });
+
+  test("Flow 6: Back from Income and Giving entries returns to Income/Giving tabs (new accounts)", async ({
+    page,
+  }) => {
+    // 1. Create a Giving entry
+    await page.goto("/new/giving");
+    await expect(page.getByRole("heading", { level: 2, name: "Giving" })).toBeVisible();
+    await page.getByPlaceholder("0.00").first().fill("15000");
+    await page.getByLabel(/Recipient/i).fill("Community Pantry");
+    const saveGivingBtn = page.getByRole("button", { name: "Save", exact: true });
+    await expect(saveGivingBtn).toBeEnabled();
+    await saveGivingBtn.click({ force: true });
+    await expect(page.getByText("Saved").first()).toBeVisible();
+
+    // 2. Clear sessionStorage so there is no stored active tab
+    await page.evaluate(() => {
+      sessionStorage.removeItem("moneymap_records_tab");
+      localStorage.removeItem("moneymap_records_tab");
+    });
+
+    // 3. Navigate directly to /records (no tab param) -> should replace with ?tab=income
+    await page.goto("/records");
+    await expect(page).toHaveURL(/\/records\?tab=income/);
+
+    // 4. Switch to Giving tab
+    await page.getByTestId("records-tab-giving").click();
+    await expect(page).toHaveURL(/\/records\?tab=giving/);
+
+    const givingRow = page.getByTestId("record-row").first();
+    await expect(givingRow).toBeVisible();
+    await givingRow.click();
+    await expect(page).toHaveURL(/\/records\/[a-f0-9-]+/);
+
+    // Click back from giving detail -> lands on Giving tab, not Expenses!
+    const detailBack = page.getByTestId("record-detail-back-btn");
+    await detailBack.click();
+    await expect(page).toHaveURL(/\/records\?tab=giving/);
+    await expect(page.getByTestId("records-tab-giving")).toHaveAttribute("aria-selected", "true");
   });
 });

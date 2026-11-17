@@ -93,9 +93,27 @@ describe("lib/format", () => {
       expect(formatMoney(99999999999999, "NGN")).toBe("₦999,999,999,999.99");
     });
 
-    it("supports other currencies (USD, GBP, EUR)", () => {
+    it("supports other currencies (USD, GBP, EUR) with symbol in front, comma grouping, and point decimals", () => {
+      expect(formatMoney(5000000, "NGN")).toBe("₦50,000.00");
+      expect(formatMoney(5000000, "EUR")).toBe("€50,000.00");
+      expect(formatMoney(5000000, "GBP")).toBe("£50,000.00");
+      expect(formatMoney(5000000, "USD")).toBe("$50,000.00");
       expect(formatMoney(150050, "USD")).toBe("$1,500.50");
       expect(formatMoney(150050, "GBP")).toBe("£1,500.50");
+      expect(formatMoney(150050, "EUR")).toBe("€1,500.50");
+    });
+
+    it("formats negative currency values with leading minus sign before symbol", () => {
+      expect(formatMoney(-125000, "EUR")).toBe("-€1,250.00");
+      expect(formatMoney(-125000, "NGN")).toBe("-₦1,250.00");
+      expect(formatMoney(-125000, "USD")).toBe("-$1,250.00");
+      expect(formatMoney(-125000, "GBP")).toBe("-£1,250.00");
+    });
+
+    it("formats very large BigInt values exceeding MAX_SAFE_INTEGER correctly", () => {
+      expect(formatMoney(BigInt("99999999999999999999"), "EUR")).toBe("€999,999,999,999,999,999.99");
+      expect(formatMoney(BigInt("-99999999999999999999"), "EUR")).toBe("-€999,999,999,999,999,999.99");
+      expect(formatMoney(BigInt("99999999999999999999"), "NGN")).toBe("₦999,999,999,999,999,999.99");
     });
   });
 

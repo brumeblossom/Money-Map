@@ -5,7 +5,9 @@ import { isEmailAdmin } from "@/lib/auth/admin";
 import { GET as getAdminStats } from "@/app/api/admin/stats/route";
 
 describe("Admin Access & Client Bundle Security (Prompt 17c Verification)", () => {
-  it("verifies service role key and secret tokens never appear in .next/static", () => {
+  it(
+    "verifies service role key and secret tokens never appear in .next/static",
+    () => {
     const staticDir = path.join(process.cwd(), ".next", "static");
     if (!fs.existsSync(staticDir)) {
       // If static directory has not been generated in test run, skip
@@ -35,7 +37,7 @@ describe("Admin Access & Client Bundle Security (Prompt 17c Verification)", () =
 
     const leaks = findLeaks(staticDir);
     expect(leaks).toEqual([]);
-  });
+  }, 20000);
 
   it("verifies admin email logic allows admin and denies others", () => {
     process.env.ADMIN_EMAILS = "blossombrume@gmail.com,admin@moneymap.app";

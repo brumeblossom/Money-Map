@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { CategoriesSettings } from "@/components/categories-settings";
 import type { CategoryScope } from "@/lib/db/dexie";
-import { useReturnTo, getBackLinkText } from "@/lib/navigation";
+import { useReturnTo } from "@/lib/navigation";
 
 export function CategoriesPageView() {
   const searchParams = useSearchParams();
@@ -26,21 +26,19 @@ export function CategoriesPageView() {
 
   const defaultUrl = "/settings";
   const returnTo = useReturnTo(defaultUrl);
-  const backLabel = getBackLinkText(returnTo);
 
   return (
     <div className="space-y-6">
       {/* Header with back navigation */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <Link
           href={returnTo}
           replace
           data-testid="categories-back-btn"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
-          aria-label={`Back to ${backLabel}`}
+          aria-label="Back to Settings"
+          className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer -ml-2"
         >
-          <ArrowLeft className="size-4" />
-          <span>{backLabel}</span>
+          <ArrowLeft className="size-5" />
         </Link>
         <div>
           <h2 className="text-xl font-bold tracking-tight text-foreground">

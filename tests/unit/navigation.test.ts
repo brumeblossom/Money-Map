@@ -3,6 +3,7 @@ import {
   sanitizeInternalUrl,
   getBackLinkText,
   createReturnUrl,
+  resolveReturnUrl,
 } from "@/lib/navigation";
 
 describe("lib/navigation", () => {
@@ -76,6 +77,32 @@ describe("lib/navigation", () => {
     it("does not append invalid from parameter", () => {
       expect(createReturnUrl("/records/1", "https://evil.com")).toBe("/records/1");
       expect(createReturnUrl("/records/1", "//evil.com")).toBe("/records/1");
+    });
+  });
+
+  describe("resolveReturnUrl", () => {
+    it("derives the correct tab when from is null, undefined, or empty", () => {
+      expect(resolveReturnUrl(null, "income")).toBe("/records?tab=income");
+      expect(resolveReturnUrl(undefined, "expense")).toBe("/records?tab=expenses");
+      expect(resolveReturnUrl("", "giving")).toBe("/records?tab=giving");
+      expect(resolveReturnUrl(null, null)).toBe("/records?tab=income");
+    });
+
+    it("derives the correct tab when from is /records without tab", () => {
+      expect(resolveReturnUrl("/records", "income")).toBe("/records?tab=income");
+      expect(resolveReturnUrl("/records", "expense")).toBe("/records?tab=expenses");
+      expect(resolveReturnUrl("/records", "giving")).toBe("/records?tab=giving");
+      expect(resolveReturnUrl("/records?expenses_search=test", "income")).toBe(
+        "/records?expenses_search=test&tab=income"
+      );
+    });
+
+    it("preserves explicit from URLs with tab or other screens", () => {
+      expect(resolveReturnUrl("/records?tab=income", "expense")).toBe("/records?tab=income");
+      expect(resolveReturnUrl("/records?tab=expenses", "income")).toBe("/records?tab=expenses");
+      expect(resolveReturnUrl("/insights", "income")).toBe("/insights");
+      expect(resolveReturnUrl("/records/123", "income")).toBe("/records/123");
+      expect(resolveReturnUrl("/?month=2026-05", "expense")).toBe("/?month=2026-05");
     });
   });
 });

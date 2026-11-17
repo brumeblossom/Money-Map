@@ -896,7 +896,7 @@ export function InsightsView() {
                 return (
                   <Link
                     key={entry.id}
-                    href={`/records/${entry.id}`}
+                    href={createReturnUrl(`/records/${entry.id}`, currentUrl)}
                     data-testid={`recent-entry-${entry.id}`}
                     className="flex items-center justify-between py-3 transition-colors hover:bg-muted/30 px-1 rounded-xl"
                   >

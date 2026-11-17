@@ -523,9 +523,9 @@ export default function SettingsPage() {
               <Link
                 href="/welcome?intent=signin"
                 data-testid="settings-guest-signin-link"
-                className="inline-flex w-full sm:w-[240px] h-11 items-center justify-start rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-xs hover:opacity-90 transition cursor-pointer"
+                className="inline-flex w-full sm:w-auto h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-xs hover:opacity-90 transition cursor-pointer whitespace-nowrap"
               >
-                Sign in to add your name and back up your data
+                Sign in to back up your data
               </Link>
             </div>
           ) : (

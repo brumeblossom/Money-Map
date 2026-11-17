@@ -1683,6 +1683,36 @@ The following environment variables can now be safely removed from Vercel projec
     - Playwright E2E: `tests/e2e/session-navigation.spec.ts` (8/8 passed) verifying rules across 390px mobile phone and 1280px desktop viewports.
     - Regression tests: `tests/e2e/branding.spec.ts` and `tests/e2e/legal.spec.ts` (26/26 passed), Vitest unit test suite (25/25 files, 247/247 passed), `bun run lint` (0 errors), `bun run typecheck` (0 errors), and production build `bun run build` (33/33 routes).
 
+- **Fixes Across App: Guest Button, Settings Back Arrow, Currency Format, PDF Report, Back-to-Tab (Prompt 22)**:
+  1. **Guest Button (`app/settings/page.tsx`)**:
+     - Updated button text from "Sign in to add your name and back up your data" to `"Sign in to back up your data"`.
+     - Ensured single-line presentation on all viewports (from 360px phones to 1280px desktop) using `whitespace-nowrap` and removing `sm:w-[240px]` that caused wrapping.
+     - Preserved link (`/welcome?intent=signin`), colors, height, and test ID (`settings-guest-signin-link`).
+  2. **Settings Sub-Pages: Arrow Only & Page Titles**:
+     - On `/settings/categories` and `/settings/repeating`: The back link `"← Settings"` is now the back arrow icon only (no text), with `aria-label="Back to Settings"`, aligned with page heading, and a 40x40px tap area (`size-10`). Target remains `lib/navigation` returnTo (default `/settings`).
+     - In `components/app-header.tsx`, `getTitleFromPathname()` returns `"Categories"` for `/settings/categories` and `"Repeating entries"` for `/settings/repeating`.
+     - All other back links across the app retain their descriptive text.
+  3. **Universal Currency Formatting (`lib/format/index.ts`)**:
+     - Removed per-currency locale switching that previously caused EUR to format as `"50.000,00 €"`.
+     - Standardized all currencies to: symbol in front, comma for thousands separators, period for decimals, 2 decimal places, and no space (`Intl.NumberFormat("en-US", { style: "currency", currency, currencyDisplay: "narrowSymbol" })`): `₦50,000.00`, `€50,000.00`, `£50,000.00`, `$50,000.00`, and `-€1,250.00`.
+     - Large-BigInt fallback updated with identical symbol-first, comma-thousands, dot-decimal rules.
+     - Added unit tests in `tests/unit/format.test.ts` for NGN, EUR, GBP, USD, negative values, and very large BigInts.
+  4. **PDF Report Typography & Pagination (`components/report/pdf-document.tsx`)**:
+     - Migrated PDF generation font from NotoSans to Plus Jakarta Sans (`PlusJakartaSans-Regular.ttf`, `PlusJakartaSans-SemiBold.ttf`, `PlusJakartaSans-Bold.ttf` in `public/fonts/`).
+     - Header layout: Title text on the left, Moneyrails rail icon mark (`public/brand/icon-mark.png`, 36x36pt) vertically aligned on the right.
+     - Spacing & table breaks: Added `minPresenceAhead={90}` to "Entries", "Money I Lent", and "Repayments" headings (`minPresenceAhead={60}` for category breakdown), and `fixed` attribute on table header rows so table headers automatically repeat on page breaks across multi-page documents.
+  5. **Back from Income/Giving Entries Returns to Correct Tab**:
+     - Fixed tab defaulting bug where `record-detail-view.tsx` and `edit-record-view.tsx` defaulted to `"expenses"` while Dexie live query was loading or when `from` was `/records` without a `?tab=` parameter.
+     - In `components/records-view.tsx`: On first load without a `?tab=` in URL, replaces URL with `?tab=<activeTab>`. Entry links always construct return URLs with explicit `?tab=<activeTab>`.
+     - In `lib/navigation.ts`: Created `resolveReturnUrl(fromUrl, entryKind)` which resolves the exact return destination at click time, defaulting to the entry's kind (`income`, `giving`, `expenses`) when `from` is missing or lacks `tab`.
+     - In `components/insights-view.tsx` and `components/category-habit-detail-view.tsx`: Wrapped entry detail links with `createReturnUrl`.
+  6. **Verification**:
+     - Vitest unit tests: 25 test suites, 252/252 tests passed.
+     - Playwright E2E: `tests/e2e/prompt22.spec.ts` 8/8 tests passed across 390px mobile phone and 1280px desktop viewports.
+     - Full build: `bun run build` built all 33 routes with zero errors.
+     - TypeScript typecheck: `bun run typecheck` 0 errors.
+     - ESLint: `bun run lint` 0 errors.
+
 ## Known issues
 
 - None.

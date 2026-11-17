@@ -109,24 +109,10 @@ export function tryParseDisplayDate(displayDate: string): string | null {
 }
 
 /**
- * Resolves appropriate locale for a 3-letter currency code.
- */
-function getCurrencyLocale(currency: string): string {
-  switch (currency.toUpperCase()) {
-    case "NGN":
-      return "en-NG";
-    case "GBP":
-      return "en-GB";
-    case "EUR":
-      return "de-DE";
-    default:
-      return "en-US";
-  }
-}
-
-/**
  * Formats minor units (kobo, cents) into a currency string with 2 decimal places.
- * Uses Intl.NumberFormat and the user's currency.
+ * Rule for every currency: symbol in front, comma for thousands, point for decimals,
+ * 2 decimals, no space: ₦50,000.00, €50,000.00, £50,000.00, $50,000.00. Negative: -€1,250.00.
+ * Uses locale "en-US" with currencyDisplay: "narrowSymbol".
  *
  * e.g. 15000000 kobo, "NGN" -> "₦150,000.00"
  */
@@ -135,11 +121,11 @@ export function formatMoney(
   currency = "NGN",
 ): string {
   const normCurrency = (currency || "NGN").toUpperCase();
-  const locale = getCurrencyLocale(normCurrency);
 
-  const formatter = new Intl.NumberFormat(locale, {
+  const formatter = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: normCurrency,
+    currencyDisplay: "narrowSymbol",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -156,14 +142,15 @@ export function formatMoney(
   const abs = isNegative ? -big : big;
   const major = abs / HUNDRED_BIG;
   const minor = abs % HUNDRED_BIG;
-  const formattedMajor = new Intl.NumberFormat(locale, {
+  const formattedMajor = new Intl.NumberFormat("en-US", {
     useGrouping: true,
   }).format(major);
   const minorStr = minor.toString().padStart(2, "0");
 
   // Extract currency symbol
-  const sample = formatter.format(0);
-  const symbol = sample.replace(/[\d.,\s\u00A0-]/g, "") || normCurrency;
+  const sampleParts = formatter.formatToParts(0);
+  const symbolPart = sampleParts.find((p) => p.type === "currency");
+  const symbol = symbolPart?.value || normCurrency;
 
   return `${isNegative ? "-" : ""}${symbol}${formattedMajor}.${minorStr}`;
 }

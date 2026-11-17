@@ -37,7 +37,7 @@ import { Input } from "@/components/ui/input";
 import { LentListView } from "@/components/lent-list-view";
 import { EntryModal } from "@/components/entry-modal";
 import { ExportModal } from "@/components/export-modal";
-import { useCurrentUrl, createReturnUrl } from "@/lib/navigation";
+import { createReturnUrl } from "@/lib/navigation";
 
 export type RecordsTab = "income" | "expenses" | "giving" | "lent";
 
@@ -115,7 +115,6 @@ function parsePeriod(raw: string | null): PeriodPreset {
 export function RecordsView() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const currentUrl = useCurrentUrl();
 
   const tabParam = searchParams?.get("tab") ?? null;
 
@@ -263,6 +262,21 @@ export function RecordsView() {
     },
     [router],
   );
+
+  // On first load of Records, if there is no ?tab= in the URL, write ?tab=<active> into the URL
+  React.useEffect(() => {
+    if (!tabParam) {
+      updateUrl(activeTab, tabFilters, false);
+    }
+  }, [tabParam, activeTab, tabFilters, updateUrl]);
+
+  // Always ensure the return URL includes explicit tab parameter
+  const effectiveRecordUrl = React.useMemo(() => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    params.set("tab", activeTab);
+    const qs = params.toString();
+    return `/records?${qs}`;
+  }, [searchParams, activeTab]);
 
   const handleTabChange = (newTab: RecordsTab) => {
     setActiveTab(newTab);
@@ -1016,10 +1030,10 @@ export function RecordsView() {
                           setIsSelectionMode(true);
                         }}
                         onSetSwiped={(open) => setSwipedEntryId(open ? entry.id : null)}
-                        currentUrl={currentUrl}
+                        currentUrl={effectiveRecordUrl}
                         onEdit={() => {
                           saveScroll();
-                          router.push(createReturnUrl(`/records/${entry.id}/edit`, currentUrl));
+                          router.push(createReturnUrl(`/records/${entry.id}/edit`, effectiveRecordUrl));
                         }}
                         onDelete={() => setEntryToDelete(entry)}
                         onClick={() => {
@@ -1027,7 +1041,7 @@ export function RecordsView() {
                             toggleSelect(entry.id);
                           } else {
                             saveScroll();
-                            router.push(createReturnUrl(`/records/${entry.id}`, currentUrl));
+                            router.push(createReturnUrl(`/records/${entry.id}`, effectiveRecordUrl));
                           }
                         }}
                       />

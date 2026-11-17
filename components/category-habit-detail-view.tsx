@@ -25,7 +25,7 @@ import { formatMoney, formatDate } from "@/lib/format";
 import { DateField } from "@/components/date-field";
 import { HabitBadge } from "@/components/habits-view";
 import { cn } from "@/lib/utils";
-import { useReturnTo, getBackLinkText } from "@/lib/navigation";
+import { useReturnTo, getBackLinkText, useCurrentUrl, createReturnUrl } from "@/lib/navigation";
 
 const CategoryTrendChart = dynamic(
   () =>
@@ -63,6 +63,7 @@ function parsePeriodParam(raw: string | null): PeriodPreset {
 export function CategoryHabitDetailView({ categoryId }: { categoryId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const currentUrl = useCurrentUrl();
 
   const isMounted = React.useSyncExternalStore(
     () => () => {},
@@ -422,7 +423,7 @@ export function CategoryHabitDetailView({ categoryId }: { categoryId: string }) 
 
         {report.biggestEntry ? (
           <Link
-            href={`/records/${report.biggestEntry.id}`}
+            href={createReturnUrl(`/records/${report.biggestEntry.id}`, currentUrl)}
             data-testid="biggest-entry-link"
             className="group mt-4 flex items-center justify-between rounded-xl border border-border/40 p-4 transition-colors hover:bg-muted/40"
           >

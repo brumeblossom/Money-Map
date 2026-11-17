@@ -151,3 +151,4 @@ export function getClientSessionState(cookieString: string): {
 
   return { hasSession, isGuest, isUser };
 }
+

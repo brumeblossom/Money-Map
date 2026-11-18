@@ -21,6 +21,10 @@ const precacheList: (PrecacheEntry | string)[] = [
   { url: "/offline", revision: "1" },
   { url: "/privacy", revision: "1" },
   { url: "/terms", revision: "1" },
+  { url: "/brand/icon-mark.png", revision: "1" },
+  { url: "/fonts/PlusJakartaSans-Regular.ttf", revision: "1" },
+  { url: "/fonts/PlusJakartaSans-SemiBold.ttf", revision: "1" },
+  { url: "/fonts/PlusJakartaSans-Bold.ttf", revision: "1" },
 ];
 
 const serwist = new Serwist({

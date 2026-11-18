@@ -24,7 +24,7 @@ import { softDeleteEntry, restoreEntry } from "@/lib/repo";
 import { formatDate, formatMoney } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { buildSingleEntryReport } from "@/lib/report/builder";
-import { downloadReportPdf } from "@/lib/report/pdf-export";
+import { downloadReportPdf, withPdfTimeout } from "@/lib/report/pdf-export";
 import {
   useCurrentUrl,
   getBackLinkText,
@@ -62,7 +62,6 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
     if (!entry) return;
     try {
       setIsDownloadingPdf(true);
-      toast.info("Generating PDF...");
       const snapshot = buildSingleEntryReport({
         entry,
         categoryName: category?.name || "Uncategorised",
@@ -71,11 +70,11 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
         hideDetails: false,
         repeats: entry.recurring_rule_id ? "Monthly" : "No",
       });
-      await downloadReportPdf(snapshot);
+      await withPdfTimeout(downloadReportPdf(snapshot));
       toast.success("PDF downloaded");
     } catch (err) {
       console.error("PDF generation failed:", err);
-      toast.error("Failed to generate PDF");
+      toast.error("Couldn't create the PDF. Please try again.");
     } finally {
       setIsDownloadingPdf(false);
     }
@@ -177,7 +176,7 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
             className="hidden sm:inline-flex gap-1.5 rounded-xl font-semibold cursor-pointer"
           >
             <FileDown className="size-3.5" />
-            <span>{isDownloadingPdf ? "Generating..." : "Download PDF"}</span>
+            <span>{isDownloadingPdf ? "Preparing..." : "Download PDF"}</span>
           </Button>
 
           <Link href={createReturnUrl(`/records/${entry.id}/edit`, currentUrl)}>
@@ -318,7 +317,7 @@ export function RecordDetailView({ id }: RecordDetailViewProps) {
           className="w-full h-11 gap-2 rounded-xl font-semibold cursor-pointer"
         >
           <FileDown className="size-4" />
-          <span>{isDownloadingPdf ? "Generating PDF..." : "Download PDF"}</span>
+          <span>{isDownloadingPdf ? "Preparing..." : "Download PDF"}</span>
         </Button>
       </div>
 

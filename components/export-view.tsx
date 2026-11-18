@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { db } from "@/lib/db/dexie";
 import { formatDate } from "@/lib/format";
 import { buildPeriodReport } from "@/lib/report/builder";
-import { downloadReportPdf, preloadPdfRenderer } from "@/lib/report/pdf-export";
+import { downloadReportPdf, preloadPdfRenderer, withPdfTimeout } from "@/lib/report/pdf-export";
 import { Button } from "@/components/ui/button";
 import { DateField } from "@/components/date-field";
 import { useReturnTo, getBackLinkText } from "@/lib/navigation";
@@ -164,11 +164,11 @@ export function ExportView() {
         loanPayments,
       });
 
-      await downloadReportPdf(snapshot);
+      await withPdfTimeout(downloadReportPdf(snapshot));
       toast.success("PDF downloaded");
     } catch (err) {
       console.error("PDF generation failed:", err);
-      toast.error("Failed to generate PDF");
+      toast.error("Couldn't create the PDF. Please try again.");
     } finally {
       setIsDownloadingPdf(false);
     }

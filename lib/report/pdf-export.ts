@@ -26,32 +26,61 @@ export function getReportPdfFileName(snapshot: ReportSnapshot): string {
 }
 
 export async function preloadPdfRenderer(): Promise<void> {
-  await Promise.all([
+  const [, { preloadPdfAssets }] = await Promise.all([
     import("@react-pdf/renderer"),
     import("@/components/report/pdf-document"),
   ]);
+  if (typeof window !== "undefined") {
+    await preloadPdfAssets();
+  }
+}
+
+export const PDF_GENERATION_TIMEOUT_MS = 30000;
+
+export async function withPdfTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number = PDF_GENERATION_TIMEOUT_MS,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error("PDF generation timed out after 30 seconds"));
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 /**
  * Lazily loads @react-pdf/renderer, builds the PDF blob, and triggers browser download.
  * Works offline and in guest mode without making network requests.
+ * Enforces a 30-second timeout to prevent hanging UI.
  */
 export async function downloadReportPdf(snapshot: ReportSnapshot): Promise<void> {
-  const [{ pdf }, { ReportPdfDocument }] = await Promise.all([
-    import("@react-pdf/renderer"),
-    import("@/components/report/pdf-document"),
-  ]);
+  await withPdfTimeout((async () => {
+    const [{ pdf }, { ReportPdfDocument, preloadPdfAssets }] = await Promise.all([
+      import("@react-pdf/renderer"),
+      import("@/components/report/pdf-document"),
+    ]);
 
-  const docElement = React.createElement(ReportPdfDocument, { snapshot });
-  const blob = await pdf(docElement as unknown as React.ReactElement<DocumentProps>).toBlob();
+    if (typeof window !== "undefined") {
+      await preloadPdfAssets();
+    }
 
-  const fileName = getReportPdfFileName(snapshot);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+    const docElement = React.createElement(ReportPdfDocument, { snapshot });
+    const blob = await pdf(docElement as unknown as React.ReactElement<DocumentProps>).toBlob();
+
+    const fileName = getReportPdfFileName(snapshot);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  })(), PDF_GENERATION_TIMEOUT_MS);
 }

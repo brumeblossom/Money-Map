@@ -1713,6 +1713,27 @@ The following environment variables can now be safely removed from Vercel projec
      - TypeScript typecheck: `bun run typecheck` 0 errors.
      - ESLint: `bun run lint` 0 errors.
 
+- **PDF Export Hang Fix & Hardening (Prompt 22b)**:
+  1. **CSP Directive for Web Worker (`next.config.ts`)**:
+     - Added directive `"worker-src 'self' blob:"` immediately after `font-src 'self' data:`.
+     - `@react-pdf/renderer` renders images (`<Image src="/brand/icon-mark.png">`) by launching an internal Web Worker from a `blob:` URL. In production, Content Security Policy lacked `worker-src`, causing the browser to fall back to `script-src` and block the blob worker with a CSP error, which left the PDF export promise unresolved and the button stuck on "Preparing...". Adding `worker-src 'self' blob:` directly solves the hang while keeping the brand icon in the PDF.
+  2. **Timeout, Error Toast & Button Recovery**:
+     - In `lib/report/pdf-export.ts`: Created `withPdfTimeout()` wrapper (30-second timeout).
+     - Across all callers (`components/export-modal.tsx`, `components/export-view.tsx`, `components/record-detail-view.tsx`, `components/loan-detail-view.tsx`):
+       - Wrapped PDF generation in 30-second timeout.
+       - On error or timeout: cancels "Preparing...", re-enables button, logs error to console, and shows toast: `"Couldn't create the PDF. Please try again."`.
+  3. **Offline & Service Worker Compatibility (`components/report/pdf-document.tsx`, `app/sw.ts`)**:
+     - Preloaded brand icon as an in-memory data URI and preloaded Plus Jakarta Sans font assets so `@react-pdf/renderer` generates PDFs entirely in-memory offline without network requests from the blob worker.
+     - Added `/brand/icon-mark.png` and font files to the Service Worker precache list in `app/sw.ts`.
+  4. **Testing Rule**:
+     - *PDF tests run against the production build* (`bun run build` followed by `bun run start`), ensuring real CSP headers apply in test environments.
+  5. **Verification**:
+     - Playwright E2E: `tests/e2e/prompt22b-pdf.spec.ts` (8/8 tests passed) testing guest and signed-in PDF downloads from Records export modal, single entry detail, and single loan detail at 390px mobile and 1280px desktop viewports against the production build.
+     - Verified downloaded PDFs: brand icon (`/Subtype /Image`), Plus Jakarta Sans font, and ₦ symbol. No CSP worker/script errors.
+     - Vitest unit tests: 25 test files, 252/252 tests passed.
+     - TypeScript: `bun run typecheck` 0 errors.
+     - ESLint: 0 errors.
+
 ## Known issues
 
 - None.

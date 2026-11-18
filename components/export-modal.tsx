@@ -7,7 +7,7 @@ import { FileDown } from "lucide-react";
 import { db } from "@/lib/db/dexie";
 import { formatDate } from "@/lib/format";
 import { buildPeriodReport } from "@/lib/report/builder";
-import { downloadReportPdf, preloadPdfRenderer } from "@/lib/report/pdf-export";
+import { downloadReportPdf, preloadPdfRenderer, withPdfTimeout } from "@/lib/report/pdf-export";
 import { Button } from "@/components/ui/button";
 import { DateField } from "@/components/date-field";
 import {
@@ -207,12 +207,12 @@ export function ExportModalContent({
         today,
       });
 
-      await downloadReportPdf(snapshot);
+      await withPdfTimeout(downloadReportPdf(snapshot));
       toast.success("PDF downloaded");
       onClose();
     } catch (err) {
       console.error("PDF generation failed:", err);
-      toast.error("Failed to generate PDF");
+      toast.error("Couldn't create the PDF. Please try again.");
     } finally {
       setIsDownloadingPdf(false);
     }

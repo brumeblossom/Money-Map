@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { RecordPaymentModal } from "@/components/record-payment-modal";
 import { EditLoanModal } from "@/components/edit-loan-modal";
 import { buildSingleLoanReport } from "@/lib/report/builder";
-import { downloadReportPdf } from "@/lib/report/pdf-export";
+import { downloadReportPdf, withPdfTimeout } from "@/lib/report/pdf-export";
 import { useReturnTo, getBackLinkText } from "@/lib/navigation";
 import {
   db,
@@ -80,7 +80,6 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
     if (!loan) return;
     try {
       setIsDownloadingPdf(true);
-      toast.info("Generating PDF...");
       const snapshot = buildSingleLoanReport({
         loan,
         payments,
@@ -89,11 +88,11 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
         hideDetails: false,
         today,
       });
-      await downloadReportPdf(snapshot);
+      await withPdfTimeout(downloadReportPdf(snapshot));
       toast.success("PDF downloaded");
     } catch (err) {
       console.error("PDF generation failed:", err);
-      toast.error("Failed to generate PDF");
+      toast.error("Couldn't create the PDF. Please try again.");
     } finally {
       setIsDownloadingPdf(false);
     }
@@ -242,7 +241,7 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
               className="hidden sm:inline-flex items-center gap-1.5 rounded-xl font-semibold cursor-pointer"
             >
               <FileDown className="size-3.5" />
-              <span>{isDownloadingPdf ? "Generating..." : "Download PDF"}</span>
+              <span>{isDownloadingPdf ? "Preparing..." : "Download PDF"}</span>
             </Button>
             <Button
               type="button"
@@ -372,7 +371,7 @@ export function LoanDetailView({ id, currency = "NGN" }: LoanDetailViewProps) {
           className="w-full h-11 gap-2 rounded-xl font-semibold cursor-pointer"
         >
           <FileDown className="size-4" />
-          <span>{isDownloadingPdf ? "Generating PDF..." : "Download PDF"}</span>
+          <span>{isDownloadingPdf ? "Preparing..." : "Download PDF"}</span>
         </Button>
       </div>
 

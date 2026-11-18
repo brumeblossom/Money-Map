@@ -28,7 +28,32 @@ function getFontPath(filename: string): string {
   return `/fonts/${filename}`;
 }
 
-function getBrandIconPath(): string {
+let cachedBrandIcon: string | null = null;
+
+export async function preloadPdfAssets(): Promise<void> {
+  if (typeof window === "undefined") return;
+  try {
+    registerFonts();
+    const [iconRes] = await Promise.all([
+      fetch("/brand/icon-mark.png").catch(() => null),
+      Font.load({ fontFamily: "Plus Jakarta Sans" }).catch(() => null),
+    ]);
+    if (iconRes && iconRes.ok) {
+      const blob = await iconRes.blob();
+      cachedBrandIcon = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => resolve("/brand/icon-mark.png");
+        reader.readAsDataURL(blob);
+      });
+    }
+  } catch {
+    // Ignore preload error
+  }
+}
+
+export function getBrandIconPath(): string {
+  if (cachedBrandIcon) return cachedBrandIcon;
   if (isNodeEnv()) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports

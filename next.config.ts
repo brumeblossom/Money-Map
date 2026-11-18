@@ -17,6 +17,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' blob: data:",
       "font-src 'self' data:",
+      "worker-src 'self' blob:",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://va.vercel-scripts.com https://vitals.vercel-insights.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",

@@ -337,7 +337,7 @@ export function LandingPageView() {
                           {mounted ? dateStr : "Tuesday, 10 November"}
                         </small>
                         <strong className="text-[12px] sm:text-[12.5px] font-bold text-foreground truncate block">
-                          Welcome back, Blossom
+                          Welcome back, Feyi
                         </strong>
                       </div>
                       <span className="text-[8.5px] font-bold bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full shrink-0">
@@ -899,7 +899,7 @@ export function LandingPageView() {
           <div className="max-w-[1152px] mx-auto px-4 sm:px-6">
             <div className="bg-card dark:bg-[#1B1A23] border border-border rounded-[24px] p-6 sm:p-9 lg:p-12 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
               {/* Left Column (5 cols) */}
-              <div className="lg:col-span-5 flex flex-col justify-between gap-10 text-center lg:text-left items-center lg:items-start">
+              <div className="lg:col-span-5 flex flex-col gap-6 lg:gap-0 lg:justify-between text-center lg:text-left items-center lg:items-start">
                 <div className="flex flex-col gap-3 items-center lg:items-start">
                   <span className="text-[12px] font-bold tracking-[0.12em] uppercase text-primary">
                     FAQ
@@ -925,15 +925,6 @@ export function LandingPageView() {
                   >
                     Get started
                   </Link>
-                  <p className="text-[13px] text-muted-foreground mt-3.5">
-                    Still have a question? Email us at{" "}
-                    <a
-                      href="mailto:workwithbrume@gmail.com"
-                      className="text-primary font-semibold hover:underline"
-                    >
-                      workwithbrume@gmail.com
-                    </a>
-                  </p>
                 </div>
               </div>
 

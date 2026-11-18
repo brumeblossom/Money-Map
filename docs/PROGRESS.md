@@ -1734,6 +1734,29 @@ The following environment variables can now be safely removed from Vercel projec
      - TypeScript: `bun run typecheck` 0 errors.
      - ESLint: 0 errors.
 
+- **Dropdown Arrows on Selects, Hero Greeting & FAQ Alignment (Prompt 23)**:
+  1. **Dropdown Arrow on Selects & Shared NativeSelect Wrapper**:
+     - Created `components/ui/native-select.tsx`: A lightweight shared wrapper rendering `<select>` with standard styling (`h-11`, `rounded-xl`, `border`, `bg-background/50`, `pr-10`, `appearance-none`) paired with a vertically-centered `lucide-react` `ChevronDown` icon (`size-4 text-muted-foreground pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2`).
+     - Replaced raw `appearance-none` `<select>` elements:
+       - `components/entry-form.tsx`: `#repeats-select` (Repeats field across Income, Expense, Giving add/edit forms in both mobile drawer sheet and desktop dialog) and `#plan-select` (Money I Lent payment plan).
+       - `components/edit-loan-modal.tsx`: `#edit-plan-select`.
+       - `components/recurring-rules-list.tsx`: Frequency selection when editing a repeating rule.
+  2. **Landing Phone Mockup Greeting (`components/landing-page-view.tsx`)**:
+     - Updated hero phone mockup greeting from `"Welcome back, Blossom"` to `"Welcome back, Feyi"`. No other mockup elements changed.
+  3. **Landing FAQ Section Layout & Tidy (`components/landing-page-view.tsx`)**:
+     - Removed the line `"Still have a question? Email us at workwithbrume@gmail.com"` (the `<p>` containing the mailto link) from the FAQ card.
+     - Preserved footer email links ("Send feedback" and "Contact us").
+     - Re-aligned FAQ left column:
+       - Desktop (1024px+): Left-aligned with `justify-between`; "FAQ" label and "Frequently asked questions" at top; CTA block ("Start mapping your money today." + subtext + "Get started" button) anchored at the bottom so the bottom edge of the button lines up with the bottom edge of the last FAQ accordion card (within 4px).
+       - Mobile/tablet (<1024px): Centered alignment with even spacing (label, heading, 24px gap, CTA block, then FAQ accordion questions).
+       - Verified no horizontal overflow or scroll at 360px.
+  4. **Verification**:
+     - Playwright E2E: `tests/e2e/prompt23.spec.ts` (8/8 tests passed) testing landing greeting "Feyi", FAQ alignment and email line removal, footer links, Repeats chevron icon, and saving weekly/monthly across Income, Expense, Giving, and edit forms in light and dark mode at 390px and 1280px.
+     - Vitest unit tests: 25 test suites, 252/252 tests passed.
+     - TypeScript: `bun run typecheck` passed with 0 errors.
+     - ESLint: `bun run lint` passed with 0 errors.
+     - Production build: `bun run build` built all 33 routes with code 0.
+
 ## Known issues
 
 - None.

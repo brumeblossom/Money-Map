@@ -7,6 +7,7 @@ import { useRecurringRules, useCategories } from "@/lib/repo/hooks";
 import { updateRecurringRule, softDeleteRecurringRule } from "@/lib/repo";
 import type { RecurringRuleRow } from "@/lib/db/dexie";
 import { formatDate, formatMoney, toMinor, fromMinor } from "@/lib/format";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export interface RecurringRulesListProps {
   currency?: string;
@@ -280,14 +281,14 @@ export function RecurringRulesList({ currency = "NGN", limit }: RecurringRulesLi
 
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-foreground">Repeats</label>
-                <select
+                <NativeSelect
                   value={editFrequency}
                   onChange={(e) => setEditFrequency(e.target.value as "weekly" | "monthly")}
-                  className="w-full rounded-xl border border-input bg-background px-3.5 py-2 text-xs text-foreground focus:outline-none focus:border-primary cursor-pointer"
+                  className="h-9 text-xs"
                 >
                   <option value="weekly">Weekly</option>
                   <option value="monthly">Monthly</option>
-                </select>
+                </NativeSelect>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2">

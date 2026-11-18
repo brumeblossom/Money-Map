@@ -45,6 +45,7 @@ import { Button } from "@/components/ui/button";
 import { useReturnTo } from "@/lib/navigation";
 import { formatMonthYear } from "@/lib/format";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export interface EntryFormProps {
   action?: string;
@@ -508,16 +509,15 @@ function StandardEntryForm({
           <label htmlFor="repeats-select" className="text-sm font-medium text-foreground">
             Repeats (optional)
           </label>
-          <select
+          <NativeSelect
             id="repeats-select"
             value={repeats}
             onChange={(e) => setRepeats(e.target.value as "No" | "Weekly" | "Monthly")}
-            className="flex h-11 w-full appearance-none items-center justify-between rounded-xl border border-input bg-background/50 px-3.5 py-2 text-base text-foreground shadow-xs transition-colors focus:border-ring focus:outline-none focus:ring-3 focus:ring-ring/50"
           >
             <option value="No">No</option>
             <option value="Weekly">Weekly</option>
             <option value="Monthly">Monthly</option>
-          </select>
+          </NativeSelect>
         </div>
 
         {/* 6. Description (optional) */}
@@ -853,19 +853,18 @@ function LentEntryForm({
           <label htmlFor="plan-select" className="text-sm font-medium text-foreground">
             Payback plan (optional)
           </label>
-          <select
+          <NativeSelect
             id="plan-select"
             value={plan}
             onChange={(e) => {
               setPlan(e.target.value as RepeatPlan);
               setCustomInstalmentMinor(null);
             }}
-            className="flex h-11 w-full appearance-none items-center justify-between rounded-xl border border-input bg-background/50 px-3.5 py-2 text-base text-foreground shadow-xs transition-colors focus:border-ring focus:outline-none focus:ring-3 focus:ring-ring/50"
           >
             <option value="one_payment">One payment</option>
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
-          </select>
+          </NativeSelect>
         </div>
 
         {/* 7. Instalment amount (optional) */}

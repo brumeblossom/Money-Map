@@ -4,6 +4,7 @@ import * as React from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import { AmountField } from "@/components/amount-field";
 import { DateField } from "@/components/date-field";
 import { CategoryPicker } from "@/components/category-picker";
@@ -262,19 +263,18 @@ function EditLoanFormInner({
             <label htmlFor="edit-plan-select" className="text-sm font-medium text-foreground">
               Payback plan (optional)
             </label>
-            <select
+            <NativeSelect
               id="edit-plan-select"
               value={plan}
               onChange={(e) => {
                 setPlan(e.target.value as RepeatPlan);
                 setCustomInstalmentMinor(null);
               }}
-              className="flex h-11 w-full appearance-none items-center justify-between rounded-xl border border-input bg-background/50 px-3.5 py-2 text-base text-foreground shadow-xs transition-colors focus:border-ring focus:outline-none focus:ring-3 focus:ring-ring/50"
             >
               <option value="one_payment">One payment</option>
               <option value="weekly">Weekly</option>
               <option value="monthly">Monthly</option>
-            </select>
+            </NativeSelect>
           </div>
 
           {/* Instalment amount */}
